@@ -1,0 +1,29 @@
+import { getRandomInt } from "./generalUtils";
+import { CellType, createRectGrid, Grid, GridPos } from "../types/Grid";
+
+function recursiveDFS(grid: Grid, pos: GridPos): void {
+  // assume pos is a valid position in the grid
+  grid.setCell(pos, CellType.Passage);
+
+  const neighbors = grid.getNeighbors(pos);
+  while (neighbors.length != 0) {
+    let index = getRandomInt(0, neighbors.length);
+    const neighborPos = neighbors[index];
+    neighbors.splice(index, 1);
+    if (grid.getCell(neighborPos) != CellType.Wall) continue;
+
+    const bridgePos: GridPos = {
+      row: (pos.row + neighborPos.row) / 2,
+      col: (pos.col + neighborPos.col) / 2,
+    };
+    grid.setCell(bridgePos, CellType.Passage);
+    recursiveDFS(grid, neighborPos);
+  }
+}
+
+export function generateDFSRectGrid(width: number, height: number): Grid {
+  const grid: Grid = createRectGrid(width, height);
+  recursiveDFS(grid, { row: 0, col: 0 });
+
+  return grid;
+}
