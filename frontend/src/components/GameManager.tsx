@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import useAnimationUpdate from "../hooks/useAnimationUpdate";
-import { GridPos } from "@shared/types/Grid";
-import usePlayerHandler from "../hooks/usePlayerHandler";
+import usePlayerPositionHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
 import { Maze } from "@shared/types/Maze";
 import GameCanvas from "./GameCanvas";
+import { addPos, equalPos, GridPos, ZERO_POS } from "@shared/types/GridPos";
+import { CellType } from "@shared/types/Grid";
 
 function GameManager({
   maze,
@@ -15,15 +15,21 @@ function GameManager({
   size: MazeSize;
   fps?: number;
 }) {
-  const [playerPos, setPlayerPos] = useState<GridPos>();
+  const [playerPos, setPlayerPos] = useState<GridPos>({ row: 0, col: 0 });
   const cellScale = getMazeRenderHeight(size) / maze.height;
-  usePlayerHandler(setPlayerPos, maze.height);
+  usePlayerPositionHandler((deltaPos: GridPos) => {
+    const newPos = maze.clamp(addPos(playerPos, deltaPos));
+    if (equalPos(playerPos, newPos)) return;
+
+    console.log(maze.getCell(newPos));
+    setPlayerPos(newPos);
+  });
 
   useEffect(() => {
     console.log(playerPos);
   }, [playerPos]);
 
-  return <GameCanvas maze={maze} cellScale={cellScale} />;
+  return <GameCanvas maze={maze} cellScale={cellScale} playerPos={playerPos} />;
 }
 
 export default GameManager;

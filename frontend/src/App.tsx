@@ -92,7 +92,7 @@ function App() {
         Generate maze
       </button>
 
-      <MazeRenderer maze={currMaze} size={mazeSize.mazeSize} />
+      {/*<MazeRenderer maze={currMaze} size={mazeSize.mazeSize} />*/}
       <GameManager maze={currMaze} size={mazeSize.mazeSize} />
     </>
   );

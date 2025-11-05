@@ -1,4 +1,5 @@
 import {GridPos} from "./GridPos";
+import {clamp} from "../utils/common-helpers";
 
 /**
  * Type of cell
@@ -96,6 +97,14 @@ export class Grid {
     }
 
     return resultMat;
+  }
+
+  // clamp a position into this grid
+  public clamp(pos: GridPos): GridPos {
+    return {
+      row: clamp(pos.row, 0, this.height - 1),
+      col: clamp(pos.col, 0, this.width - 1),
+    };
   }
 }
 

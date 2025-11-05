@@ -1,22 +1,23 @@
 import React, { useCallback, useRef } from "react";
 import { Maze } from "@shared/types/Maze";
+import { GridPos } from "@shared/types/GridPos";
 
 function GameCanvas({
   maze,
   cellScale,
-  cellSpacing = 0,
+  playerPos,
 }: {
   maze: Maze;
   cellScale: number;
-  cellSpacing?: number;
+  playerPos: GridPos;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const matrix = maze.getMatrix();
-  const canvasWidth: number = (cellScale + cellSpacing) * maze.width;
-  const canvasHeight: number = (cellScale + cellSpacing) * maze.height;
+  const canvasWidth: number = cellScale * maze.width;
+  const canvasHeight: number = cellScale * maze.height;
 
-  const gameLoop = useCallback(() => {
+  const drawGame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -24,7 +25,9 @@ function GameCanvas({
     if (!ctx) return;
   }, []);
 
-  return <canvas ref={canvasRef}></canvas>;
+  return (
+    <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight}></canvas>
+  );
 }
 
 export default GameCanvas;

@@ -1,4 +1,5 @@
-import { addBorder, CellType, Grid, GridPos } from "./Grid";
+import { addBorder, CellType, Grid } from "./Grid";
+import {GridPos} from "./GridPos";
 
 export class Maze {
   public readonly width: number;
@@ -42,5 +43,10 @@ export class Maze {
 
   public getMatrix() {
     return this.grid.createDuplicate();
+  }
+
+  // clamp a position to this maze's bounds
+  public clamp(pos: GridPos): GridPos {
+      return this.grid.clamp(pos);
   }
 }

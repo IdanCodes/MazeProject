@@ -1,0 +1,141 @@
+import React, { useCallback, useRef } from "react";
+import useAnimationUpdate from "./useAnimationUpdate";
+import { clamp } from "@shared/utils/common-helpers";
+import { GridPos } from "@shared/types/GridPos";
+
+enum MovementDirection {
+  Up,
+  Right,
+  Down,
+  Left,
+}
+
+const MovementKeys: Readonly<Map<MovementDirection, string[]>> = new Map([
+  [MovementDirection.Up, ["ArrowUp", "KeyW"]],
+  [MovementDirection.Right, ["ArrowRight", "KeyD"]],
+  [MovementDirection.Down, ["ArrowDown", "KeyS"]],
+  [MovementDirection.Left, ["ArrowLeft", "KeyA"]],
+]);
+
+// get the movement direction of a key
+function getMovementDirection(code: string): MovementDirection | undefined {
+  const md = MovementKeys.entries().find((mk) => mk[1].includes(code));
+  return md ? md[0] : undefined;
+}
+
+// check whether a keyCode is a movement key
+function isMovementKey(code: string): boolean {
+  return getMovementDirection(code) !== undefined;
+}
+
+// mazeScale is the number of cells in a row/column
+const usePlayerPositionHandler = (
+  movePlayer: (deltaPos: GridPos) => void,
+): void => {
+  // Saves whether a key for a direction is pressed
+  const keysPressed = useRef<Set<string>>(new Set());
+
+  const lastHorizontalMove = useRef<{ dir: MovementDirection; time: number }>({
+    dir: MovementDirection.Up,
+    time: 0,
+  });
+  const lastVerticalMove = useRef<{ dir: MovementDirection; time: number }>({
+    dir: MovementDirection.Left,
+    time: 0,
+  });
+  const singleDirMoveCooldown = 200;
+
+  function generateMoveDirs() {
+    const moveDirections: Set<MovementDirection> = new Set();
+    for (const keyCode of keysPressed.current) {
+      const md = getMovementDirection(keyCode)!;
+      moveDirections.add(md);
+    }
+
+    return moveDirections;
+  }
+
+  // const updatePlayerPosition = useCallback(() => {
+  //   const moveDirections = generateMoveDirs();
+  //   // const nowTime = Date.now();
+  //
+  //   let deltaY = 0;
+  //   if (moveDirections.has(MovementDirection.Up)) deltaY -= 1;
+  //   if (moveDirections.has(MovementDirection.Down)) deltaY += 1;
+  //
+  //   // const newRow = playerPos.row + deltaY;
+  //   // const dirY =
+  //   //   deltaY > 0
+  //   //     ? MovementDirection.Down
+  //   //     : deltaY < 0
+  //   //       ? MovementDirection.Up
+  //   //       : undefined;
+  //   // if (dirY && nowTime - lastVerticalMove.current.time > movementDelayMS) {
+  //   //   lastVerticalMove.current.time = nowTime;
+  //   //   lastVerticalMove.current.dir = dirY;
+  //   // }
+  //
+  //   let deltaX = 0;
+  //   if (moveDirections.has(MovementDirection.Right)) deltaX += 1;
+  //   if (moveDirections.has(MovementDirection.Left)) deltaX -= 1;
+  //
+  //   movePlayer({ row: deltaY, col: deltaX });
+  // }, [playerPos]);
+
+  function getDeltaPos(moveDirections: Set<MovementDirection>): GridPos {
+    let deltaY = 0;
+    if (moveDirections.has(MovementDirection.Up)) deltaY -= 1;
+    if (moveDirections.has(MovementDirection.Down)) deltaY += 1;
+
+    let deltaX = 0;
+    if (moveDirections.has(MovementDirection.Right)) deltaX += 1;
+    if (moveDirections.has(MovementDirection.Left)) deltaX -= 1;
+
+    return { row: deltaY, col: deltaX };
+  }
+
+  function updatePosition() {
+    const moveDirections = generateMoveDirs();
+    const deltaPos = getDeltaPos(moveDirections);
+    const nowTime = Date.now();
+
+    const dirY =
+      deltaPos.row > 0 ? MovementDirection.Down : MovementDirection.Up;
+    if (
+      deltaPos.row != 0 &&
+      (nowTime - lastVerticalMove.current.time > singleDirMoveCooldown ||
+        dirY != lastVerticalMove.current.dir)
+    ) {
+      lastVerticalMove.current.time = nowTime;
+      lastVerticalMove.current.dir = dirY;
+    } else deltaPos.row = 0;
+
+    const dirX =
+      deltaPos.col > 0 ? MovementDirection.Right : MovementDirection.Left;
+    if (
+      deltaPos.col != 0 &&
+      (nowTime - lastHorizontalMove.current.time > singleDirMoveCooldown ||
+        dirX != lastHorizontalMove.current.dir)
+    ) {
+      lastHorizontalMove.current.time = nowTime;
+      lastHorizontalMove.current.dir = dirX;
+    } else deltaPos.col = 0;
+
+    movePlayer(deltaPos);
+  }
+
+  useAnimationUpdate(30, updatePosition);
+
+  window.onkeydown = (e) => {
+    if (isMovementKey(e.code) && !e.repeat) {
+      keysPressed.current.add(e.code);
+      updatePosition();
+    }
+  };
+
+  window.onkeyup = (e) => {
+    if (isMovementKey(e.code)) keysPressed.current.delete(e.code);
+  };
+};
+
+export default usePlayerPositionHandler;
