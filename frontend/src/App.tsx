@@ -1,10 +1,6 @@
 import "./index.css";
 import { ChangeEvent, useRef, useState } from "react";
-import MazeRenderer from "./components/MazeRenderer";
-import GameCanvas from "./components/GameCanvas";
 import { MazeSize } from "./types/maze-size";
-import { getRandomInt } from "@shared/utils/common-helpers";
-import { generateDFSRectGrid } from "@shared/utils/maze-generator";
 import { Maze } from "@shared/types/Maze";
 import { createRectGrid } from "@shared/types/Grid";
 import GameManager from "./components/GameManager";

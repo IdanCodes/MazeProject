@@ -106,6 +106,10 @@ export class Grid {
       col: clamp(pos.col, 0, this.width - 1),
     };
   }
+
+  public inBounds(pos: GridPos): boolean {
+      return pos.row >= 0 && pos.row < this.height && pos.col >= 0 && pos.col < this.width;
+  }
 }
 
 export const createGrid = (

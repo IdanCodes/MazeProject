@@ -47,11 +47,32 @@ function GameCanvas({
     ctx.fillRect(canvasPos.x, canvasPos.y, cellScale, cellScale);
   };
 
+  const strokeBarrier = (
+    ctx: CanvasRenderingContext2D,
+    p1: GridPos,
+    p2: GridPos,
+  ) => {
+    ctx.strokeStyle = "2px black";
+  };
+
   const drawMaze = (ctx: CanvasRenderingContext2D): void => {
     for (let i = 0; i < maze.height; i += 1) {
       for (let j = 0; j < maze.width; j += 1) {
         const pos = { row: i, col: j };
         fillCell(ctx, pos, cellColor(maze.getCell(pos)));
+
+        // check horizontal barrier
+        // const rightBridgePos: GridPos = { row: i, col: j + 1 };
+        // if (maze.getCell(rightBridgePos) === CellType.Wall) {
+        //   ctx.fillStyle = "black";
+        //   const startPos = getCanvasPos(pos);
+        //   ctx.fillRect(
+        //     startPos.x + (3 * cellScale) / 5,
+        //     startPos.y,
+        //     startPos.x + (5 * cellScale) / 4,
+        //     startPos.y + cellScale * 2,
+        //   );
+        // }
       }
     }
   };

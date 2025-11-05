@@ -49,4 +49,8 @@ export class Maze {
   public clamp(pos: GridPos): GridPos {
       return this.grid.clamp(pos);
   }
+
+  public inBounds(pos: GridPos): boolean {
+      return this.grid.inBounds(pos);
+  }
 }

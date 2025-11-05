@@ -13,7 +13,6 @@ const useAnimationUpdate = (fps: number, callback: () => void) => {
         while (deltaTime >= frameLengthMS) {
           callback(); // call lost loops
           deltaTime -= frameLengthMS;
-          // Previous time must be updated to account for consumed time
           previousTimeRef.current += frameLengthMS;
         }
       } else previousTimeRef.current = timestamp;
