@@ -43,7 +43,10 @@ const usePlayerPositionHandler = (
     dir: MovementDirection.Left,
     time: 0,
   });
-  const singleDirMoveCooldown = 200;
+  const singleDirMoveCooldown = 5;
+  const startMoveFrame = useRef<number>(-1);
+  const frameNumber = useRef<number>(0);
+  const fps = 60;
 
   function generateMoveDirs() {
     const moveDirections: Set<MovementDirection> = new Set();
@@ -97,44 +100,71 @@ const usePlayerPositionHandler = (
   function updatePosition() {
     const moveDirections = generateMoveDirs();
     const deltaPos = getDeltaPos(moveDirections);
-    const nowTime = Date.now();
+    const currFrame = frameNumber.current;
 
-    const dirY =
-      deltaPos.row > 0 ? MovementDirection.Down : MovementDirection.Up;
-    if (
-      deltaPos.row != 0 &&
-      (nowTime - lastVerticalMove.current.time > singleDirMoveCooldown ||
-        dirY != lastVerticalMove.current.dir)
-    ) {
-      lastVerticalMove.current.time = nowTime;
-      lastVerticalMove.current.dir = dirY;
-    } else deltaPos.row = 0;
+    if (startMoveFrame.current < 0) startMoveFrame.current = currFrame;
+    if ((currFrame - startMoveFrame.current) % singleDirMoveCooldown == 0) {
+      movePlayer(deltaPos);
+    }
+    // const cooldownDoneY: boolean =
+    //   (currFrame - lastVerticalMove.current.time) % singleDirMoveCooldown == 0;
+    // const dirY =
+    //   deltaPos.row > 0 ? MovementDirection.Down : MovementDirection.Up;
+    // if (
+    //   deltaPos.row != 0 &&
+    //   (cooldownDoneY || dirY != lastVerticalMove.current.dir)
+    // ) {
+    //   lastVerticalMove.current.time = currFrame;
+    //   lastVerticalMove.current.dir = dirY;
+    // } else deltaPos.row = 0;
+    //
+    // const cooldownDoneX =
+    //   (currFrame - lastHorizontalMove.current.time) % singleDirMoveCooldown ==
+    //   0;
+    // const dirX =
+    //   deltaPos.col > 0 ? MovementDirection.Right : MovementDirection.Left;
+    // if (
+    //   deltaPos.col != 0 &&
+    //   (cooldownDoneX || dirX != lastHorizontalMove.current.dir)
+    // ) {
+    //   lastHorizontalMove.current.time = currFrame;
+    //   lastHorizontalMove.current.dir = dirX;
+    // } else deltaPos.col = 0;
 
-    const dirX =
-      deltaPos.col > 0 ? MovementDirection.Right : MovementDirection.Left;
-    if (
-      deltaPos.col != 0 &&
-      (nowTime - lastHorizontalMove.current.time > singleDirMoveCooldown ||
-        dirX != lastHorizontalMove.current.dir)
-    ) {
-      lastHorizontalMove.current.time = nowTime;
-      lastHorizontalMove.current.dir = dirX;
-    } else deltaPos.col = 0;
-
-    movePlayer(deltaPos);
+    // movePlayer(deltaPos);
   }
 
-  useAnimationUpdate(30, updatePosition);
+  useAnimationUpdate(fps, () => {
+    frameNumber.current = (frameNumber.current + 1) % fps;
+    updatePosition();
+  });
 
   window.onkeydown = (e) => {
     if (isMovementKey(e.code) && !e.repeat) {
       keysPressed.current.add(e.code);
       updatePosition();
     }
+
+    // const md = getMovementDirection(e.code);
+    // if (md !== undefined) {
+    //   // const nowTime = Date.now();
+    //   keysPressed.current.add(e.code);
+    //   // if (md === MovementDirection.Up || md === MovementDirection.Down) {
+    //   //   lastVerticalMove.current.time = Date.now();
+    //   // } else lastHorizontalMove.current.time = Date.now();
+    // }
+    // updatePosition();
   };
 
   window.onkeyup = (e) => {
-    if (isMovementKey(e.code)) keysPressed.current.delete(e.code);
+    const md = getMovementDirection(e.code);
+    if (md !== undefined) {
+      keysPressed.current.delete(e.code);
+      if (keysPressed.current.size === 0) startMoveFrame.current = -1;
+      // if (md === MovementDirection.Up || md === MovementDirection.Down)
+      //   lastVerticalMove.current.time = Date.now();
+      // else lastHorizontalMove.current.time = Date.now();
+    }
   };
 };
 

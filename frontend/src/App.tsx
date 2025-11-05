@@ -1,5 +1,5 @@
 import "./index.css";
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 import MazeRenderer from "./components/MazeRenderer";
 import GameCanvas from "./components/GameCanvas";
 import { MazeSize } from "./types/maze-size";
@@ -16,6 +16,7 @@ function App() {
     mazeSize: MazeSize.Small,
   });
   const [currMaze, setCurrMaze] = useState(new Maze(createRectGrid(5, 5)));
+  const [genFlag, setGenFlag] = useState<boolean>(true);
 
   function handleSizeChange(e: ChangeEvent<HTMLInputElement>) {
     e.preventDefault();
@@ -49,20 +50,6 @@ function App() {
     setMazeSize((s) => ({ ...s, mazeSize: strToSize(e.target.value) }));
   }
 
-  function generateMaze() {
-    const grid = generateDFSRectGrid(
-      mazeSize.size * 2 - 1,
-      mazeSize.size * 2 - 1,
-    );
-
-    const border = {
-      finishColumn: getRandomInt(1, mazeSize.size) * 2 - 1,
-      startColumn: getRandomInt(1, mazeSize.size) * 2 - 1,
-    };
-    const maze = new Maze(grid, border);
-    setCurrMaze(maze);
-  }
-
   return (
     <>
       <div className="flex flex-row">
@@ -88,12 +75,16 @@ function App() {
         </select>
       </div>
       <br />
-      <button onClick={generateMaze} className="bg-gray-500 text-3xl">
+      <button onClick={() => setGenFlag(true)} className="bg-gray-500 text-3xl">
         Generate maze
       </button>
 
       {/*<MazeRenderer maze={currMaze} size={mazeSize.mazeSize} />*/}
-      <GameManager maze={currMaze} size={mazeSize.mazeSize} />
+      <GameManager
+        mazeSize={mazeSize.mazeSize}
+        mazeScale={mazeSize.size}
+        genFlag={{ flag: genFlag, setFlag: setGenFlag }}
+      />
     </>
   );
 }
