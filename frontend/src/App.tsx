@@ -7,6 +7,7 @@ import { getRandomInt } from "@shared/utils/common-helpers";
 import { generateDFSRectGrid } from "@shared/utils/maze-generator";
 import { Maze } from "@shared/types/Maze";
 import { createRectGrid } from "@shared/types/Grid";
+import GameManager from "./components/GameManager";
 
 function App() {
   const [mazeSize, setMazeSize] = useState({
@@ -92,7 +93,7 @@ function App() {
       </button>
 
       <MazeRenderer maze={currMaze} size={mazeSize.mazeSize} />
-      <GameCanvas maze={currMaze} size={mazeSize.mazeSize} />
+      <GameManager maze={currMaze} size={mazeSize.mazeSize} />
     </>
   );
 }

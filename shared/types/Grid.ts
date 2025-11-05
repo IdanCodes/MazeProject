@@ -1,3 +1,5 @@
+import {GridPos} from "./GridPos";
+
 /**
  * Type of cell
  */
@@ -138,7 +140,3 @@ export function addBorder(srcGrid: Grid): Grid {
   return resultGrid;
 }
 
-export type GridPos = {
-  row: number;
-  col: number;
-};

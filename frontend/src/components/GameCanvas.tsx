@@ -1,21 +1,18 @@
 import React, { useCallback, useRef } from "react";
-import { Maze } from "../types/Maze";
-import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
-import useAnimationUpdate from "../hooks/useAnimationUpdate";
+import { Maze } from "@shared/types/Maze";
 
 function GameCanvas({
   maze,
-  size,
+  cellScale,
   cellSpacing = 0,
 }: {
   maze: Maze;
-  size: MazeSize;
+  cellScale: number;
   cellSpacing?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const matrix = maze.getMatrix();
-  const cellScale = getMazeRenderHeight(size) / maze.height;
   const canvasWidth: number = (cellScale + cellSpacing) * maze.width;
   const canvasHeight: number = (cellScale + cellSpacing) * maze.height;
 
