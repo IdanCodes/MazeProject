@@ -1,5 +1,5 @@
-import { getRandomInt } from "./generalUtils";
-import { CellType, createRectGrid, Grid, GridPos } from "../types/Grid";
+import { getRandomInt } from "./common-helpers";
+import {CellType, createRectGrid, Grid, GridPos} from "../types/Grid";
 
 function recursiveDFS(grid: Grid, pos: GridPos): void {
   // assume pos is a valid position in the grid

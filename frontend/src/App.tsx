@@ -1,10 +1,12 @@
 import "./index.css";
-import { generateDFSRectGrid } from "./utils/mazeGenerator";
 import { ChangeEvent, useState } from "react";
-import MazeRenderer, { MazeSize } from "./components/MazeRenderer";
-import { Maze } from "./types/Maze";
-import { createRectGrid } from "./types/Grid";
-import { getRandomInt } from "./utils/generalUtils";
+import MazeRenderer from "./components/MazeRenderer";
+import GameCanvas from "./components/GameCanvas";
+import { MazeSize } from "./types/maze-size";
+import { getRandomInt } from "@shared/utils/common-helpers";
+import { generateDFSRectGrid } from "@shared/utils/maze-generator";
+import { Maze } from "@shared/types/Maze";
+import { createRectGrid } from "@shared/types/Grid";
 
 function App() {
   const [mazeSize, setMazeSize] = useState({
@@ -62,36 +64,35 @@ function App() {
 
   return (
     <>
-      <div>
-        <div className="flex flex-row">
-          <p className="text-3xl">Size:</p>
-          <input
-            type="number"
-            name="size"
-            className="border-2 text-3xl"
-            value={mazeSize.size}
-            onChange={handleSizeChange}
-          />
-          <select
-            id="mazeSizes"
-            name="mazeSize"
-            size={6}
-            onChange={handleUpdateMazeSize}
-          >
-            <option value="XS">XS</option>
-            <option value="Small">Small</option>
-            <option value="Medium">Medium</option>
-            <option value="Large">Large</option>
-            <option value="XL">XL</option>
-          </select>
-        </div>
-        <br />
-        <button onClick={generateMaze} className="bg-gray-500 text-3xl">
-          Generate maze
-        </button>
-
-        <MazeRenderer maze={currMaze} size={mazeSize.mazeSize} />
+      <div className="flex flex-row">
+        <p className="text-3xl">Size:</p>
+        <input
+          type="number"
+          name="size"
+          className="border-2 text-3xl"
+          value={mazeSize.size}
+          onChange={handleSizeChange}
+        />
+        <select
+          id="mazeSizes"
+          name="mazeSize"
+          size={6}
+          onChange={handleUpdateMazeSize}
+        >
+          <option value="XS">XS</option>
+          <option value="Small">Small</option>
+          <option value="Medium">Medium</option>
+          <option value="Large">Large</option>
+          <option value="XL">XL</option>
+        </select>
       </div>
+      <br />
+      <button onClick={generateMaze} className="bg-gray-500 text-3xl">
+        Generate maze
+      </button>
+
+      <MazeRenderer maze={currMaze} size={mazeSize.mazeSize} />
+      <GameCanvas maze={currMaze} size={mazeSize.mazeSize} />
     </>
   );
 }

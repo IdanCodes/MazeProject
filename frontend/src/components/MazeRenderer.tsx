@@ -1,15 +1,8 @@
 import React, { JSX } from "react";
-import { Maze } from "../types/Maze";
-import { CellType } from "../types/Grid";
 import clsx from "clsx";
-
-export enum MazeSize {
-  XS,
-  Small,
-  Medium,
-  Large,
-  XL,
-}
+import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
+import { CellType } from "@shared/types/Grid";
+import { Maze } from "@shared/types/Maze";
 
 function MatrixCell({
   cell,
@@ -64,21 +57,6 @@ function MatrixRow({
   );
 }
 
-function getMazeHeight(size: MazeSize) {
-  switch (size) {
-    case MazeSize.XS:
-      return 50;
-    case MazeSize.Small:
-      return 100;
-    case MazeSize.Medium:
-      return 150;
-    case MazeSize.Large:
-      return 200;
-    case MazeSize.XL:
-      return 250;
-  }
-}
-
 function MazeRenderer({
   maze,
   size,
@@ -89,8 +67,10 @@ function MazeRenderer({
   cellSpacing?: number;
 }) {
   const matrix = maze.getMatrix();
-  const cellScale = getMazeHeight(size) / maze.height;
+  const cellScale = getMazeRenderHeight(size) / maze.height;
   const rowWidth: number = (cellScale + cellSpacing) * maze.width;
+
+  // return <canvas></canvas>;
 
   return (
     <div className="flex justify-center">
