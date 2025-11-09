@@ -1,7 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import useAnimationUpdate from "./useAnimationUpdate";
-import { clamp } from "@shared/utils/common-helpers";
-import { GridPos } from "@shared/types/GridPos";
+import { useEffect, useState } from "react";
+import { Vector2 } from "@shared/interfaces/Vector2";
 
 enum MovementDirection {
   Up,
@@ -30,22 +28,10 @@ function isMovementKey(code: string): boolean {
 
 // mazeScale is the number of cells in a row/column
 const usePlayerPositionHandler = (
-  movePlayer: (deltaPos: GridPos) => void,
+  movePlayer: (deltaPos: Vector2) => void,
 ): void => {
   // Saves whether a key for a direction is pressed
   const [keysPressed, setKeysPressed] = useState<Set<string>>(new Set());
-
-  // const lastHorizontalMove = useRef<{ dir: MovementDirection; time: number }>({
-  //   dir: MovementDirection.Up,
-  //   time: 0,
-  // });
-  // const lastVerticalMove = useRef<{ dir: MovementDirection; time: number }>({
-  //   dir: MovementDirection.Left,
-  //   time: 0,
-  // });
-  // const moveCooldown = 8;
-  // const startMoveFrame = useRef<number>(-1);
-  // const frameNumber = useRef<number>(0);
 
   function generateMoveDirs() {
     const moveDirections: Set<MovementDirection> = new Set();
@@ -57,34 +43,7 @@ const usePlayerPositionHandler = (
     return moveDirections;
   }
 
-  // const updatePlayerPosition = useCallback(() => {
-  //   const moveDirections = generateMoveDirs();
-  //   // const nowTime = Date.now();
-  //
-  //   let deltaY = 0;
-  //   if (moveDirections.has(MovementDirection.Up)) deltaY -= 1;
-  //   if (moveDirections.has(MovementDirection.Down)) deltaY += 1;
-  //
-  //   // const newRow = playerPos.row + deltaY;
-  //   // const dirY =
-  //   //   deltaY > 0
-  //   //     ? MovementDirection.Down
-  //   //     : deltaY < 0
-  //   //       ? MovementDirection.Up
-  //   //       : undefined;
-  //   // if (dirY && nowTime - lastVerticalMove.current.time > movementDelayMS) {
-  //   //   lastVerticalMove.current.time = nowTime;
-  //   //   lastVerticalMove.current.dir = dirY;
-  //   // }
-  //
-  //   let deltaX = 0;
-  //   if (moveDirections.has(MovementDirection.Right)) deltaX += 1;
-  //   if (moveDirections.has(MovementDirection.Left)) deltaX -= 1;
-  //
-  //   movePlayer({ row: deltaY, col: deltaX });
-  // }, [playerPos]);
-
-  function getDeltaPos(moveDirections: Set<MovementDirection>): GridPos {
+  function getDeltaPos(moveDirections: Set<MovementDirection>): Vector2 {
     let deltaY = 0;
     if (moveDirections.has(MovementDirection.Up)) deltaY -= 1;
     if (moveDirections.has(MovementDirection.Down)) deltaY += 1;
@@ -93,7 +52,7 @@ const usePlayerPositionHandler = (
     if (moveDirections.has(MovementDirection.Right)) deltaX += 1;
     if (moveDirections.has(MovementDirection.Left)) deltaX -= 1;
 
-    return { row: deltaY, col: deltaX };
+    return { x: deltaX, y: deltaY };
   }
 
   // function updatePosition() {

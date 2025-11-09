@@ -1,5 +1,5 @@
 import { addBorder, CellType, Grid } from "./Grid";
-import {GridPos} from "./GridPos";
+import {Vector2} from "../interfaces/Vector2";
 
 export class Maze {
   public readonly width: number;
@@ -19,11 +19,11 @@ export class Maze {
     if (border) {
       grid = addBorder(grid);
       if (0 <= border.finishColumn && border.finishColumn < grid.width)
-        grid.setCell({ row: 0, col: border.finishColumn }, CellType.Passage);
+        grid.setCell({ x: border.finishColumn, y: 0 }, CellType.Passage);
 
       if (0 <= border.startColumn && border.startColumn < grid.width)
         grid.setCell(
-          { row: grid.height - 1, col: border.startColumn },
+          { x: border.startColumn, y: grid.height - 1 },
           CellType.Passage,
         );
     }
@@ -33,7 +33,7 @@ export class Maze {
     this.height = grid.height;
   }
 
-  public getCell(pos: GridPos): CellType {
+  public getCell(pos: Vector2): CellType {
     return this.grid.getCell(pos);
   }
 
@@ -46,11 +46,11 @@ export class Maze {
   }
 
   // clamp a position to this maze's bounds
-  public clamp(pos: GridPos): GridPos {
+  public clamp(pos: Vector2): Vector2 {
       return this.grid.clamp(pos);
   }
 
-  public inBounds(pos: GridPos): boolean {
+  public inBounds(pos: Vector2): boolean {
       return this.grid.inBounds(pos);
   }
 }

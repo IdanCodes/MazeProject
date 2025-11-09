@@ -2,17 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
 import { Maze } from "@shared/types/Maze";
-import GameCanvas, {
-  calcNormalized,
-  GameCanvasHandle,
-  scaleVec,
-  Vector2,
-} from "./GameCanvas";
-import { GridPos } from "@shared/types/GridPos";
+import GameCanvas, { GameCanvasHandle } from "./GameCanvas";
 import { CellType, createRectGrid } from "@shared/types/Grid";
 import { generateDFSRectGrid } from "@shared/utils/maze-generator";
 import { getRandomInt } from "@shared/utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
+import { calcNormalized, scaleVec, Vector2 } from "@shared/interfaces/Vector2";
 
 function GameManager({
   mazeSize,
@@ -27,25 +22,23 @@ function GameManager({
 }) {
   const [maze, setMaze] = useState<Maze>(new Maze(createRectGrid(5, 5)));
   const gameCanvasRef = useRef<GameCanvasHandle | null>(null);
-  const [playerPos, setPlayerPos] = useState<GridPos>({ row: 0, col: 0 });
-  const inputVector = useRef<GridPos>({ row: 0, col: 0 });
-  const [canvasPos, setCanvasPos] = useState<Vector2>({ x: 0, y: 0 });
+  const [playerPos, setPlayerPos] = useState<Vector2>({ x: 0, y: 0 });
   const velocity = useRef<Vector2>({ x: 0, y: 0 });
-  const speedAmplifier = 3.5;
+  const speedAmplifier = 6;
 
   const cellScale = getMazeRenderHeight(mazeSize) / maze.height;
   usePlayerInputHandler((inputVec) => {
     velocity.current = scaleVec(
       calcNormalized({
-        x: inputVec.col,
-        y: inputVec.row,
+        x: inputVec.x,
+        y: inputVec.y,
       }),
       speedAmplifier,
     );
   });
 
   useAnimationUpdate(fps, () => {
-    setCanvasPos((cp) => {
+    setPlayerPos((cp) => {
       if (!gameCanvasRef.current) return cp;
 
       // TODO: if close to wall, clamp the next pos to be close to but not on the wall
@@ -55,7 +48,7 @@ function GameManager({
         y: cp.y + velocity.current.y,
       };
 
-      const newGridPos: GridPos = gameCanvasRef.current.canvasToGrid(newPos);
+      const newGridPos: Vector2 = gameCanvasRef.current.canvasToGrid(newPos);
 
       if (
         maze.inBounds(newGridPos) &&
@@ -67,11 +60,11 @@ function GameManager({
         x: newPos.x,
         y: cp.y,
       };
-      const onlyHorizontalGP: GridPos =
+      const onlyHorizontalGP: Vector2 =
         gameCanvasRef.current.canvasToGrid(onlyHorizontal);
       if (
         maze.inBounds(onlyHorizontalGP) &&
-        maze.getCell(onlyHorizontalGP) !== CellType.Wall
+        maze.getCell(onlyHorizontalGP) === CellType.Passage
       )
         return onlyHorizontal;
 
@@ -79,11 +72,11 @@ function GameManager({
         x: cp.x,
         y: newPos.y,
       };
-      const onlyVerticalGP: GridPos =
+      const onlyVerticalGP: Vector2 =
         gameCanvasRef.current.canvasToGrid(onlyVertical);
       if (
         maze.inBounds(onlyVerticalGP) &&
-        maze.getCell(onlyVerticalGP) !== CellType.Wall
+        maze.getCell(onlyVerticalGP) === CellType.Passage
       )
         return onlyVertical;
 
@@ -169,8 +162,8 @@ function GameManager({
     };
     setMaze(new Maze(grid));
     setPlayerPos({
-      row: maze.height - 1,
-      col: border.startColumn - 1,
+      x: border.startColumn - 1,
+      y: maze.height - 1,
     });
   }
 
@@ -186,7 +179,7 @@ function GameManager({
       ref={gameCanvasRef}
       maze={maze}
       cellScale={cellScale}
-      playerPos={canvasPos}
+      playerPos={playerPos}
     />
   );
 }

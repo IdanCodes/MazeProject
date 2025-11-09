@@ -1,5 +1,5 @@
-import {GridPos} from "./GridPos";
 import {clamp} from "../utils/common-helpers";
+import {Vector2} from "../interfaces/Vector2";
 
 /**
  * Type of cell
@@ -47,34 +47,34 @@ export class Grid {
     }
   }
 
-  public getCell(pos: GridPos): CellType {
-    return this.matrix[pos.row][pos.col];
+  public getCell(pos: Vector2): CellType {
+    return this.matrix[pos.y][pos.x];
   }
 
-  public setCell(pos: GridPos, cell: CellType): void {
-    this.matrix[pos.row][pos.col] = cell;
+  public setCell(pos: Vector2, cell: CellType): void {
+    this.matrix[pos.y][pos.x] = cell;
   }
 
   // get neighbors on the grid (+-2, +-2)
-  public getNeighbors(pos: GridPos): GridPos[] {
-    const result: GridPos[] = [];
+  public getNeighbors(pos: Vector2): Vector2[] {
+    const result: Vector2[] = [];
 
-    const upRow = pos.row - 2;
-    const rightCol = pos.col + 2;
-    const downRow = pos.row + 2;
-    const leftCol = pos.col - 2;
+    const upRow = pos.y - 2;
+    const rightCol = pos.x + 2;
+    const downRow = pos.y + 2;
+    const leftCol = pos.x - 2;
 
     // check up
-    if (upRow >= 0) result.push({ row: upRow, col: pos.col });
+    if (upRow >= 0) result.push({ x: pos.x, y: upRow });
 
     // check right
-    if (rightCol < this.width) result.push({ row: pos.row, col: rightCol });
+    if (rightCol < this.width) result.push({ x: rightCol, y: pos.y });
 
     // check down
-    if (downRow < this.height) result.push({ row: downRow, col: pos.col });
+    if (downRow < this.height) result.push({ x: pos.x, y: downRow });
 
     // check left
-    if (leftCol >= 0) result.push({ row: pos.row, col: leftCol });
+    if (leftCol >= 0) result.push({ x: leftCol, y: pos.y });
 
     return result;
   }
@@ -100,15 +100,15 @@ export class Grid {
   }
 
   // clamp a position into this grid
-  public clamp(pos: GridPos): GridPos {
+  public clamp(pos: Vector2): Vector2 {
     return {
-      row: clamp(pos.row, 0, this.height - 1),
-      col: clamp(pos.col, 0, this.width - 1),
+      x: clamp(pos.x, 0, this.width - 1),
+      y: clamp(pos.y, 0, this.height - 1),
     };
   }
 
-  public inBounds(pos: GridPos): boolean {
-      return pos.row >= 0 && pos.row < this.height && pos.col >= 0 && pos.col < this.width;
+  public inBounds(pos: Vector2): boolean {
+      return pos.y >= 0 && pos.y < this.height && pos.x >= 0 && pos.x < this.width;
   }
 }
 
@@ -144,8 +144,8 @@ export function addBorder(srcGrid: Grid): Grid {
     // copy row
     for (let j = 1; j < resultGrid.width - 1; j++) {
       resultGrid.setCell(
-        { row: i, col: j },
-        srcGrid.getCell({ row: i - 1, col: j - 1 }),
+        { x: j, y: i },
+        srcGrid.getCell({ x: j - 1, y: i - 1 }),
       );
     }
   }
