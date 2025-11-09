@@ -24,7 +24,6 @@ function GameCanvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const matrix = maze.getMatrix();
   const canvasWidth: number = cellScale * (maze.width + 1);
   const canvasHeight: number = cellScale * (maze.height + 1);
 
@@ -55,67 +54,69 @@ function GameCanvas({
     ctx.strokeStyle = "2px black";
   };
 
-  const drawMaze = (ctx: CanvasRenderingContext2D): void => {
-    for (let i = 0; i < maze.height; i += 2) {
-      for (let j = 0; j < maze.width; j += 2) {
-        const pos = { row: i, col: j };
-        // fillCell(ctx, pos, cellColor(maze.getCell(pos)));
+  const drawGrid = (ctx: CanvasRenderingContext2D): void => {
+    ctx.strokeStyle = "lightgray";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
 
-        // check horizontal barrier
-        // const rightBridgePos: GridPos = { row: i, col: j + 1 };
-        // if (maze.getCell(rightBridgePos) === CellType.Wall) {
-        //   ctx.fillStyle = "black";
-        //   const startPos = getCanvasPos(pos);
-        //   ctx.fillRect(
-        //     startPos.x + (3 * cellScale) / 5,
-        //     startPos.y,
-        //     startPos.x + (5 * cellScale) / 4,
-        //     startPos.y + cellScale * 2,
-        //   );
-        // }
-      }
+    for (let lineY = 0; lineY <= canvasHeight; lineY += 2 * cellScale) {
+      ctx.moveTo(0, lineY);
+      ctx.lineTo(canvasWidth, lineY);
     }
 
+    for (let lineX = 0; lineX <= canvasWidth; lineX += 2 * cellScale) {
+      ctx.moveTo(lineX, 0);
+      ctx.lineTo(lineX, canvasHeight);
+    }
+
+    ctx.stroke();
+  };
+
+  const drawMaze = (ctx: CanvasRenderingContext2D): void => {
+    ctx.fillStyle = "black";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+
     for (let i = 0; i < maze.height; i += 2) {
       for (let j = 0; j < maze.width; j += 2) {
-        const pos = { row: i, col: j };
         const rightBar = { row: i, col: j + 1 };
         const downBar = { row: i + 1, col: j };
 
         // vertical wall (up-down)
         if (maze.getCell(rightBar) === CellType.Wall) {
           const rightCanvasPos = getCanvasPos({ row: i, col: j + 2 });
-          ctx.fillStyle = "black";
-          ctx.fillRect(
-            rightCanvasPos.x - cellScale / 4,
-            rightCanvasPos.y,
-            cellScale / 2,
-            cellScale * 2,
-          );
+          ctx.moveTo(rightCanvasPos.x, rightCanvasPos.y - 1);
+          ctx.lineTo(rightCanvasPos.x, rightCanvasPos.y + cellScale * 2 + 1);
         }
 
         // horizontal wall (left-right)
         if (maze.inBounds(downBar) && maze.getCell(downBar) === CellType.Wall) {
-          const rightCanvasPos = getCanvasPos({ row: i + 2, col: j });
-          ctx.fillStyle = "black";
-          ctx.fillRect(
-            rightCanvasPos.x,
-            rightCanvasPos.y - cellScale / 4,
-            cellScale * 2,
-            cellScale / 2,
-          );
+          const downCanvasPos = getCanvasPos({ row: i + 2, col: j });
+          ctx.moveTo(downCanvasPos.x - 1, downCanvasPos.y);
+          ctx.lineTo(downCanvasPos.x + cellScale * 2 + 1, downCanvasPos.y);
         }
       }
+    }
+
+    ctx.stroke();
+
+    // fill "junctions"
+    for (let i = 1; i < maze.height; i += 2) {
+      for (let j = 1; j < maze.width; j += 2) {}
     }
   };
 
   const drawGame = (ctx: CanvasRenderingContext2D): void => {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    ctx.fillStyle = "rgb(245,245,245)";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // fillCell(ctx, playerPos, playerColor);
+    drawGrid(ctx);
+
     const position = getCanvasPos(playerPos);
     ctx.strokeStyle = "black";
     ctx.fillStyle = playerColor;
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(
       position.x + cellScale,
@@ -145,7 +146,7 @@ function GameCanvas({
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        className="border-2 border-solid border-black block"
+        className="border-4 border-solid border-black block rounded-xl"
       ></canvas>
     </div>
   );

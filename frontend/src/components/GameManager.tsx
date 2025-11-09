@@ -82,22 +82,21 @@ function GameManager({
     return addPos(pos, delta);
   }
 
+  const loopNumber = useRef<number>(0);
   usePlayerInputHandler((deltaPos: GridPos) => {
     inputVector.current = deltaPos;
-    moveLoop(deltaPos);
+    loopNumber.current = (loopNumber.current + 1) % 5;
+    moveLoop(loopNumber.current);
   });
 
-  function moveLoop(deltaPos: GridPos) {
-    if (
-      !equalPos(deltaPos, inputVector.current) ||
-      equalPos(deltaPos, ZERO_POS)
-    )
+  function moveLoop(loopN: number) {
+    if (loopNumber.current != loopN || equalPos(inputVector.current, ZERO_POS))
       return;
 
     setPlayerPos((pos) => getNextPos(pos, inputVector.current));
 
     setTimeout(() => {
-      moveLoop(deltaPos);
+      moveLoop(loopN);
     }, 1000 / fps);
   }
 
