@@ -111,7 +111,7 @@ const GameCanvas = forwardRef<
 
   const drawGrid = (ctx: CanvasRenderingContext2D): void => {
     ctx.strokeStyle = "lightgray";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.beginPath();
 
     for (let lineY = 0; lineY <= canvasHeight; lineY += 2 * cellScale) {

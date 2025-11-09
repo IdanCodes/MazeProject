@@ -3,24 +3,16 @@ import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
 import { Maze } from "@shared/types/Maze";
 import GameCanvas, {
-  Vector2,
-  GameCanvasHandle,
   calcNormalized,
+  GameCanvasHandle,
   scaleVec,
-  ZERO_VEC,
+  Vector2,
 } from "./GameCanvas";
-import {
-  addPos,
-  equalPos,
-  GridPos,
-  isDiagonalVector,
-  ZERO_POS,
-} from "@shared/types/GridPos";
+import { GridPos } from "@shared/types/GridPos";
 import { CellType, createRectGrid } from "@shared/types/Grid";
 import { generateDFSRectGrid } from "@shared/utils/maze-generator";
 import { getRandomInt } from "@shared/utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
-import gameCanvas from "./GameCanvas";
 
 function GameManager({
   mazeSize,
@@ -39,7 +31,7 @@ function GameManager({
   const inputVector = useRef<GridPos>({ row: 0, col: 0 });
   const [canvasPos, setCanvasPos] = useState<Vector2>({ x: 0, y: 0 });
   const velocity = useRef<Vector2>({ x: 0, y: 0 });
-  const speedAmplifier = 5;
+  const speedAmplifier = 3.5;
 
   const cellScale = getMazeRenderHeight(mazeSize) / maze.height;
   usePlayerInputHandler((inputVec) => {
@@ -54,12 +46,47 @@ function GameManager({
 
   useAnimationUpdate(fps, () => {
     setCanvasPos((cp) => {
+      if (!gameCanvasRef.current) return cp;
+
+      // TODO: if close to wall, clamp the next pos to be close to but not on the wall
+
       const newPos: Vector2 = {
         x: cp.x + velocity.current.x,
         y: cp.y + velocity.current.y,
       };
-      if (gameCanvasRef.current && gameCanvasRef.current.isMovableCell(newPos))
+
+      const newGridPos: GridPos = gameCanvasRef.current.canvasToGrid(newPos);
+
+      if (
+        maze.inBounds(newGridPos) &&
+        maze.getCell(newGridPos) !== CellType.Wall
+      )
         return newPos;
+
+      const onlyHorizontal: Vector2 = {
+        x: newPos.x,
+        y: cp.y,
+      };
+      const onlyHorizontalGP: GridPos =
+        gameCanvasRef.current.canvasToGrid(onlyHorizontal);
+      if (
+        maze.inBounds(onlyHorizontalGP) &&
+        maze.getCell(onlyHorizontalGP) !== CellType.Wall
+      )
+        return onlyHorizontal;
+
+      const onlyVertical: Vector2 = {
+        x: cp.x,
+        y: newPos.y,
+      };
+      const onlyVerticalGP: GridPos =
+        gameCanvasRef.current.canvasToGrid(onlyVertical);
+      if (
+        maze.inBounds(onlyVerticalGP) &&
+        maze.getCell(onlyVerticalGP) !== CellType.Wall
+      )
+        return onlyVertical;
+
       return cp;
     });
   });
