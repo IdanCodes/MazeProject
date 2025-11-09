@@ -18,7 +18,7 @@ import useAnimationUpdate from "../hooks/useAnimationUpdate";
 function GameManager({
   mazeSize,
   mazeScale,
-  fps = 120,
+  fps = 5,
   genFlag,
 }: {
   mazeSize: MazeSize;
@@ -28,110 +28,78 @@ function GameManager({
 }) {
   const [maze, setMaze] = useState<Maze>(new Maze(createRectGrid(5, 5)));
   const [playerPos, setPlayerPos] = useState<GridPos>({ row: 0, col: 0 });
-  const delta = useRef<GridPos>({ row: 0, col: 0 });
-  const lastMove = useRef<GridPos>({ row: 0, col: 0 });
+  const inputVector = useRef<GridPos>({ row: 0, col: 0 });
   const cellScale = getMazeRenderHeight(mazeSize) / maze.height;
 
-  const currFrame = useRef<number>(0);
-  const startMove = useRef<number>(-1);
-  const moveCooldown = 10;
-
-  function canMoveDelta(delta: GridPos): boolean {
-    delta = {
-      row: delta.row > 0 ? 1 : delta.row < 0 ? -1 : 0,
-      col: delta.col > 0 ? 1 : delta.col < 0 ? -1 : 0,
+  function getNextPos(pos: GridPos, inputVec: GridPos): GridPos {
+    let delta: GridPos = {
+      row: inputVec.row > 0 ? 2 : inputVec.row < 0 ? -2 : 0,
+      col: inputVec.col > 0 ? 2 : inputVec.col < 0 ? -2 : 0,
     };
 
-    const targetPos = addPos(playerPos, addPos(delta, delta));
-    if (!maze.inBounds(targetPos)) return false;
-
-    const bridgePos = addPos(playerPos, delta);
-    return maze.getCell(bridgePos) !== CellType.Wall;
-  }
-
-  useAnimationUpdate(fps, () => {
-    currFrame.current = (currFrame.current + 1) % fps;
-    if (equalPos(delta.current, ZERO_POS)) return;
-
-    if (startMove.current < 0) startMove.current = currFrame.current;
-
-    if ((currFrame.current - startMove.current) % moveCooldown != 0) return;
-
-    const oldPos = playerPos;
-    let deltaPos = { ...delta.current };
-    deltaPos = addPos(deltaPos, deltaPos);
-    if (isDiagonalVector(deltaPos)) {
-      // moving vertically
-      if (lastMove.current.row != 0) {
-        console.log("Moving vertically");
-        const moveHorizontal = maze.clamp(
-          addPos(oldPos, { row: 0, col: deltaPos.col }),
-        );
-        // if (maze.getCell(moveHorizontal) === CellType.Wall) deltaPos.col = 0;
-        if (!canMoveDelta({ row: 0, col: deltaPos.col })) deltaPos.col = 0;
-        else deltaPos.row = 0;
-      } else {
-        const moveVertical = maze.clamp(
-          addPos(oldPos, { row: deltaPos.row, col: 0 }),
-        );
-        // if (maze.getCell(moveVertical) === CellType.Wall) deltaPos.row = 0;
-        if (!canMoveDelta({ row: deltaPos.row, col: 0 })) deltaPos.row = 0;
-        else deltaPos.col = 0;
-      }
+    const targetPos = addPos(pos, delta);
+    const targetBridge = addPos(pos, inputVec);
+    if (!isDiagonalVector(inputVec)) {
+      if (
+        !maze.inBounds(targetPos) ||
+        maze.getCell(targetBridge) === CellType.Wall
+      )
+        return pos;
+      return targetPos;
     }
 
-    // let newPos = maze.clamp(addPos(oldPos, deltaPos));
-    if (!canMoveDelta(deltaPos)) return oldPos;
-    const newPos = addPos(oldPos, deltaPos);
-    console.log(deltaPos);
-    lastMove.current = deltaPos;
-    setPlayerPos(newPos);
-  });
-
-  useEffect(() => {
+    const verticalBridge: GridPos = {
+      row: pos.row + inputVec.row,
+      col: pos.col,
+    };
+    const verticalTarget: GridPos = {
+      row: pos.row + delta.row,
+      col: pos.col,
+    };
     if (
-      equalPos(delta.current, ZERO_POS) ||
-      equalPos(lastMove.current, ZERO_POS)
-    ) {
-      startMove.current = -1;
-      lastMove.current = ZERO_POS;
-    } else startMove.current = currFrame.current;
-  }, [delta.current, lastMove.current]);
+      !maze.inBounds(verticalTarget) ||
+      maze.getCell(verticalBridge) === CellType.Wall
+    )
+      delta.row = 0;
 
-  // usePlayerPositionHandler((deltaPos: GridPos) => {
-  //   let newPos = maze.clamp(addPos(playerPos, deltaPos));
-  //   if (equalPos(playerPos, newPos)) return (delta.current = ZERO_POS);
-  //
-  //   if (lastMove.current.row != 0) {
-  //     if (!moveHorizontal() && !moveVertical())
-  //       lastMove.current = { row: 0, col: 0 };
-  //   } else if (!moveVertical() && !moveHorizontal())
-  //     lastMove.current = { row: 0, col: 0 };
-  //
-  //   function moveHorizontal() {
-  //     return tryMove({ row: 0, col: deltaPos.col });
-  //   }
-  //
-  //   function moveVertical() {
-  //     return tryMove({ row: deltaPos.row, col: 0 });
-  //   }
-  //
-  //   function tryMove(deltaPos: GridPos): boolean {
-  //     const newPos = maze.clamp(addPos(playerPos, deltaPos));
-  //     if (maze.getCell(newPos) === CellType.Passage) {
-  //       // setPlayerPos(newPos);
-  //       delta.current = deltaPos;
-  //       lastMove.current = deltaPos;
-  //       return true;
-  //     }
-  //     return false;
-  //   }
-  // });
+    const horizontalBridge: GridPos = {
+      row: pos.row,
+      col: pos.col + inputVec.col,
+    };
+    const horizontalTarget: GridPos = {
+      row: pos.row,
+      col: pos.col + delta.col,
+    };
+    if (
+      !maze.inBounds(horizontalTarget) ||
+      maze.getCell(horizontalBridge) === CellType.Wall
+    )
+      delta.col = 0;
+
+    // diagonal -> horizontal
+    if (isDiagonalVector(delta)) delta.row = 0;
+
+    return addPos(pos, delta);
+  }
 
   usePlayerInputHandler((deltaPos: GridPos) => {
-    // console.log(deltaPos);
-    delta.current = deltaPos;
+    inputVector.current = deltaPos;
+    moveLoop(deltaPos);
   });
+
+  function moveLoop(deltaPos: GridPos) {
+    if (
+      !equalPos(deltaPos, inputVector.current) ||
+      equalPos(deltaPos, ZERO_POS)
+    )
+      return;
+
+    setPlayerPos((pos) => getNextPos(pos, inputVector.current));
+
+    setTimeout(() => {
+      moveLoop(deltaPos);
+    }, 1000 / fps);
+  }
 
   function generateMaze() {
     const grid = generateDFSRectGrid(mazeScale * 2 - 1, mazeScale * 2 - 1);
@@ -146,10 +114,6 @@ function GameManager({
       col: border.startColumn - 1,
     });
   }
-
-  // useEffect(() => {
-  //   console.log(playerPos);
-  // }, [playerPos]);
 
   useEffect(() => {
     if (!genFlag.flag) return;

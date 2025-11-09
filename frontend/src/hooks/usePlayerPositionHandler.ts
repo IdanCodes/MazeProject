@@ -46,7 +46,6 @@ const usePlayerPositionHandler = (
   // const moveCooldown = 8;
   // const startMoveFrame = useRef<number>(-1);
   // const frameNumber = useRef<number>(0);
-  const fps = 90;
 
   function generateMoveDirs() {
     const moveDirections: Set<MovementDirection> = new Set();
@@ -134,23 +133,17 @@ const usePlayerPositionHandler = (
   //   // movePlayer(deltaPos);
   // }
 
-  // useAnimationUpdate(fps, () => {
-  //   frameNumber.current = (frameNumber.current + 1) % fps;
-  // });
-
   useEffect(() => {
     movePlayer(getDeltaPos(generateMoveDirs()));
   }, [keysPressed]);
 
   window.onkeydown = (e) => {
-    if (isMovementKey(e.code) && !e.repeat) {
-      setKeysPressed((oldKeys) => {
-        const newKeys: Set<string> = new Set(oldKeys);
-        newKeys.add(e.code);
-        return newKeys;
-      });
-      // updatePosition();
-    }
+    if (e.repeat || !isMovementKey(e.code)) return;
+    setKeysPressed((oldKeys) => {
+      const newKeys: Set<string> = new Set(oldKeys);
+      newKeys.add(e.code);
+      return newKeys;
+    });
 
     // const md = getMovementDirection(e.code);
     // if (md !== undefined) {
@@ -164,23 +157,12 @@ const usePlayerPositionHandler = (
   };
 
   window.onkeyup = (e) => {
-    if (isMovementKey(e.code) && !e.repeat) {
-      setKeysPressed((oldKeys) => {
-        const newKeys: Set<string> = new Set(oldKeys);
-        newKeys.delete(e.code);
-        return newKeys;
-      });
-      // updatePosition();
-    }
-
-    // const md = getMovementDirection(e.code);
-    // if (md !== undefined) {
-    //   keysPressed.current.delete(e.code);
-    //   if (keysPressed.current.size === 0) startMoveFrame.current = -1;
-    //   // if (md === MovementDirection.Up || md === MovementDirection.Down)
-    //   //   lastVerticalMove.current.time = Date.now();
-    //   // else lastHorizontalMove.current.time = Date.now();
-    // }
+    if (e.repeat || !isMovementKey(e.code)) return;
+    setKeysPressed((oldKeys) => {
+      const newKeys: Set<string> = new Set(oldKeys);
+      newKeys.delete(e.code);
+      return newKeys;
+    });
   };
 };
 
