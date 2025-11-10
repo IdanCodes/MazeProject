@@ -16,7 +16,6 @@ import useAnimationUpdate from "../hooks/useAnimationUpdate";
 import {
   calcMagnitude,
   calcNormalized,
-  equalVec,
   scaleVec,
   Vector2,
   ZERO_VEC,
@@ -24,6 +23,8 @@ import {
 
 export interface GameManagerHandle {
   generateMaze: () => void;
+  getMaze: () => Maze;
+  setMaze: (maze: Maze) => void;
 }
 
 const GameManager = forwardRef<
@@ -123,6 +124,8 @@ const GameManager = forwardRef<
 
   useImperativeHandle(ref, () => ({
     generateMaze,
+    getMaze: () => maze,
+    setMaze,
   }));
 
   if (onPlayerMove)
