@@ -25,3 +25,7 @@ export function scaleVec(vec: Vector2, scale: number): Vector2 {
         y: vec.y * scale,
     };
 }
+
+export function equalVec(v1: Vector2, v2: Vector2 ) {
+    return v1.x === v2.x && v1.y === v2.y;
+}

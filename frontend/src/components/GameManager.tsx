@@ -5,7 +5,7 @@ import { Maze } from "@shared/types/Maze";
 import GameCanvas, { GameCanvasHandle } from "./GameCanvas";
 import { CellType, createRectGrid } from "@shared/types/Grid";
 import { generateDFSRectGrid } from "@shared/utils/maze-generator";
-import { getRandomInt } from "@shared/utils/common-helpers";
+import { getRandomInt, lerp } from "@shared/utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
 import { calcNormalized, scaleVec, Vector2 } from "@shared/interfaces/Vector2";
 
@@ -23,12 +23,13 @@ function GameManager({
   const [maze, setMaze] = useState<Maze>(new Maze(createRectGrid(5, 5)));
   const gameCanvasRef = useRef<GameCanvasHandle | null>(null);
   const [playerPos, setPlayerPos] = useState<Vector2>({ x: 0, y: 0 });
+  const targetVelocity = useRef<Vector2>({ x: 0, y: 0 });
   const velocity = useRef<Vector2>({ x: 0, y: 0 });
-  const speedAmplifier = 6;
+  const speedAmplifier = 4;
 
   const cellScale = getMazeRenderHeight(mazeSize) / maze.height;
   usePlayerInputHandler((inputVec) => {
-    velocity.current = scaleVec(
+    targetVelocity.current = scaleVec(
       calcNormalized({
         x: inputVec.x,
         y: inputVec.y,
@@ -37,6 +38,8 @@ function GameManager({
     );
   });
 
+  const accelerationRate = 0.3;
+  const decelerationRate = 0.4;
   useAnimationUpdate(fps, () => {
     setPlayerPos((cp) => {
       if (!gameCanvasRef.current) return cp;
@@ -84,74 +87,20 @@ function GameManager({
     });
   });
 
-  // function getNextPos(pos: GridPos, inputVec: GridPos): GridPos {
-  //   let delta: GridPos = {
-  //     row: inputVec.row > 0 ? 2 : inputVec.row < 0 ? -2 : 0,
-  //     col: inputVec.col > 0 ? 2 : inputVec.col < 0 ? -2 : 0,
-  //   };
-  //
-  //   const targetPos = addPos(pos, delta);
-  //   const targetBridge = addPos(pos, inputVec);
-  //   if (!isDiagonalVector(inputVec)) {
-  //     if (
-  //       !maze.inBounds(targetPos) ||
-  //       maze.getCell(targetBridge) === CellType.Wall
-  //     )
-  //       return pos;
-  //     return targetPos;
-  //   }
-  //
-  //   const verticalBridge: GridPos = {
-  //     row: pos.row + inputVec.row,
-  //     col: pos.col,
-  //   };
-  //   const verticalTarget: GridPos = {
-  //     row: pos.row + delta.row,
-  //     col: pos.col,
-  //   };
-  //   if (
-  //     !maze.inBounds(verticalTarget) ||
-  //     maze.getCell(verticalBridge) === CellType.Wall
-  //   )
-  //     delta.row = 0;
-  //
-  //   const horizontalBridge: GridPos = {
-  //     row: pos.row,
-  //     col: pos.col + inputVec.col,
-  //   };
-  //   const horizontalTarget: GridPos = {
-  //     row: pos.row,
-  //     col: pos.col + delta.col,
-  //   };
-  //   if (
-  //     !maze.inBounds(horizontalTarget) ||
-  //     maze.getCell(horizontalBridge) === CellType.Wall
-  //   )
-  //     delta.col = 0;
-  //
-  //   // diagonal -> horizontal
-  //   if (isDiagonalVector(delta)) delta.row = 0;
-  //
-  //   return addPos(pos, delta);
-  // }
-  //
-  // const loopNumber = useRef<number>(0);
-  // usePlayerInputHandler((deltaPos: GridPos) => {
-  //   inputVector.current = deltaPos;
-  //   loopNumber.current = (loopNumber.current + 1) % 5;
-  //   moveLoop(loopNumber.current);
-  // });
-  //
-  // function moveLoop(loopN: number) {
-  //   if (loopNumber.current != loopN || equalPos(inputVector.current, ZERO_POS))
-  //     return;
-  //
-  //   setPlayerPos((pos) => getNextPos(pos, inputVector.current));
-  //
-  //   setTimeout(() => {
-  //     moveLoop(loopN);
-  //   }, 1000 / fps);
-  // }
+  useAnimationUpdate(50, () => {
+    velocity.current = {
+      x: lerp(
+        velocity.current.x,
+        targetVelocity.current.x,
+        targetVelocity.current.x != 0 ? accelerationRate : decelerationRate,
+      ),
+      y: lerp(
+        velocity.current.y,
+        targetVelocity.current.y,
+        targetVelocity.current.x != 0 ? accelerationRate : decelerationRate,
+      ),
+    };
+  });
 
   function generateMaze() {
     const grid = generateDFSRectGrid(mazeScale * 2 - 1, mazeScale * 2 - 1);
