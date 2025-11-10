@@ -1,6 +1,4 @@
 import React, { ChangeEvent, useState } from "react";
-import { Maze } from "@shared/types/Maze";
-import { createRectGrid } from "@shared/types/Grid";
 import { MazeSize } from "../types/maze-size";
 import GameManager from "../components/GameManager";
 
@@ -10,7 +8,6 @@ function MazeTests() {
     scale: "Small",
     mazeSize: MazeSize.Small,
   });
-  const [currMaze, setCurrMaze] = useState(new Maze(createRectGrid(5, 5)));
   const [genFlag, setGenFlag] = useState<boolean>(true);
 
   function handleSizeChange(e: ChangeEvent<HTMLInputElement>) {

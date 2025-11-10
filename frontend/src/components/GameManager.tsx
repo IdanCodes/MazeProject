@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
 import { Maze } from "@shared/types/Maze";
@@ -7,19 +13,28 @@ import { CellType, createRectGrid } from "@shared/types/Grid";
 import { generateDFSRectGrid } from "@shared/utils/maze-generator";
 import { getRandomInt, lerp } from "@shared/utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
-import { calcNormalized, scaleVec, Vector2 } from "@shared/interfaces/Vector2";
+import {
+  calcMagnitude,
+  calcNormalized,
+  equalVec,
+  scaleVec,
+  Vector2,
+  ZERO_VEC,
+} from "@shared/interfaces/Vector2";
 
-function GameManager({
-  mazeSize,
-  mazeScale,
-  fps = 60,
-  genFlag,
-}: {
-  mazeSize: MazeSize;
-  mazeScale: number;
-  fps?: number;
-  genFlag: { flag: boolean; setFlag: (value: boolean) => void };
-}) {
+export interface GameManagerHandle {
+  generateMaze: () => void;
+}
+
+const GameManager = forwardRef<
+  GameManagerHandle,
+  {
+    mazeSize: MazeSize;
+    mazeScale: number;
+    fps?: number;
+    onPlayerMove?: (pos: Vector2) => void;
+  }
+>(({ mazeSize, mazeScale, fps = 60, onPlayerMove = undefined }, ref) => {
   const [maze, setMaze] = useState<Maze>(new Maze(createRectGrid(5, 5)));
   const gameCanvasRef = useRef<GameCanvasHandle | null>(null);
   const [playerPos, setPlayerPos] = useState<Vector2>({ x: 0, y: 0 });
@@ -28,6 +43,7 @@ function GameManager({
   const speedAmplifier = 4;
 
   const cellScale = getMazeRenderHeight(mazeSize) / maze.height;
+
   usePlayerInputHandler((inputVec) => {
     targetVelocity.current = scaleVec(
       calcNormalized({
@@ -41,7 +57,7 @@ function GameManager({
   const accelerationRate = 0.3;
   const decelerationRate = 0.4;
   useAnimationUpdate(fps, () => {
-    setPlayerPos((cp) => {
+    setPlayerPos((cp: Vector2): Vector2 => {
       if (!gameCanvasRef.current) return cp;
 
       // TODO: if close to wall, clamp the next pos to be close to but not on the wall
@@ -88,6 +104,7 @@ function GameManager({
   });
 
   useAnimationUpdate(50, () => {
+    const epsilon = 0.05;
     velocity.current = {
       x: lerp(
         velocity.current.x,
@@ -100,7 +117,18 @@ function GameManager({
         targetVelocity.current.x != 0 ? accelerationRate : decelerationRate,
       ),
     };
+
+    if (calcMagnitude(velocity.current) < epsilon) velocity.current = ZERO_VEC;
   });
+
+  useImperativeHandle(ref, () => ({
+    generateMaze,
+  }));
+
+  if (onPlayerMove)
+    useEffect(() => {
+      onPlayerMove(playerPos);
+    }, [playerPos]);
 
   function generateMaze() {
     const grid = generateDFSRectGrid(mazeScale * 2 - 1, mazeScale * 2 - 1);
@@ -116,13 +144,6 @@ function GameManager({
     });
   }
 
-  useEffect(() => {
-    if (!genFlag.flag) return;
-
-    genFlag.setFlag(false);
-    generateMaze();
-  }, [mazeSize, genFlag.flag]);
-
   return (
     <GameCanvas
       ref={gameCanvasRef}
@@ -131,6 +152,6 @@ function GameManager({
       playerPos={playerPos}
     />
   );
-}
+});
 
 export default GameManager;

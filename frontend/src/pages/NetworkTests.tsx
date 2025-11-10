@@ -70,7 +70,7 @@ function NetworkTests() {
   }
 
   return (
-    <div className="w-80 mx-auto flex flex-col justify-center h-fit border-5 gap-10 p-5">
+    <div className="w-[80%] mx-auto flex flex-col justify-center h-fit border-5 gap-10 p-5">
       <input
         className="border-2 rounded-xl text-xl p-2"
         value={inputValue}
