@@ -83,18 +83,27 @@ function NetworkConnDemo() {
         managerRef.current.setMaze(maze);
         break;
       }
-      case GameMsgType.UPDATE_POS: {
-        const pos: Vector2 | undefined = parseVector2(msg.data);
-        if (!pos) return;
 
-        console.log(pos);
+      case GameMsgType.UPDATE_POS: {
+        const newPlayerPos: Vector2 | undefined = parseVector2(msg.data);
+        if (!newPlayerPos) return;
+
+        const oldPlayerPos = otherPlayers.get(msg.source);
+        if (oldPlayerPos && equalVec(oldPlayerPos, newPlayerPos)) return;
+
         setOtherPlayers((op) => {
           const newOp = new Map(op);
-          newOp.set(msg.source, pos);
+          newOp.set(msg.source, newPlayerPos);
           return newOp;
         });
         break;
       }
+
+      case GameMsgType.PLAYER_CONNECTED: {
+        sendPos();
+        break;
+      }
+
       case GameMsgType.PLAYER_DISCONNECTED: {
         setOtherPlayers((op) => {
           const newOp = new Map(op);
