@@ -1,8 +1,8 @@
 import React, { JSX } from "react";
 import clsx from "clsx";
 import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
-import { CellType } from "@shared/types/Grid";
-import { Maze } from "@shared/types/Maze";
+import { CellType } from "../types/Grid";
+import { Maze } from "../types/Maze";
 
 function MatrixCell({
   cell,

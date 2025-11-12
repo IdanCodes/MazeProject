@@ -1,5 +1,5 @@
-import {clamp} from "../utils/common-helpers";
-import {Vector2} from "../interfaces/Vector2";
+import { clamp } from "../utils/common-helpers";
+import { Vector2 } from "../interfaces/Vector2";
 
 /**
  * Type of cell
@@ -108,7 +108,9 @@ export class Grid {
   }
 
   public inBounds(pos: Vector2): boolean {
-      return pos.y >= 0 && pos.y < this.height && pos.x >= 0 && pos.x < this.width;
+    return (
+      pos.y >= 0 && pos.y < this.height && pos.x >= 0 && pos.x < this.width
+    );
   }
 }
 
@@ -135,21 +137,3 @@ export function createMatrix(
 ): CellType[][] {
   return Array.from({ length: height }, () => Array(width).fill(cellType));
 }
-
-// adds a wall border to a duplicate of the srcGrid and returns it
-export function addBorder(srcGrid: Grid): Grid {
-  const resultGrid = createRectGrid(srcGrid.width + 2, srcGrid.height + 2);
-
-  for (let i = 1; i < resultGrid.height - 1; i++) {
-    // copy row
-    for (let j = 1; j < resultGrid.width - 1; j++) {
-      resultGrid.setCell(
-        { x: j, y: i },
-        srcGrid.getCell({ x: j - 1, y: i - 1 }),
-      );
-    }
-  }
-
-  return resultGrid;
-}
-

@@ -1,28 +1,31 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MazeSize } from "../types/maze-size";
 import GameManager, { GameManagerHandle } from "../components/GameManager";
-import { Vector2, ZERO_VEC } from "@shared/interfaces/Vector2";
+import {
+  equalVec,
+  parseVector2,
+  Vector2,
+  ZERO_VEC,
+} from "../interfaces/Vector2";
 import PrimaryButton from "../components/buttons/PrimaryButton";
-import useWebSocket from "react-use-websocket";
-import { Maze } from "@shared/types/Maze";
-import { CellType, Grid } from "@shared/types/Grid";
+import useWebSocket, { ReadyState } from "react-use-websocket";
+import { Maze } from "../types/Maze";
+import { CellType, Grid } from "../types/Grid";
+import useAnimationUpdate from "../hooks/useAnimationUpdate";
+import {
+  buildGameRequest,
+  parseGameServerMessage,
+} from "../utils/game-protocol";
+import { GameMsgType } from "../components/game-msg-type";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const SERVER_PORT = 3003;
 const SERVER_IP = "127.0.0.1";
 const SERVER_WS_URL: string = `ws://${SERVER_IP}:${SERVER_PORT}`;
 
-function constructMazeMessage(maze: Maze): unknown {
-  return {
-    type: "maze",
-    maze: maze,
-  };
-}
-
-function constructPosMessage(pos: Vector2): unknown {
-  return {
-    type: "pos",
-    pos: pos,
-  };
+export interface NetworkPlayerInfo {
+  addr: string;
+  pos: Vector2;
 }
 
 function NetworkConnDemo() {
@@ -32,55 +35,143 @@ function NetworkConnDemo() {
     mazeSize: MazeSize.Medium,
   });
   const managerRef = useRef<GameManagerHandle | null>(null);
-  const [playerPos, setPlayerPos] = useState<Vector2>(ZERO_VEC);
-  const { sendMessage, sendJsonMessage, readyState, lastJsonMessage } =
-    useWebSocket(SERVER_WS_URL, {
+  const playerPos = useRef<Vector2>(ZERO_VEC);
+  const lastSentPos = useRef<Vector2>(ZERO_VEC);
+  const [connectOnDemand, setConnectOnDemand] = useState<boolean>(true);
+  const { sendMessage, readyState, lastJsonMessage } = useWebSocket(
+    SERVER_WS_URL,
+    {
       onOpen: () => console.log("Connected!"),
-      onMessage: (e: MessageEvent) => console.log("Received: ", e.data),
-    });
+      onMessage: (e: MessageEvent) => onReceiveMessage(e),
+    },
+    connectOnDemand,
+  );
+  const [otherPlayers, setOtherPlayers] = useState<Map<string, Vector2>>(
+    new Map(),
+  );
 
-  useEffect(() => {
-    generateMaze();
-  }, []);
+  const connectedToServer = useMemo<boolean>(() => {
+    return readyState === ReadyState.OPEN;
+  }, [readyState]);
 
   function generateMaze() {
     if (!managerRef.current) return;
     managerRef.current.generateMaze();
   }
 
-  useEffect(() => {
-    if (lastJsonMessage) executeMessage(lastJsonMessage);
-  }, [lastJsonMessage]);
+  function onReceiveMessage(msg: MessageEvent) {
+    const serverMsg = parseGameServerMessage(msg.data);
+    if (serverMsg) handleServerMessage(serverMsg);
+    else
+      console.log(
+        "Received message from server with invalid format:",
+        msg.data,
+      );
+  }
 
-  function executeMessage(msg: any) {
-    if (!msg || !("type" in msg) || typeof msg.type !== "string") {
-      console.error(`Invalid message format ${msg}`);
-      return;
+  function handleServerMessage(msg: {
+    msgType: GameMsgType;
+    source: string;
+    data: any | undefined;
+  }) {
+    switch (msg.msgType) {
+      case GameMsgType.MAZE: {
+        if (!managerRef.current) return;
+        const matrix = msg.data as CellType[][];
+        const grid = new Grid(matrix);
+        const maze = new Maze(grid);
+        managerRef.current.setMaze(maze);
+        break;
+      }
+      case GameMsgType.UPDATE_POS: {
+        const pos: Vector2 | undefined = parseVector2(msg.data);
+        if (!pos) return;
+
+        console.log(pos);
+        setOtherPlayers((op) => {
+          const newOp = new Map(op);
+          newOp.set(msg.source, pos);
+          return newOp;
+        });
+        break;
+      }
+      case GameMsgType.PLAYER_DISCONNECTED: {
+        setOtherPlayers((op) => {
+          const newOp = new Map(op);
+          newOp.delete(msg.source);
+          return newOp;
+        });
+        break;
+      }
+
+      default:
+        break;
     }
 
-    const msgType: string = msg.type;
-    if (msgType == "maze") {
-      if (
-        !managerRef.current ||
-        !("maze" in msg) ||
-        msg.maze === undefined ||
-        !("grid" in msg.maze) ||
-        msg.maze.grid === undefined
-      )
-        return;
-      const matrix: CellType[][] = msg.maze.grid.matrix;
-      const grid = new Grid(matrix);
-      const maze = new Maze(grid);
-      managerRef.current.setMaze(maze);
-    }
+    // const msgType: string = msg.type;
+    // console.log(msgType);
+    // if (msgType == "maze") {
+    //   if (
+    //     !managerRef.current ||
+    //     !("maze" in msg) ||
+    //     msg.maze === undefined ||
+    //     !("grid" in msg.maze) ||
+    //     msg.maze.grid === undefined
+    //   )
+    //     return;
+    //   const matrix: CellType[][] = msg.maze.grid.matrix;
+    //   const grid = new Grid(matrix);
+    //   const maze = new Maze(grid);
+    //   managerRef.current.setMaze(maze);
+    // } else if (msgType == "pos") {
+    //   if (
+    //     !managerRef.current ||
+    //     !("pos" in msg) ||
+    //     msg.pos === undefined ||
+    //     !("x" in msg.pos) ||
+    //     msg.pos.x === undefined ||
+    //     !("y" in msg.pos) ||
+    //     msg.pos.y === undefined ||
+    //     !("addr" in msg) ||
+    //     msg.addr === undefined
+    //   )
+    //     return;
+    //   const addr: string = msg.addr;
+    //   const pos: Vector2 = {
+    //     x: msg.pos.x,
+    //     y: msg.pos.y,
+    //   };
+    //   console.log(pos);
+    //   setOtherPlayers((op) => {
+    //     const newOp = new Map(op);
+    //     newOp.set(addr, pos);
+    //     return newOp;
+    //   });
+    // } else if (msgType == "disconnect") {
+    //   if (!("addr" in msg) || msg.addr === undefined) return;
+    //   setOtherPlayers((op) => {
+    //     const newOp = new Map(op);
+    //     newOp.delete(msg.addr);
+    //     return newOp;
+    //   });
+    // }
   }
 
   function sendMaze() {
     if (!managerRef.current) return;
 
     const maze = managerRef.current.getMaze();
-    sendJsonMessage(constructMazeMessage(maze));
+    sendMessage(buildGameRequest(GameMsgType.MAZE, maze.getMatrix()));
   }
+
+  function sendPos() {
+    sendMessage(buildGameRequest(GameMsgType.UPDATE_POS, playerPos.current));
+    lastSentPos.current = playerPos.current;
+  }
+
+  useAnimationUpdate(10, () => {
+    if (!equalVec(playerPos.current, lastSentPos.current)) sendPos();
+  });
 
   return (
     <>
@@ -88,12 +179,23 @@ function NetworkConnDemo() {
         <div>
           <PrimaryButton onClick={generateMaze} text="Generate" />
           <PrimaryButton onClick={sendMaze} text="Send" />
+          <p className="text-xl">
+            Status:
+            {readyState == ReadyState.OPEN
+              ? "Connected"
+              : readyState === ReadyState.CLOSED
+                ? "Closed"
+                : ""}
+          </p>
         </div>
         <GameManager
           ref={managerRef}
           mazeSize={mazeSize.mazeSize}
           mazeScale={mazeSize.scale}
-          onPlayerMove={setPlayerPos}
+          onPlayerMove={(pos) => {
+            if (!equalVec(pos, playerPos.current)) playerPos.current = pos;
+          }}
+          otherPlayers={otherPlayers}
         />
       </div>
     </>

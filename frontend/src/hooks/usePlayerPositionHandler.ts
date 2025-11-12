@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Vector2 } from "@shared/interfaces/Vector2";
+import { Vector2 } from "../interfaces/Vector2";
 
 enum MovementDirection {
   Up,
