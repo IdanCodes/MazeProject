@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import { MazeSize } from "../types/maze-size";
-import GameManager, { GameManagerHandle } from "../components/GameManager";
+import GameInstance, { GameManagerHandle } from "../components/GameInstance";
 import {
   equalVec,
   parseVector2,
@@ -143,10 +143,12 @@ function NetworkConnDemo() {
                 : ""}
           </p>
         </div>
-        <GameManager
+        <GameInstance
           ref={managerRef}
-          mazeSize={mazeSize.mazeSize}
-          mazeScale={mazeSize.scale}
+          displayConfig={{
+            mazeScale: 14,
+            mazeSize: MazeSize.Large,
+          }}
           onPlayerMove={(pos) => {
             if (!equalVec(pos, playerPos.current)) playerPos.current = pos;
           }}

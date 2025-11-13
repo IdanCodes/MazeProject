@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useState } from "react";
 import { MazeSize } from "../types/maze-size";
-import GameManager from "../components/GameManager";
+import GameInstance from "../components/GameInstance";
 
 function MazeTests() {
   const [mazeSize, setMazeSize] = useState({
@@ -71,7 +71,7 @@ function MazeTests() {
         Generate maze
       </button>
 
-      <GameManager
+      <GameInstance
         mazeSize={mazeSize.mazeSize}
         mazeScale={mazeSize.size}
         genFlag={{ flag: genFlag, setFlag: setGenFlag }}
