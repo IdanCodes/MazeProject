@@ -1,12 +1,11 @@
 import "./index.css";
-import NetworkTests from "./pages/NetworkTests";
-import MazeTests from "./pages/MazeTests";
-import NetworkConnDemo from "./pages/NetworkConnDemo";
+import Home from "./pages/Home";
 
 function App() {
   // return <NetworkTests />;
   // return <MazeTests />;
-  return <NetworkConnDemo />;
+  // return <NetworkConnDemo />;
+  return <Home />;
 }
 
 export default App;

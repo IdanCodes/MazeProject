@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { MazeSize } from "../types/maze-size";
 import GameManager, { GameManagerHandle } from "../components/GameManager";
 import {
@@ -17,16 +17,10 @@ import {
   parseGameServerMessage,
 } from "../utils/game-protocol";
 import { GameMsgType } from "../components/game-msg-type";
-import LoadingSpinner from "../components/LoadingSpinner";
 
 const SERVER_PORT = 3003;
 const SERVER_IP = "127.0.0.1";
 const SERVER_WS_URL: string = `ws://${SERVER_IP}:${SERVER_PORT}`;
-
-export interface NetworkPlayerInfo {
-  addr: string;
-  pos: Vector2;
-}
 
 function NetworkConnDemo() {
   const [mazeSize, setMazeSize] = useState({
@@ -38,7 +32,7 @@ function NetworkConnDemo() {
   const playerPos = useRef<Vector2>(ZERO_VEC);
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
   const [connectOnDemand, setConnectOnDemand] = useState<boolean>(true);
-  const { sendMessage, readyState, lastJsonMessage } = useWebSocket(
+  const { sendMessage, readyState } = useWebSocket(
     SERVER_WS_URL,
     {
       onOpen: () => console.log("Connected!"),
@@ -116,54 +110,6 @@ function NetworkConnDemo() {
       default:
         break;
     }
-
-    // const msgType: string = msg.type;
-    // console.log(msgType);
-    // if (msgType == "maze") {
-    //   if (
-    //     !managerRef.current ||
-    //     !("maze" in msg) ||
-    //     msg.maze === undefined ||
-    //     !("grid" in msg.maze) ||
-    //     msg.maze.grid === undefined
-    //   )
-    //     return;
-    //   const matrix: CellType[][] = msg.maze.grid.matrix;
-    //   const grid = new Grid(matrix);
-    //   const maze = new Maze(grid);
-    //   managerRef.current.setMaze(maze);
-    // } else if (msgType == "pos") {
-    //   if (
-    //     !managerRef.current ||
-    //     !("pos" in msg) ||
-    //     msg.pos === undefined ||
-    //     !("x" in msg.pos) ||
-    //     msg.pos.x === undefined ||
-    //     !("y" in msg.pos) ||
-    //     msg.pos.y === undefined ||
-    //     !("addr" in msg) ||
-    //     msg.addr === undefined
-    //   )
-    //     return;
-    //   const addr: string = msg.addr;
-    //   const pos: Vector2 = {
-    //     x: msg.pos.x,
-    //     y: msg.pos.y,
-    //   };
-    //   console.log(pos);
-    //   setOtherPlayers((op) => {
-    //     const newOp = new Map(op);
-    //     newOp.set(addr, pos);
-    //     return newOp;
-    //   });
-    // } else if (msgType == "disconnect") {
-    //   if (!("addr" in msg) || msg.addr === undefined) return;
-    //   setOtherPlayers((op) => {
-    //     const newOp = new Map(op);
-    //     newOp.delete(msg.addr);
-    //     return newOp;
-    //   });
-    // }
   }
 
   function sendMaze() {

@@ -1,6 +1,7 @@
 import React, { JSX, MouseEventHandler } from "react";
 import clsx from "clsx";
 import { ButtonSize } from "./ButtonSize";
+import { motion } from "motion/react";
 
 export default function PrimaryButton({
   text = "",
@@ -9,9 +10,9 @@ export default function PrimaryButton({
   buttonSize = ButtonSize.Medium,
   btnType = "button",
   colors = {
-    normal: "bg-gray-500",
-    hover: "bg-gray-500/90",
-    click: "bg-gray-600/90",
+    normal: "rgb(106,114,130)",
+    hover: "rgba(106,114,130,0.9)",
+    click: "rgba(74,85,101, 0.9)",
   },
 }: {
   text?: string | number;
@@ -23,17 +24,29 @@ export default function PrimaryButton({
 }): JSX.Element {
   return (
     <>
-      <button
+      <motion.button
         className={clsx(
-          `box-border flex scale-95 items-center justify-center rounded-xl p-3 transition-all duration-100 select-none ${colors.normal}`,
+          `box-border flex scale-95 items-center justify-center rounded-xl p-3 transition-all duration-100 select-none`,
           disabled && "cursor-not-allowed opacity-70",
-          !disabled &&
-            `cursor-pointer hover:scale-100 hover:${colors.hover} active:${colors.click}`,
+          !disabled && `cursor-pointer hover:scale-100`,
         )}
         type={btnType}
         disabled={disabled}
         onClick={(e) => {
           if (!disabled) onClick(e);
+        }}
+        initial={{
+          backgroundColor: colors.normal,
+        }}
+        whileHover={{
+          backgroundColor: disabled ? colors.normal : colors.hover,
+        }}
+        whileTap={{
+          backgroundColor: disabled ? colors.normal : colors.click,
+        }}
+        transition={{
+          duration: 0.03,
+          ease: "easeIn",
         }}
       >
         <p
@@ -45,7 +58,7 @@ export default function PrimaryButton({
         >
           {text}
         </p>
-      </button>
+      </motion.button>
     </>
   );
 }

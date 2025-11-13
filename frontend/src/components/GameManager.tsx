@@ -12,7 +12,7 @@ import { Maze } from "../types/Maze";
 import GameCanvas, { GameCanvasHandle } from "./GameCanvas";
 import { CellType, createRectGrid } from "../types/Grid";
 import { generateDFSRectGrid } from "../utils/maze-generator";
-import { getRandomInt, lerp } from "../utils/common-helpers";
+import { lerp } from "../utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
 import {
   calcMagnitude,
@@ -70,8 +70,6 @@ const GameManager = forwardRef<
     useAnimationUpdate(fps, () => {
       setPlayerPos((cp: Vector2): Vector2 => {
         if (!gameCanvasRef.current) return cp;
-
-        // TODO: if close to wall, clamp the next pos to be close to but not on the wall
 
         const newPos: Vector2 = {
           x: cp.x + velocity.current.x,
@@ -146,7 +144,6 @@ const GameManager = forwardRef<
 
     function generateMaze() {
       const grid = generateDFSRectGrid(mazeScale * 2 - 1, mazeScale * 2 - 1);
-
       setMaze(new Maze(grid));
     }
 

@@ -7,7 +7,6 @@ import React, {
 import { Maze } from "../types/Maze";
 import { CellType } from "../types/Grid";
 import { Vector2 } from "../interfaces/Vector2";
-import { NetworkPlayerInfo } from "../pages/NetworkConnDemo";
 
 export interface GameCanvasHandle {
   gridToCanvas: (gridPos: Vector2) => Vector2;
