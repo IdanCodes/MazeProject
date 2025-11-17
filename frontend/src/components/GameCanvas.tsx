@@ -168,7 +168,7 @@ const GameCanvas = forwardRef<
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
       // -- background
-      ctx.fillStyle = "rgb(245,245,245)";
+      ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
       drawGrid(ctx);
