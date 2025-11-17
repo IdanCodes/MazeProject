@@ -55,43 +55,6 @@ const usePlayerPositionHandler = (
     return { x: deltaX, y: deltaY };
   }
 
-  // function updatePosition() {
-  //   const moveDirections = generateMoveDirs();
-  //   const deltaPos = getDeltaPos(moveDirections);
-  //   const currFrame = frameNumber.current;
-  //
-  //   // if (startMoveFrame.current < 0) startMoveFrame.current = currFrame;
-  //   // if ((currFrame - startMoveFrame.current) % moveCooldown == 0) {
-  //   //   movePlayer(deltaPos);
-  //   // }
-  //   // const cooldownDoneY: boolean =
-  //   //   (currFrame - lastVerticalMove.current.time) % singleDirMoveCooldown == 0;
-  //   // const dirY =
-  //   //   deltaPos.row > 0 ? MovementDirection.Down : MovementDirection.Up;
-  //   // if (
-  //   //   deltaPos.row != 0 &&
-  //   //   (cooldownDoneY || dirY != lastVerticalMove.current.dir)
-  //   // ) {
-  //   //   lastVerticalMove.current.time = currFrame;
-  //   //   lastVerticalMove.current.dir = dirY;
-  //   // } else deltaPos.row = 0;
-  //   //
-  //   // const cooldownDoneX =
-  //   //   (currFrame - lastHorizontalMove.current.time) % singleDirMoveCooldown ==
-  //   //   0;
-  //   // const dirX =
-  //   //   deltaPos.col > 0 ? MovementDirection.Right : MovementDirection.Left;
-  //   // if (
-  //   //   deltaPos.col != 0 &&
-  //   //   (cooldownDoneX || dirX != lastHorizontalMove.current.dir)
-  //   // ) {
-  //   //   lastHorizontalMove.current.time = currFrame;
-  //   //   lastHorizontalMove.current.dir = dirX;
-  //   // } else deltaPos.col = 0;
-  //
-  //   // movePlayer(deltaPos);
-  // }
-
   useEffect(() => {
     movePlayer(getDeltaPos(generateMoveDirs()));
   }, [keysPressed]);
@@ -103,16 +66,6 @@ const usePlayerPositionHandler = (
       newKeys.add(e.code);
       return newKeys;
     });
-
-    // const md = getMovementDirection(e.code);
-    // if (md !== undefined) {
-    //   // const nowTime = Date.now();
-    //   keysPressed.current.add(e.code);
-    //   // if (md === MovementDirection.Up || md === MovementDirection.Down) {
-    //   //   lastVerticalMove.current.time = Date.now();
-    //   // } else lastHorizontalMove.current.time = Date.now();
-    // }
-    // updatePosition();
   };
 
   window.onkeyup = (e) => {

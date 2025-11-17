@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useState } from "react";
-import { MazeSize } from "../types/maze-size";
-import GameInstance from "../components/GameInstance";
+import { MazeSize } from "../../types/maze-size";
+import GameInstance from "../../components/GameInstance";
 
 function MazeTests() {
   const [mazeSize, setMazeSize] = useState({

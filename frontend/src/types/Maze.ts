@@ -1,5 +1,6 @@
 import { CellType, Grid } from "./Grid";
 import { Vector2 } from "../interfaces/Vector2";
+import { generateDFSRectGrid } from "@src/utils/maze-generator";
 
 export class Maze {
   public readonly width: number;
@@ -32,4 +33,8 @@ export class Maze {
   public inBounds(pos: Vector2): boolean {
     return this.grid.inBounds(pos);
   }
+}
+
+export function generateMaze(mazeScale: number) {
+  return new Maze(generateDFSRectGrid(mazeScale * 2 - 1, mazeScale * 2 - 1));
 }

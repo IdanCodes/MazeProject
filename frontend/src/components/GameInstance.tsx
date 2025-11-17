@@ -1,17 +1,9 @@
-import React, {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
 import { Maze } from "../types/Maze";
 import GameCanvas, { GameCanvasHandle } from "./GameCanvas";
-import { CellType, createRectGrid } from "../types/Grid";
-import { generateDFSRectGrid } from "../utils/maze-generator";
+import { CellType } from "../types/Grid";
 import { lerp } from "../utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
 import {
@@ -21,6 +13,7 @@ import {
   Vector2,
   ZERO_VEC,
 } from "../interfaces/Vector2";
+import { GameOptions } from "@src/components/GameOptionsSelector";
 
 const GAME_FPS = 60;
 const PHYSICS_UPDATE_FPS = 50;
@@ -31,32 +24,28 @@ export interface GameManagerHandle {
   setMaze: (maze: Maze) => void;
 }
 
-const GameInstance = forwardRef<
-  GameManagerHandle,
-  {
-    displayConfig: {
-      mazeSize: MazeSize;
-      mazeScale: number;
-    };
-    otherPlayers: Map<string, Vector2>;
-    onPlayerMove?: (pos: Vector2) => void;
-  }
->(({ displayConfig, otherPlayers, onPlayerMove = undefined }, ref) => {
-  const [maze, setMaze] = useState<Maze>(new Maze(createRectGrid(5, 5)));
+function GameInstance({
+  viewOptions,
+  maze,
+  otherPlayers,
+  onPlayerMove = undefined,
+}: {
+  viewOptions: GameOptions;
+  maze: Maze;
+  otherPlayers: Map<string, Vector2>;
+  onPlayerMove?: (pos: Vector2) => void;
+}) {
+  if (!maze) return;
 
   const gameCanvasRef = useRef<GameCanvasHandle | null>(null);
   const targetVelocity = useRef<Vector2>({ x: 0, y: 0 });
   const velocity = useRef<Vector2>({ x: 0, y: 0 });
 
   const cellScale = useMemo(
-    () => getMazeRenderHeight(displayConfig.mazeSize) / maze.height,
-    [maze],
+    () => getMazeRenderHeight(viewOptions.mazeSize) / maze.height,
+    [maze.height, viewOptions],
   );
   const [playerPos, setPlayerPos] = useState<Vector2>(ZERO_VEC);
-
-  useEffect(() => {
-    generateMaze();
-  }, []);
 
   useEffect(() => {
     setPlayerPos({
@@ -66,7 +55,15 @@ const GameInstance = forwardRef<
     });
   }, [maze]);
 
-  const speedAmplifier = 4;
+  // cells per second
+  const playerSpeed = 3;
+  const accelerationRate = 0.25;
+  const decelerationRate = 0.4;
+
+  const speedAmplifier = useMemo(() => {
+    return (playerSpeed * cellScale * 4) / GAME_FPS;
+  }, [cellScale]);
+
   usePlayerInputHandler((inputVec) => {
     targetVelocity.current = scaleVec(
       calcNormalized({
@@ -77,8 +74,6 @@ const GameInstance = forwardRef<
     );
   });
 
-  const accelerationRate = 0.3;
-  const decelerationRate = 0.4;
   useAnimationUpdate(GAME_FPS, () => {
     setPlayerPos((cp: Vector2): Vector2 => {
       if (!gameCanvasRef.current) return cp;
@@ -142,24 +137,10 @@ const GameInstance = forwardRef<
     if (calcMagnitude(velocity.current) < epsilon) velocity.current = ZERO_VEC;
   });
 
-  useImperativeHandle(ref, () => ({
-    generateMaze,
-    getMaze: () => maze,
-    setMaze,
-  }));
-
   if (onPlayerMove)
     useEffect(() => {
       onPlayerMove(playerPos);
     }, [playerPos]);
-
-  function generateMaze() {
-    const grid = generateDFSRectGrid(
-      displayConfig.mazeScale * 2 - 1,
-      displayConfig.mazeScale * 2 - 1,
-    );
-    setMaze(new Maze(grid));
-  }
 
   return (
     <GameCanvas
@@ -170,6 +151,6 @@ const GameInstance = forwardRef<
       otherPlayers={otherPlayers}
     />
   );
-});
+}
 
 export default GameInstance;

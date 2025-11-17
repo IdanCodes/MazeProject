@@ -1,22 +1,22 @@
 import React, { useMemo, useRef, useState } from "react";
-import { MazeSize } from "../types/maze-size";
-import GameInstance, { GameManagerHandle } from "../components/GameInstance";
+import { MazeSize } from "../../types/maze-size";
+import GameInstance, { GameManagerHandle } from "../../components/GameInstance";
 import {
   equalVec,
   parseVector2,
   Vector2,
   ZERO_VEC,
-} from "../interfaces/Vector2";
-import PrimaryButton from "../components/buttons/PrimaryButton";
+} from "../../interfaces/Vector2";
+import PrimaryButton from "../../components/buttons/PrimaryButton";
 import useWebSocket, { ReadyState } from "react-use-websocket";
-import { Maze } from "../types/Maze";
-import { CellType, Grid } from "../types/Grid";
-import useAnimationUpdate from "../hooks/useAnimationUpdate";
+import { Maze } from "../../types/Maze";
+import { CellType, Grid } from "../../types/Grid";
+import useAnimationUpdate from "../../hooks/useAnimationUpdate";
 import {
   buildGameRequest,
   parseGameServerMessage,
-} from "../utils/game-protocol";
-import { GameMsgType } from "../components/game-msg-type";
+} from "../../utils/game-protocol";
+import { GameMsgType } from "../../components/game-msg-type";
 
 const SERVER_PORT = 3003;
 const SERVER_IP = "127.0.0.1";
@@ -145,7 +145,7 @@ function NetworkConnDemo() {
         </div>
         <GameInstance
           ref={managerRef}
-          displayConfig={{
+          viewOptions={{
             mazeScale: 14,
             mazeSize: MazeSize.Large,
           }}

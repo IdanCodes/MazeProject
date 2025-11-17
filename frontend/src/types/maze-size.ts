@@ -9,14 +9,14 @@ export enum MazeSize {
 export function getMazeRenderHeight(size: MazeSize) {
   switch (size) {
     case MazeSize.XS:
-      return 150;
-    case MazeSize.Small:
       return 250;
-    case MazeSize.Medium:
+    case MazeSize.Small:
       return 400;
-    case MazeSize.Large:
+    case MazeSize.Medium:
       return 500;
+    case MazeSize.Large:
+      return 550;
     case MazeSize.XL:
-      return 650;
+      return 625;
   }
 }
