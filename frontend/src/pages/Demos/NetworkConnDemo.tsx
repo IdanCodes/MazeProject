@@ -145,7 +145,7 @@ function NetworkConnDemo() {
         </div>
         <GameInstance
           ref={managerRef}
-          viewOptions={{
+          gameOptions={{
             mazeScale: 14,
             mazeSize: MazeSize.Large,
           }}

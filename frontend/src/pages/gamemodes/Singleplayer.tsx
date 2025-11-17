@@ -29,7 +29,7 @@ export default function Singleplayer(): JSX.Element {
       <br />
       <div className="w-full place-items-center">
         <GameInstance
-          viewOptions={gameOptions}
+          gameOptions={gameOptions}
           maze={maze}
           otherPlayers={new Map()}
         />

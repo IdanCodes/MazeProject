@@ -25,12 +25,12 @@ export interface GameManagerHandle {
 }
 
 function GameInstance({
-  viewOptions,
+  gameOptions,
   maze,
   otherPlayers,
   onPlayerMove = undefined,
 }: {
-  viewOptions: GameOptions;
+  gameOptions: GameOptions;
   maze: Maze;
   otherPlayers: Map<string, Vector2>;
   onPlayerMove?: (pos: Vector2) => void;
@@ -42,8 +42,8 @@ function GameInstance({
   const velocity = useRef<Vector2>({ x: 0, y: 0 });
 
   const cellScale = useMemo(
-    () => getMazeRenderHeight(viewOptions.mazeSize) / maze.height,
-    [maze.height, viewOptions],
+    () => getMazeRenderHeight(gameOptions.mazeSize) / maze.height,
+    [maze.height, gameOptions],
   );
   const [playerPos, setPlayerPos] = useState<Vector2>(ZERO_VEC);
 
