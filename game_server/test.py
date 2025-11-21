@@ -47,4 +47,4 @@ def my_func(x: bool) -> tuple[str, str] | None:
 
 request_str = "{\"msgType\":\"update_pos\",\"data\":{\"x\":10.526315789473685,\"y\":10.526315789473685}}"
 json_msg = json.loads(request_str)
-print(type(json_msg))
+print(json_msg["data"])

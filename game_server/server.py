@@ -1,6 +1,7 @@
 import asyncio
 import json
 import websockets
+from ClientInfo import ClientInfo
 import protocol
 from protocol import MsgType, parse_request, build_broadcast_msg
 
@@ -18,46 +19,54 @@ class Server:
         await asyncio.gather(server_task, terminal_task)
 
     async def server_loop(self):
-        async with websockets.serve(self.handle_client, protocol.IP_ADDR, protocol.PORT):
+        async with websockets.serve(self.init_connection, protocol.IP_ADDR, protocol.PORT):
             await asyncio.Future()
 
+    # initialize the connection with a client - "handshake" before connection
+    # returns the client's name
+    async def init_connection(self, websocket: websockets.ServerConnection):
+        rec_text = await websocket.recv()
+        req_type, req_data = parse_request(rec_text)
+        if not req_type or not isinstance(req_data, str):
+            await websocket.close()
+            return
+        
+        await self.handle_client(ClientInfo(websocket, req_data))
 
-    async def handle_client(self, websocket: websockets.ServerConnection):
-        await self.onClientConnect(websocket)
+    async def handle_client(self, client: ClientInfo):
+        await self.onClientConnect(client)
         try:
             if self.curr_maze:
-                await websocket.send(build_broadcast_msg(websocket, MsgType.MAZE, self.curr_maze))
-            async for msg in websocket:
-                await self.onReceiveMessage(websocket, msg)
+                await client.send(build_broadcast_msg(client, MsgType.MAZE, self.curr_maze))
+            async for msg in client.websocket:
+                await self.onReceiveMessage(client, msg)
         finally:
-            await self.onClientDisconnect(websocket)
-            await websocket.close()
+            await self.onClientDisconnect(client)
+            await client.websocket.close()
+    
+    async def onClientDisconnect(self, client: ClientInfo):
+        self.clients.remove(client)
+        await self.broadcast(build_broadcast_msg(client, MsgType.PLAYER_DISCONNECTED))
+        print(f"{client.to_string()} disconnected");
 
 
-    async def onClientDisconnect(self, websocket: websockets.ServerConnection):
-        self.clients.remove(websocket)
-        await self.broadcast(build_broadcast_msg(websocket, MsgType.PLAYER_DISCONNECTED))
-        print(f"{websocket.remote_address} disconnected");
+    async def onClientConnect(self, client: ClientInfo):
+        self.clients.append(client)
+        await self.broadcast(build_broadcast_msg(client, MsgType.PLAYER_CONNECTED), client)
+        print(f"{client.to_string()} connected")
 
 
-    async def onClientConnect(self, websocket: websockets.ServerConnection):
-        self.clients.append(websocket)
-        await self.broadcast(build_broadcast_msg(websocket, MsgType.PLAYER_CONNECTED), websocket)
-        print(f"{websocket.remote_address} connected")
-
-
-    async def onReceiveMessage(self, sender: websockets.ServerConnection, msg_str: str):
-        request = parse_request(msg_str)
-        if not request: return
-
-        req_type, req_data = request
+    async def onReceiveMessage(self, sender: ClientInfo, msg_str: str):
+        req_type, req_data = parse_request(msg_str)
+        if not req_type: return
+        
         bc_msg = self.generate_broadcast(req_type, req_data)
         if not bc_msg: return
 
         bc_type, bc_data, exclude_sender = bc_msg
 
-        exclude = sender
-        if not exclude_sender: exclude = None
+        exclude = None
+        if exclude_sender: exclude = sender
 
         await self.broadcast(build_broadcast_msg(sender, bc_type, bc_data), exclude)
     
@@ -79,14 +88,14 @@ class Server:
                 return None
     
     
-    async def broadcast(self, message: str, exclude=None):
+    async def broadcast(self, message: str, exclude: ClientInfo | None = None):
         if len(self.clients) == 0:
             return
 
         send_tasks = [
             client.send(message)
             for client in self.clients
-            if client != exclude
+            if (not exclude) or (client.name != exclude.name)
         ]
 
         await asyncio.gather(*send_tasks, return_exceptions=True)

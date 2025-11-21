@@ -2,6 +2,8 @@ import websockets
 from enum import Enum
 import json
 
+from ClientInfo import ClientInfo
+
 # message structure:
 """
 Message Structure
@@ -29,14 +31,18 @@ class MsgType(Enum):
     CONNECT_REQUEST = "connect_request"
     MAZE = "maze"
     UPDATE_POS = "update_pos"
+    SET_NAME = "set_name"
     
     PLAYER_CONNECTED = "player_connected"
     PLAYER_DISCONNECTED = "player_disconnected"
 
 
-INCLUDE_DATA_MSG_TYPES: list[MsgType] = [MsgType.CONNECT_REQUEST, MsgType.UPDATE_POS, MsgType.MAZE, MsgType.UPDATE_POS]
+INCLUDE_DATA_MSG_TYPES: list[MsgType] = [MsgType.CONNECT_REQUEST, MsgType.UPDATE_POS, MsgType.MAZE, MsgType.UPDATE_POS, MsgType.SET_NAME]
 
-def parse_request(request_str: str) -> tuple[MsgType, str | None] | None:
+# Returns - req_type, req_data
+# or - None, None
+# when the request is invalid
+def parse_request(request_str: str) -> tuple[MsgType | None, str | None]:
     try:
         json_msg = json.loads(request_str)
         req_type = MsgType(json_msg["msgType"])
@@ -48,13 +54,13 @@ def parse_request(request_str: str) -> tuple[MsgType, str | None] | None:
         return req_type, req_data
     except Exception as e:
         print("exception:", e)
-        return None
+        return None, None
 
 
-def build_broadcast_msg(source: websockets.ServerConnection, bc_type: MsgType, bc_data: str | None = None) -> str:
+def build_broadcast_msg(source: ClientInfo, bc_type: MsgType, bc_data: str | None = None) -> str:
     bc_dict = {
         "msgType": bc_type.value,
-        "source": get_addr_str(source.remote_address)
+        "source": source.name
     }
     if bc_data:
         bc_dict["data"] = bc_data
