@@ -1,6 +1,8 @@
 import React, { useMemo, useRef, useState } from "react";
 import { MazeSize } from "../../types/maze-size";
-import GameInstance, { GameManagerHandle } from "../../components/GameInstance";
+import GameInstance, {
+  GameInstanceHandle,
+} from "../../components/GameInstance";
 import {
   equalVec,
   parseVector2,
@@ -28,7 +30,7 @@ function NetworkConnDemo() {
     sizeStr: "Medium",
     mazeSize: MazeSize.Medium,
   });
-  const managerRef = useRef<GameManagerHandle | null>(null);
+  const managerRef = useRef<GameInstanceHandle | null>(null);
   const playerPos = useRef<Vector2>(ZERO_VEC);
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
   const [connectOnDemand, setConnectOnDemand] = useState<boolean>(true);

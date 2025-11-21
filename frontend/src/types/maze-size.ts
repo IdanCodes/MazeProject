@@ -13,9 +13,9 @@ export function getMazeRenderHeight(size: MazeSize) {
     case MazeSize.Small:
       return 400;
     case MazeSize.Medium:
-      return 625;
+      return 550;
     case MazeSize.Large:
-      return 675;
+      return 650;
     case MazeSize.XL:
       return 800;
   }

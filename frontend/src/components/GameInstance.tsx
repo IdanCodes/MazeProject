@@ -1,6 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
-import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
+import { getMazeRenderHeight } from "../types/maze-size";
 import { Maze } from "../types/Maze";
 import GameCanvas, { GameCanvasHandle } from "./GameCanvas";
 import { CellType } from "../types/Grid";
@@ -18,23 +25,19 @@ import { GameOptions } from "@src/components/GameOptionsSelector";
 const GAME_FPS = 60;
 const PHYSICS_UPDATE_FPS = 50;
 
-export interface GameManagerHandle {
-  generateMaze: () => void;
-  getMaze: () => Maze;
-  setMaze: (maze: Maze) => void;
+export interface GameInstanceHandle {
+  gameCanvasRef: GameCanvasHandle | null;
 }
 
-function GameInstance({
-  gameOptions,
-  maze,
-  otherPlayers,
-  onPlayerMove = undefined,
-}: {
-  gameOptions: GameOptions;
-  maze: Maze;
-  otherPlayers: Map<string, Vector2>;
-  onPlayerMove?: (pos: Vector2) => void;
-}) {
+const GameInstance = forwardRef<
+  GameInstanceHandle,
+  {
+    gameOptions: GameOptions;
+    maze: Maze;
+    otherPlayers: Map<string, Vector2>;
+    onPlayerMove?: (pos: Vector2) => void;
+  }
+>(({ gameOptions, maze, otherPlayers, onPlayerMove = undefined }, ref) => {
   if (!maze) return;
 
   const gameCanvasRef = useRef<GameCanvasHandle | null>(null);
@@ -58,10 +61,18 @@ function GameInstance({
   // cells per second
   const playerSpeed = 3;
   const accelerationRate = 0.25;
-  const decelerationRate = 0.4;
+  const decelerationRate = 0.25;
 
   const speedAmplifier = useMemo(() => {
     return (playerSpeed * cellScale * 4) / GAME_FPS;
+  }, [cellScale]);
+
+  const accelerationSpeed = useMemo(() => {
+    return (accelerationRate * cellScale * 4) / GAME_FPS;
+  }, [cellScale]);
+
+  const decelerationSpeed = useMemo(() => {
+    return (decelerationRate * cellScale * 4) / GAME_FPS;
   }, [cellScale]);
 
   usePlayerInputHandler((inputVec) => {
@@ -125,17 +136,25 @@ function GameInstance({
       x: lerp(
         velocity.current.x,
         targetVelocity.current.x,
-        targetVelocity.current.x != 0 ? accelerationRate : decelerationRate,
+        targetVelocity.current.x != 0 ? accelerationSpeed : decelerationSpeed,
       ),
       y: lerp(
         velocity.current.y,
         targetVelocity.current.y,
-        targetVelocity.current.x != 0 ? accelerationRate : decelerationRate,
+        targetVelocity.current.x != 0 ? accelerationSpeed : decelerationSpeed,
       ),
     };
 
     if (calcMagnitude(velocity.current) < epsilon) velocity.current = ZERO_VEC;
   });
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      gameCanvasRef: gameCanvasRef.current,
+    }),
+    [gameCanvasRef.current],
+  );
 
   if (onPlayerMove)
     useEffect(() => {
@@ -151,6 +170,6 @@ function GameInstance({
       otherPlayers={otherPlayers}
     />
   );
-}
+});
 
 export default GameInstance;

@@ -12,6 +12,7 @@ import { Vector2 } from "../interfaces/Vector2";
 const bgColor = "rgb(245, 245, 245)";
 
 export interface GameCanvasHandle {
+  dimensions: { width: number; height: number };
   gridToCanvas: (gridPos: Vector2) => Vector2;
   canvasToGrid: (canvasPos: Vector2) => Vector2;
 }
@@ -66,10 +67,15 @@ const GameCanvas = forwardRef<
     }
 
     // export functions
-    useImperativeHandle(ref, () => ({
-      gridToCanvas,
-      canvasToGrid,
-    }));
+    useImperativeHandle(
+      ref,
+      () => ({
+        dimensions: { width: canvasWidth, height: canvasHeight },
+        gridToCanvas,
+        canvasToGrid,
+      }),
+      [canvasWidth, canvasHeight],
+    );
 
     const drawGrid = (ctx: CanvasRenderingContext2D): void => {
       ctx.strokeStyle = "lightgray";
@@ -126,28 +132,30 @@ const GameCanvas = forwardRef<
       ctx.stroke();
     };
 
+    const highlightCell = (
+      ctx: CanvasRenderingContext2D,
+      cellPos: Vector2,
+      highlightColor: string = "rgba(242,251,2,0.6)",
+    ) => {
+      ctx.fillStyle = highlightColor;
+      ctx.fillRect(cellPos.x, cellPos.y, cellScale * 2, cellScale * 2);
+    };
+
+    // apply the offset from the canvas position to the position on the grid for drawing a circle
+    const applyCanvasCircleOffset = (pos: Vector2): Vector2 => ({
+      x: pos.x - cellScale / 2,
+      y: pos.y - cellScale / 2,
+    });
+
     const drawPlayer = (
       ctx: CanvasRenderingContext2D,
       pos: Vector2,
       color: string,
-      highlightColor?: string,
     ): void => {
       const position: Vector2 = {
         x: pos.x - cellScale / 2,
         y: pos.y - cellScale / 2,
       };
-
-      // -- highlight player cell
-      if (highlightColor) {
-        const playerCellPos = gridToCanvas(canvasToVisualGrid(position));
-        ctx.fillStyle = highlightColor;
-        ctx.fillRect(
-          playerCellPos.x,
-          playerCellPos.y,
-          cellScale * 2,
-          cellScale * 2,
-        );
-      }
 
       ctx.strokeStyle = "black";
       ctx.lineWidth = 1.5;
@@ -174,11 +182,17 @@ const GameCanvas = forwardRef<
       drawGrid(ctx);
       drawMaze(ctx);
 
-      for (const [otherAddr, otherPos] of otherPlayers) {
-        drawPlayer(ctx, otherPos, "green", undefined);
-      }
+      // -- highlight player cell
+      const playerCell = gridToCanvas(
+        canvasToVisualGrid(applyCanvasCircleOffset(playerPos)),
+      );
+      highlightCell(ctx, playerCell, "rgba(242,251,2,0.6)");
 
-      drawPlayer(ctx, playerPos, playerColor, "rgba(242,251,2,0.6)");
+      for (const [otherAddr, otherPos] of otherPlayers)
+        drawPlayer(ctx, otherPos, "green");
+
+      drawPlayer(ctx, playerPos, playerColor);
+
       drawMaze(ctx);
     };
 
