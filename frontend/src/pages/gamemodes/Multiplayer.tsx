@@ -50,6 +50,7 @@ const MultiplayerGameManager = forwardRef<
 
 export function Multiplayer(): JSX.Element {
   const [playerPos, setPlayerPos] = useState<Vector2>(ZERO_VEC);
+  const [playerName, setPlayerName] = useState<string>("");
   const [gameOptions, setGameOptions] = useState<GameOptions>({
     mazeScale: 15,
     mazeSize: MazeSize.Medium,
@@ -94,8 +95,10 @@ export function Multiplayer(): JSX.Element {
       <div className="flex w-full justify-between">
         <div className="w-full">
           <div className="mx-auto w-fit">
+            <NameInput nameState={[playerName, setPlayerName]} />
             <ConnectButton
               readyState={readyState}
+              nameState={[playerName, setPlayerName]}
               connectToServer={connectToServer}
               disconnectFromServer={disconnectFromServer}
             />
@@ -134,24 +137,62 @@ export function Multiplayer(): JSX.Element {
 
 function ConnectButton({
   readyState,
+  nameState,
   connectToServer,
   disconnectFromServer,
 }: {
   readyState: ReadyState;
+  nameState: PassedState<string>;
   connectToServer: () => void;
   disconnectFromServer: () => void;
 }) {
+  const minNameLen = 3;
+  const maxNameLen = 10;
+
+  const [name, setName] = usePassedState(nameState);
+
+  const isValidName = useMemo(() => {
+    const formatted = name.trim();
+    return (
+      minNameLen <= formatted.length &&
+      formatted.length <= maxNameLen &&
+      /^[a-zA-Z0-9]+$/.test(formatted) &&
+      Number.isNaN(Number(formatted[0]))
+    );
+  }, [nameState]);
+
   return (
     <PrimaryButton
       text={readyState === ReadyState.OPEN ? "Disconnect" : "Connect"}
       disabled={
-        readyState !== ReadyState.OPEN &&
-        readyState !== ReadyState.CLOSED &&
-        readyState !== ReadyState.UNINSTANTIATED
+        !isValidName ||
+        (readyState !== ReadyState.OPEN &&
+          readyState !== ReadyState.CLOSED &&
+          readyState !== ReadyState.UNINSTANTIATED)
       }
       onClick={
         readyState === ReadyState.OPEN ? disconnectFromServer : connectToServer
       }
     />
+  );
+}
+
+function NameInput({ nameState }: { nameState: PassedState<string> }) {
+  const [name, setName] = usePassedState(nameState);
+
+  return (
+    <>
+      <input
+        type="text"
+        className="bg-white text-2xl rounded-md p-2"
+        placeholder="Name"
+        maxLength={10}
+        value={name}
+        onChange={(e) => {
+          e.preventDefault();
+          setName(e.target.value);
+        }}
+      />
+    </>
   );
 }
