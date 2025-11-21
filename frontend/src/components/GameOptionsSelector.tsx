@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { Dispatch, useMemo } from "react";
 import { MazeSize } from "@src/types/maze-size";
 import { clamp } from "@src/utils/common-helpers";
 
@@ -10,10 +10,7 @@ export interface GameOptions {
 function GameOptionsSelector({
   gameOptionsState,
 }: {
-  gameOptionsState: [
-    GameOptions,
-    (v: React.SetStateAction<GameOptions>) => void,
-  ];
+  gameOptionsState: [GameOptions, Dispatch<React.SetStateAction<GameOptions>>];
 }) {
   const [gameOptions, setGameOptions] = useMemo(
     () => gameOptionsState,

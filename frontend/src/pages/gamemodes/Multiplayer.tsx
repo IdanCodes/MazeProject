@@ -1,4 +1,11 @@
-import { JSX, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  forwardRef,
+  JSX,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import PageTitle from "@src/components/PageTitle";
 import GameInstance, { GameInstanceHandle } from "@src/components/GameInstance";
 import { MazeSize } from "@src/types/maze-size";
@@ -12,7 +19,34 @@ import { useNavigate } from "react-router-dom";
 import { RoutePath } from "@src/constants/route-path";
 import { useNetworkHandler } from "@src/hooks/useNetworkHandler";
 import { ReadyState } from "react-use-websocket";
-import gameInstance from "@src/components/GameInstance";
+import { usePassedState } from "@src/hooks/usePassedState";
+import { PassedState } from "@src/types/passed-state";
+
+const MultiplayerGameManager = forwardRef<
+  GameInstanceHandle,
+  {
+    gameOptions: GameOptions;
+    maze: Maze;
+    otherPlayers: Map<string, Vector2>;
+    playerPosState: PassedState<Vector2>;
+  }
+>(({ gameOptions, maze, otherPlayers, playerPosState }, ref) => {
+  const [playerPos, setPlayerPos] = usePassedState(playerPosState);
+
+  return (
+    <>
+      <GameInstance
+        ref={ref}
+        gameOptions={gameOptions}
+        maze={maze}
+        otherPlayers={otherPlayers}
+        onPlayerMove={(newPos) => {
+          if (!equalVec(newPos, playerPos)) setPlayerPos(newPos);
+        }}
+      />
+    </>
+  );
+});
 
 export function Multiplayer(): JSX.Element {
   const [playerPos, setPlayerPos] = useState<Vector2>(ZERO_VEC);
@@ -23,11 +57,6 @@ export function Multiplayer(): JSX.Element {
   const [maze, setMaze] = useState<Maze>(generateMaze(13));
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
   const navigate = useNavigate();
-
-  const handleGenerateMaze = useCallback(
-    () => setMaze(generateMaze(gameOptions.mazeScale)),
-    [gameOptions],
-  );
 
   const canvasDimensions = useMemo<{
     width: number;
@@ -53,28 +82,23 @@ export function Multiplayer(): JSX.Element {
     return readyState === ReadyState.OPEN;
   }, [readyState]);
 
+  const handleGenerateMaze = useCallback(
+    () => setMaze(generateMaze(gameOptions.mazeScale)),
+    [gameOptions],
+  );
+
   return (
     <>
       <PageTitle text="Multiplayer" />
       <br />
       <div className="flex w-full justify-between">
-        <p className="text-2xl"></p>
         <div className="w-full">
           <div className="mx-auto w-fit">
-            <PrimaryButton
-              text={readyState === ReadyState.OPEN ? "Disconnect" : "Connect"}
-              disabled={
-                readyState !== ReadyState.OPEN &&
-                readyState !== ReadyState.CLOSED &&
-                readyState !== ReadyState.UNINSTANTIATED
-              }
-              onClick={
-                readyState === ReadyState.OPEN
-                  ? disconnectFromServer
-                  : connectToServer
-              }
+            <ConnectButton
+              readyState={readyState}
+              connectToServer={connectToServer}
+              disconnectFromServer={disconnectFromServer}
             />
-
             {isConnected && (
               <>
                 <PrimaryButton
@@ -86,23 +110,48 @@ export function Multiplayer(): JSX.Element {
           </div>
         </div>
         <div className="w-full">
-          <GameInstance
-            ref={gameInstanceRef}
-            gameOptions={gameOptions}
-            maze={maze}
-            otherPlayers={otherPlayers}
-            onPlayerMove={(newPos) => {
-              if (!equalVec(newPos, playerPos)) setPlayerPos(newPos);
-            }}
-          />
-          <GameOptionsSelector
-            gameOptionsState={[gameOptions, setGameOptions]}
-          />
-          <PrimaryButton text="Generate" onClick={handleGenerateMaze} />
+          {isConnected && (
+            <>
+              <MultiplayerGameManager
+                gameOptions={gameOptions}
+                maze={maze}
+                otherPlayers={otherPlayers}
+                playerPosState={[playerPos, setPlayerPos]}
+              />
+              <GameOptionsSelector
+                gameOptionsState={[gameOptions, setGameOptions]}
+              />
+              <PrimaryButton text="Generate" onClick={handleGenerateMaze} />
+            </>
+          )}
           <PrimaryButton text="Home" onClick={() => navigate(RoutePath.Home)} />
         </div>
         <div className="w-full"></div>
       </div>
     </>
+  );
+}
+
+function ConnectButton({
+  readyState,
+  connectToServer,
+  disconnectFromServer,
+}: {
+  readyState: ReadyState;
+  connectToServer: () => void;
+  disconnectFromServer: () => void;
+}) {
+  return (
+    <PrimaryButton
+      text={readyState === ReadyState.OPEN ? "Disconnect" : "Connect"}
+      disabled={
+        readyState !== ReadyState.OPEN &&
+        readyState !== ReadyState.CLOSED &&
+        readyState !== ReadyState.UNINSTANTIATED
+      }
+      onClick={
+        readyState === ReadyState.OPEN ? disconnectFromServer : connectToServer
+      }
+    />
   );
 }
