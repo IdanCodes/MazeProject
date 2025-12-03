@@ -1,7 +1,10 @@
 import React, {
+  Dispatch,
   forwardRef,
   JSX,
+  SetStateAction,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -20,7 +23,7 @@ import { RoutePath } from "@src/constants/route-path";
 import { useNetworkHandler } from "@src/hooks/useNetworkHandler";
 import { ReadyState } from "react-use-websocket";
 import { usePassedState } from "@src/hooks/usePassedState";
-import { PassedState } from "@src/types/passed-state";
+import { PassedState, SetStateFunc } from "@src/types/passed-state";
 
 const MultiplayerGameManager = forwardRef<
   GameInstanceHandle,
@@ -56,6 +59,7 @@ export function Multiplayer(): JSX.Element {
     mazeSize: MazeSize.Medium,
   });
   const [maze, setMaze] = useState<Maze>(generateMaze(13));
+  const [errorText, setErrorText] = useState<string>("");
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
   const navigate = useNavigate();
 
@@ -94,14 +98,16 @@ export function Multiplayer(): JSX.Element {
       <br />
       <div className="flex w-full justify-between">
         <div className="w-full">
-          <div className="mx-auto w-fit">
+          <div className="mx-auto pl-10 pr-10 w-fit flex flex-col">
             <NameInput nameState={[playerName, setPlayerName]} />
             <ConnectButton
               readyState={readyState}
               nameState={[playerName, setPlayerName]}
               connectToServer={connectToServer}
               disconnectFromServer={disconnectFromServer}
+              setErrorText={setErrorText}
             />
+            <ErrorLabel text={errorText} />
             {isConnected && (
               <>
                 <PrimaryButton
@@ -140,26 +146,38 @@ function ConnectButton({
   nameState,
   connectToServer,
   disconnectFromServer,
+  setErrorText,
 }: {
   readyState: ReadyState;
   nameState: PassedState<string>;
   connectToServer: () => void;
   disconnectFromServer: () => void;
+  setErrorText: SetStateFunc<string>;
 }) {
   const minNameLen = 3;
-  const maxNameLen = 10;
+  const maxNameLen = 15;
 
   const [name, setName] = usePassedState(nameState);
+  const [isValidName, setIsValidName] = useState<boolean>(false);
 
-  const isValidName = useMemo(() => {
+  useEffect(() => {
     const formatted = name.trim();
-    return (
-      minNameLen <= formatted.length &&
-      formatted.length <= maxNameLen &&
-      /^[a-zA-Z0-9]+$/.test(formatted) &&
-      Number.isNaN(Number(formatted[0]))
-    );
-  }, [nameState]);
+    let error: string = "";
+    if (formatted.length === 0) {
+      setIsValidName(false);
+      return;
+    } else if (formatted.length < minNameLen)
+      error = `Name should be at least ${minNameLen} characters`;
+    else if (formatted.length > maxNameLen)
+      error = `Name should be at most ${maxNameLen} characters`;
+    else if (!/^[a-zA-Z0-9]+$/.test(formatted))
+      error = `Name has to be alpha-numeric!`;
+    else if (!Number.isNaN(Number(formatted[0])))
+      error = `Name can't start with a number`;
+
+    setErrorText(error);
+    setIsValidName(error.length === 0);
+  }, [name]);
 
   return (
     <PrimaryButton
@@ -177,6 +195,16 @@ function ConnectButton({
   );
 }
 
+function ErrorLabel({ text }: { text: string }) {
+  return (
+    <>
+      <p className="text-red-500 text-center">
+        {text.length > 0 ? `Error: ${text}` : ""}
+      </p>
+    </>
+  );
+}
+
 function NameInput({ nameState }: { nameState: PassedState<string> }) {
   const [name, setName] = usePassedState(nameState);
 
@@ -186,7 +214,7 @@ function NameInput({ nameState }: { nameState: PassedState<string> }) {
         type="text"
         className="bg-white text-2xl rounded-md p-2"
         placeholder="Name"
-        maxLength={10}
+        maxLength={15}
         value={name}
         onChange={(e) => {
           e.preventDefault();

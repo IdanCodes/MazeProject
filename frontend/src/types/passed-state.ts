@@ -1,3 +1,4 @@
 import React from "react";
 
-export type PassedState<T> = [T, React.Dispatch<React.SetStateAction<T>>];
+export type SetStateFunc<T> = React.Dispatch<React.SetStateAction<T>>;
+export type PassedState<T> = [T, SetStateFunc<T>];
