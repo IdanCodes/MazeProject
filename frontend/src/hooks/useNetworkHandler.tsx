@@ -29,7 +29,8 @@ export function useNetworkHandler(
   localPlayerPos: Vector2,
   canvasSize: { width: number; height: number },
   setMaze: (maze: Maze) => void,
-  onError: (e: Event) => void = (_) => {},
+  onError: (e: WebSocketEventMap["error"]) => void = (_) => {},
+  onClose: (e: WebSocketEventMap["close"]) => void = (_) => {},
   posUpdateRate: number = 10,
 ): {
   otherPlayers: Map<string, Vector2>;
@@ -48,7 +49,8 @@ export function useNetworkHandler(
     {
       onOpen: () => console.log("Connected!"),
       onMessage: (e: MessageEvent) => onReceiveMessage(e),
-      onError: (e: Event) => onError(e),
+      onError: (e: WebSocketEventMap["error"]) => onError(e),
+      onClose: (e: WebSocketEventMap["close"]) => onClose(e),
     },
     connectOnDemand,
   );

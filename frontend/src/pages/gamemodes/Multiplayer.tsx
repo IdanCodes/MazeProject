@@ -1,8 +1,6 @@
 import React, {
-  Dispatch,
   forwardRef,
   JSX,
-  SetStateAction,
   useCallback,
   useEffect,
   useMemo,
@@ -73,14 +71,24 @@ export function Multiplayer(): JSX.Element {
         }
       : { width: 1, height: 1 };
   }, [gameInstanceRef.current]);
+
+  const handleNetworkError = (e: WebSocketEventMap["error"]) => {
+    console.error("Network error:", e);
+    setErrorText(`A network error occurred. Please refresh the page`);
+    setPlayerName("");
+  };
+
   const {
     otherPlayers,
     sendMaze,
     readyState,
     connectToServer,
     disconnectFromServer,
-  } = useNetworkHandler(playerPos, canvasDimensions, setMaze, (e) =>
-    console.error(e),
+  } = useNetworkHandler(
+    playerPos,
+    canvasDimensions,
+    setMaze,
+    handleNetworkError,
   );
 
   const isConnected = useMemo<boolean>(() => {
@@ -98,15 +106,21 @@ export function Multiplayer(): JSX.Element {
       <br />
       <div className="flex w-full justify-between">
         <div className="w-full">
-          <div className="mx-auto pl-10 pr-10 w-fit flex flex-col">
-            <NameInput nameState={[playerName, setPlayerName]} />
-            <ConnectButton
-              readyState={readyState}
-              nameState={[playerName, setPlayerName]}
-              connectToServer={connectToServer}
-              disconnectFromServer={disconnectFromServer}
-              setErrorText={setErrorText}
-            />
+          <div className="mx-auto pl-10 pr-10 w-full flex flex-col">
+            <div>
+              <NameInput
+                disabled={readyState === ReadyState.CLOSED}
+                nameState={[playerName, setPlayerName]}
+              />
+              <ConnectButton
+                readyState={readyState}
+                nameState={[playerName, setPlayerName]}
+                connectToServer={connectToServer}
+                disconnectFromServer={disconnectFromServer}
+                setErrorText={setErrorText}
+              />
+            </div>
+            <ReadyStateLabel readyState={readyState} />
             <ErrorLabel text={errorText} />
             {isConnected && (
               <>
@@ -167,11 +181,11 @@ function ConnectButton({
       setIsValidName(false);
       return;
     } else if (formatted.length < minNameLen)
-      error = `Name should be at least ${minNameLen} characters`;
+      error = `Name mus be at least ${minNameLen} characters long`;
     else if (formatted.length > maxNameLen)
-      error = `Name should be at most ${maxNameLen} characters`;
+      error = `Name must be at most ${maxNameLen} characters long`;
     else if (!/^[a-zA-Z0-9]+$/.test(formatted))
-      error = `Name has to be alpha-numeric!`;
+      error = `Name must to be alpha-numeric`;
     else if (!Number.isNaN(Number(formatted[0])))
       error = `Name can't start with a number`;
 
@@ -185,7 +199,6 @@ function ConnectButton({
       disabled={
         !isValidName ||
         (readyState !== ReadyState.OPEN &&
-          readyState !== ReadyState.CLOSED &&
           readyState !== ReadyState.UNINSTANTIATED)
       }
       onClick={
@@ -198,14 +211,30 @@ function ConnectButton({
 function ErrorLabel({ text }: { text: string }) {
   return (
     <>
-      <p className="text-red-500 text-center">
+      <p className="text-red-500 max-w-[70%]">
         {text.length > 0 ? `Error: ${text}` : ""}
       </p>
     </>
   );
 }
 
-function NameInput({ nameState }: { nameState: PassedState<string> }) {
+function ReadyStateLabel({ readyState }: { readyState: ReadyState }) {
+  return (
+    <>
+      <p className="text-base text-gray-700/90">
+        Status: {ReadyState[readyState]}
+      </p>
+    </>
+  );
+}
+
+function NameInput({
+  disabled,
+  nameState,
+}: {
+  disabled: boolean;
+  nameState: PassedState<string>;
+}) {
   const [name, setName] = usePassedState(nameState);
 
   return (
@@ -213,6 +242,7 @@ function NameInput({ nameState }: { nameState: PassedState<string> }) {
       <input
         type="text"
         className="bg-white text-2xl rounded-md p-2"
+        disabled={disabled}
         placeholder="Name"
         maxLength={15}
         value={name}
