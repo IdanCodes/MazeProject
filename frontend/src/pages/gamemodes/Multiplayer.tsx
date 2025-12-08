@@ -19,9 +19,9 @@ import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { useNavigate } from "react-router-dom";
 import { RoutePath } from "@src/constants/route-path";
 import { useNetworkHandler } from "@src/hooks/useNetworkHandler";
-import { ReadyState } from "react-use-websocket";
 import { usePassedState } from "@src/hooks/usePassedState";
 import { PassedState, SetStateFunc } from "@src/types/passed-state";
+import { getUsernameError } from "@src/utils/game-protocol";
 
 const MultiplayerGameManager = forwardRef<
   GameInstanceHandle,
@@ -81,7 +81,7 @@ export function Multiplayer(): JSX.Element {
   const {
     otherPlayers,
     sendMaze,
-    readyState,
+    isConnected,
     connectToServer,
     disconnectFromServer,
   } = useNetworkHandler(
@@ -90,10 +90,6 @@ export function Multiplayer(): JSX.Element {
     setMaze,
     handleNetworkError,
   );
-
-  const isConnected = useMemo<boolean>(() => {
-    return readyState === ReadyState.OPEN;
-  }, [readyState]);
 
   const handleGenerateMaze = useCallback(
     () => setMaze(generateMaze(gameOptions.mazeScale)),
@@ -109,18 +105,17 @@ export function Multiplayer(): JSX.Element {
           <div className="mx-auto pl-10 pr-10 w-full flex flex-col">
             <div>
               <NameInput
-                disabled={readyState === ReadyState.CLOSED}
+                disabled={isConnected}
                 nameState={[playerName, setPlayerName]}
               />
               <ConnectButton
-                readyState={readyState}
+                isConnected={isConnected}
                 nameState={[playerName, setPlayerName]}
-                connectToServer={connectToServer}
+                connectToServer={() => connectToServer(playerName)}
                 disconnectFromServer={disconnectFromServer}
                 setErrorText={setErrorText}
               />
             </div>
-            <ReadyStateLabel readyState={readyState} />
             <ErrorLabel text={errorText} />
             {isConnected && (
               <>
@@ -156,54 +151,37 @@ export function Multiplayer(): JSX.Element {
 }
 
 function ConnectButton({
-  readyState,
+  isConnected,
   nameState,
   connectToServer,
   disconnectFromServer,
   setErrorText,
 }: {
-  readyState: ReadyState;
+  isConnected: boolean;
   nameState: PassedState<string>;
   connectToServer: () => void;
   disconnectFromServer: () => void;
   setErrorText: SetStateFunc<string>;
 }) {
-  const minNameLen = 3;
-  const maxNameLen = 15;
-
-  const [name, setName] = usePassedState(nameState);
+  const [name, _] = usePassedState(nameState);
   const [isValidName, setIsValidName] = useState<boolean>(false);
 
   useEffect(() => {
     const formatted = name.trim();
-    let error: string = "";
-    if (formatted.length === 0) {
-      setIsValidName(false);
-      return;
-    } else if (formatted.length < minNameLen)
-      error = `Name mus be at least ${minNameLen} characters long`;
-    else if (formatted.length > maxNameLen)
-      error = `Name must be at most ${maxNameLen} characters long`;
-    else if (!/^[a-zA-Z0-9]+$/.test(formatted))
-      error = `Name must to be alpha-numeric`;
-    else if (!Number.isNaN(Number(formatted[0])))
-      error = `Name can't start with a number`;
-
-    setErrorText(error);
-    setIsValidName(error.length === 0);
+    const error = getUsernameError(formatted);
+    setIsValidName(error === null);
+    setErrorText(error ?? "");
   }, [name]);
 
   return (
     <PrimaryButton
-      text={readyState === ReadyState.OPEN ? "Disconnect" : "Connect"}
+      text={isConnected ? "Disconnect" : "Connect"}
       disabled={
-        !isValidName ||
-        (readyState !== ReadyState.OPEN &&
-          readyState !== ReadyState.UNINSTANTIATED)
+        !isValidName
+        // (readyState !== ReadyState.OPEN &&
+        //   readyState !== ReadyState.UNINSTANTIATED)
       }
-      onClick={
-        readyState === ReadyState.OPEN ? disconnectFromServer : connectToServer
-      }
+      onClick={isConnected ? disconnectFromServer : connectToServer}
     />
   );
 }
@@ -213,16 +191,6 @@ function ErrorLabel({ text }: { text: string }) {
     <>
       <p className="text-red-500 max-w-[70%]">
         {text.length > 0 ? `Error: ${text}` : ""}
-      </p>
-    </>
-  );
-}
-
-function ReadyStateLabel({ readyState }: { readyState: ReadyState }) {
-  return (
-    <>
-      <p className="text-base text-gray-700/90">
-        Status: {ReadyState[readyState]}
       </p>
     </>
   );

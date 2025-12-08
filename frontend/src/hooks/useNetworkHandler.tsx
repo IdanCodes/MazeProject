@@ -8,12 +8,8 @@ import { useRef, useState } from "react";
 import { GameMsgType } from "@src/components/game-msg-type";
 import { CellType, Grid } from "@src/types/Grid";
 import { Maze } from "@src/types/Maze";
-import {
-  buildGameRequest,
-  parseGameServerMessage,
-} from "@src/utils/game-protocol";
-import useWebSocket, { ReadyState } from "react-use-websocket";
 import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
+import { useMazePlayerSocket } from "@src/hooks/useMazePlayerSocket";
 
 const SERVER_PORT = 3003;
 const SERVER_IP = "127.0.0.1";
@@ -35,34 +31,30 @@ export function useNetworkHandler(
 ): {
   otherPlayers: Map<string, Vector2>;
   sendMaze: (maze: Maze) => void;
-  readyState: ReadyState;
-  connectToServer: () => void;
+  isConnected: boolean;
+  connectToServer: (name: string) => void;
   disconnectFromServer: () => void;
 } {
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
   const [otherPlayers, setOtherPlayers] = useState<Map<string, Vector2>>(
     new Map(),
   );
-  const [connectOnDemand, setConnectOnDemand] = useState<boolean>(false);
-  const { sendMessage, readyState } = useWebSocket(
+  const clientName = useRef<string>("");
+  const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
     SERVER_WS_URL,
     {
-      onOpen: () => console.log("Connected!"),
-      onMessage: (e: MessageEvent) => onReceiveMessage(e),
-      onError: (e: WebSocketEventMap["error"]) => onError(e),
-      onClose: (e: WebSocketEventMap["close"]) => onClose(e),
+      onConnect: () => {
+        console.log("Connection is open!");
+      },
+      onMessage: (msg) => onReceiveMessage(msg),
+      // onError: (e: WebSocketEventMap["error"]) => onError(e),
+      onDisconnect: (e: WebSocketEventMap["close"]) => onClose(e),
     },
-    connectOnDemand,
   );
 
-  function onReceiveMessage(msg: MessageEvent) {
-    const serverMsg = parseGameServerMessage(msg.data);
-    if (serverMsg) handleServerMessage(serverMsg);
-    else
-      console.log(
-        "Received message from server with invalid format:",
-        msg.data,
-      );
+  function onReceiveMessage(msg: NetworkMessage) {
+    console.log(msg);
+    handleServerMessage(msg);
   }
 
   // region Server Message Handlers
@@ -129,31 +121,39 @@ export function useNetworkHandler(
       x: localPlayerPos.x / canvasSize.width,
       y: localPlayerPos.y / canvasSize.height,
     } as Vector2;
-    sendMessage(buildGameRequest(GameMsgType.UPDATE_POS, posToSend));
+    sendMessage(GameMsgType.UPDATE_POS, posToSend);
     lastSentPos.current = localPlayerPos;
   }
 
   function sendMaze(maze: Maze) {
-    sendMessage(buildGameRequest(GameMsgType.MAZE, maze.getMatrix()));
+    sendMessage(GameMsgType.MAZE, maze.getMatrix());
   }
 
   useAnimationUpdate(posUpdateRate, () => {
     if (!equalVec(localPlayerPos, lastSentPos.current)) sendPos();
   });
 
-  function connectToServer() {
-    setConnectOnDemand(true);
+  function connectToServer(name: string) {
+    if (!name.length) {
+      console.warn("Not connecting - no name was provided");
+      return;
+    }
+
+    clientName.current = name;
+    connect(name);
+    // setConnectOnDemand(true);
   }
 
   function disconnectFromServer() {
     setOtherPlayers(new Map());
-    setConnectOnDemand(false);
+    disconnect();
+    // setConnectOnDemand(false);
   }
 
   return {
     otherPlayers,
     sendMaze,
-    readyState,
+    isConnected,
     connectToServer,
     disconnectFromServer,
   };

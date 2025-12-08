@@ -1,5 +1,4 @@
 import asyncio
-import json
 import websockets
 from ClientInfo import ClientInfo
 import protocol
@@ -23,15 +22,31 @@ class Server:
             await asyncio.Future()
 
     # initialize the connection with a client - "handshake" before connection
-    # returns the client's name
     async def init_connection(self, websocket: websockets.ServerConnection):
         rec_text = await websocket.recv()
         req_type, req_data = parse_request(rec_text)
         if not req_type or not isinstance(req_data, str):
             await websocket.close()
             return
+
+        client_name: str = req_data
+        new_client = ClientInfo(websocket, client_name)
+
+        # check if the name is already registered
+        if self.get_client_info(new_client.name) != None:
+            await new_client.send(build_broadcast_msg(new_client, MsgType.ERR_NAME_TAKEN))
+            return await self.init_connection(websocket)
         
-        await self.handle_client(ClientInfo(websocket, req_data))
+        await new_client.send(build_broadcast_msg(new_client, MsgType.ACCEPT_CONNECTION))
+        await self.handle_client(new_client)
+
+    # Get ClientInfo by the client's id
+    # Returns None if the client isn't connected
+    def get_client_info(self, client_name: str) -> ClientInfo | None:
+        for c in self.clients:
+            if c.name == client_name:
+                return c
+        return None
 
     async def handle_client(self, client: ClientInfo):
         await self.onClientConnect(client)

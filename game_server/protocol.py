@@ -33,6 +33,8 @@ class MsgType(Enum):
     UPDATE_POS = "update_pos"
     SET_NAME = "set_name"
     
+    ACCEPT_CONNECTION = "accept_connection"
+    ERR_NAME_TAKEN = "err_name_taken"
     PLAYER_CONNECTED = "player_connected"
     PLAYER_DISCONNECTED = "player_disconnected"
 

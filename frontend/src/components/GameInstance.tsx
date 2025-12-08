@@ -161,6 +161,23 @@ const GameInstance = forwardRef<
       onPlayerMove(playerPos);
     }, [playerPos]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(
+          e.code,
+        ) > -1
+      )
+        e.preventDefault();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   return (
     <GameCanvas
       ref={gameCanvasRef}
