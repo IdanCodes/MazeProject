@@ -28,6 +28,7 @@ export function useMazePlayerSocket(
   };
 
   const handleClose = (e: CloseEvent) => {
+    ws.current = undefined;
     setIsConnected(false);
     if (handlers.onDisconnect) handlers.onDisconnect(e);
   };
@@ -41,15 +42,6 @@ export function useMazePlayerSocket(
   const handleError = (e: WebSocketEventMap["error"]) => {
     console.error("Socket error:", e);
   };
-
-  useEffect(() => {
-    return () => {
-      if (!ws.current) return;
-      ws.current.removeEventListener("close", handleClose);
-      ws.current.removeEventListener("message", handleMessage);
-      ws.current.removeEventListener("error", handleError);
-    };
-  }, [ws.current]);
 
   function connect(name: string) {
     if (isConnected || getUsernameError(name) !== null) return;
@@ -94,9 +86,7 @@ export function useMazePlayerSocket(
 
   function disconnect() {
     if (!isConnected || !ws.current) return;
-    ws.current.close(1000, "Normal closure");
-    ws.current = undefined;
-    setIsConnected(false);
+    ws.current.close(1000);
   }
 
   function sendMessage(msgType: GameMsgType, data: any | undefined) {

@@ -111,7 +111,7 @@ export function Multiplayer(): JSX.Element {
               <ConnectButton
                 isConnected={isConnected}
                 nameState={[playerName, setPlayerName]}
-                connectToServer={() => connectToServer(playerName)}
+                connectToServer={() => connectToServer(playerName.trim())}
                 disconnectFromServer={disconnectFromServer}
                 setErrorText={setErrorText}
               />
@@ -163,7 +163,7 @@ function ConnectButton({
   disconnectFromServer: () => void;
   setErrorText: SetStateFunc<string>;
 }) {
-  const [name, _] = usePassedState(nameState);
+  const [name, setName] = usePassedState(nameState);
   const [isValidName, setIsValidName] = useState<boolean>(false);
 
   useEffect(() => {
@@ -176,12 +176,15 @@ function ConnectButton({
   return (
     <PrimaryButton
       text={isConnected ? "Disconnect" : "Connect"}
-      disabled={
-        !isValidName
-        // (readyState !== ReadyState.OPEN &&
-        //   readyState !== ReadyState.UNINSTANTIATED)
+      disabled={!isValidName}
+      onClick={
+        isConnected
+          ? disconnectFromServer
+          : () => {
+              setName(name.trim());
+              connectToServer();
+            }
       }
-      onClick={isConnected ? disconnectFromServer : connectToServer}
     />
   );
 }
