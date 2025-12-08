@@ -32,7 +32,7 @@ export function useNetworkHandler(
   otherPlayers: Map<string, Vector2>;
   sendMaze: (maze: Maze) => void;
   isConnected: boolean;
-  connectToServer: (name: string) => void;
+  connectToServer: (name: string) => Promise<string>;
   disconnectFromServer: () => void;
 } {
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
@@ -133,14 +133,14 @@ export function useNetworkHandler(
     if (!equalVec(localPlayerPos, lastSentPos.current)) sendPos();
   });
 
-  function connectToServer(name: string) {
+  function connectToServer(name: string): Promise<string> {
     if (!name.length) {
       console.warn("Not connecting - no name was provided");
-      return;
+      return new Promise((res, rej) => rej("No name was provided"));
     }
 
     clientName.current = name;
-    connect(name);
+    return connect(name);
     // setConnectOnDemand(true);
   }
 

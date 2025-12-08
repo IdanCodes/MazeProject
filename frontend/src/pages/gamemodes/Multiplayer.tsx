@@ -111,7 +111,15 @@ export function Multiplayer(): JSX.Element {
               <ConnectButton
                 isConnected={isConnected}
                 nameState={[playerName, setPlayerName]}
-                connectToServer={() => connectToServer(playerName.trim())}
+                connectToServer={async () => {
+                  connectToServer(playerName.trim())
+                    .then(() => {
+                      setErrorText("");
+                    })
+                    .catch((err) => {
+                      setErrorText(err);
+                    });
+                }}
                 disconnectFromServer={disconnectFromServer}
                 setErrorText={setErrorText}
               />
