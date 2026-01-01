@@ -1,7 +1,10 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 
 const useAnimationUpdate = (fps: number, callback: () => void) => {
-  const frameLengthMS = Math.floor(1000 * (1.0 / fps));
+  const frameLengthMS = useMemo<number>(
+    () => Math.floor(1000 * (1.0 / fps)),
+    [fps],
+  );
   const requestRef = useRef<DOMHighResTimeStamp | null>(null);
   const previousTimeRef = useRef<DOMHighResTimeStamp | null>(null);
 

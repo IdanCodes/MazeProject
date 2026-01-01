@@ -22,6 +22,7 @@ import { useNetworkHandler } from "@src/hooks/useNetworkHandler";
 import { usePassedState } from "@src/hooks/usePassedState";
 import { PassedState, SetStateFunc } from "@src/types/passed-state";
 import { getUsernameError } from "@src/utils/game-protocol";
+import clsx from "clsx";
 
 const MultiplayerGameManager = forwardRef<
   GameInstanceHandle,
@@ -71,6 +72,7 @@ export function Multiplayer(): JSX.Element {
         }
       : { width: 1, height: 1 };
   }, [gameInstanceRef.current]);
+  const [isReady, setIsReady] = useState<boolean>(false);
 
   const handleNetworkError = (e: WebSocketEventMap["error"]) => {
     console.error("Network error:", e);
@@ -103,6 +105,12 @@ export function Multiplayer(): JSX.Element {
       <div className="flex w-full justify-between">
         <div className="w-full">
           <div className="mx-auto pl-10 pr-10 w-full flex flex-col">
+            <PrimaryButton
+              className="text-3xl w-[50%] my-5 mx-0"
+              onClick={() => navigate(RoutePath.Home)}
+            >
+              Home
+            </PrimaryButton>
             <div>
               <NameInput
                 disabled={isConnected}
@@ -120,7 +128,10 @@ export function Multiplayer(): JSX.Element {
                       setErrorText(err);
                     });
                 }}
-                disconnectFromServer={disconnectFromServer}
+                disconnectFromServer={() => {
+                  disconnectFromServer();
+                  setIsReady(false);
+                }}
                 setErrorText={setErrorText}
               />
             </div>
@@ -128,9 +139,11 @@ export function Multiplayer(): JSX.Element {
             {isConnected && (
               <>
                 <PrimaryButton
-                  text="Send Maze"
+                  className="text-3xl"
                   onClick={() => sendMaze(maze)}
-                />
+                >
+                  Send Maze
+                </PrimaryButton>
               </>
             )}
           </div>
@@ -147,12 +160,24 @@ export function Multiplayer(): JSX.Element {
               <GameOptionsSelector
                 gameOptionsState={[gameOptions, setGameOptions]}
               />
-              <PrimaryButton text="Generate" onClick={handleGenerateMaze} />
+              <div className="flex justify-around">
+                <PrimaryButton
+                  className="text-3xl"
+                  onClick={handleGenerateMaze}
+                >
+                  Generate
+                </PrimaryButton>
+                <ReadyButton
+                  readyState={[isReady, setIsReady]}
+                  disabled={!isConnected}
+                />
+              </div>
             </>
           )}
-          <PrimaryButton text="Home" onClick={() => navigate(RoutePath.Home)} />
         </div>
-        <div className="w-full"></div>
+        <div className="w-full">
+          <PlayersList playersMap={} />
+        </div>
       </div>
     </>
   );
@@ -183,7 +208,7 @@ function ConnectButton({
 
   return (
     <PrimaryButton
-      text={isConnected ? "Disconnect" : "Connect"}
+      className="text-3xl"
       disabled={!isValidName}
       onClick={
         isConnected
@@ -193,7 +218,9 @@ function ConnectButton({
               connectToServer();
             }
       }
-    />
+    >
+      {isConnected ? "Disconnect" : "Connect"}
+    </PrimaryButton>
   );
 }
 
@@ -232,4 +259,39 @@ function NameInput({
       />
     </>
   );
+}
+
+function ReadyButton({
+  readyState,
+  disabled,
+}: {
+  readyState: PassedState<boolean>;
+  disabled: boolean;
+}) {
+  const [isReady, setIsReady] = usePassedState(readyState);
+  return (
+    <>
+      <PrimaryButton
+        className={clsx(
+          "text-3xl",
+          isReady
+            ? "bg-green-500 hover:bg-green-500/80 active:bg-green-600/80"
+            : "bg-emerald-400 hover:bg-emerald-400/80 active:bg-emerald-500/80",
+        )}
+        disabled={disabled}
+        onClick={() =>
+          setIsReady((r) => {
+            console.log(`from ${r} to ${!r}`);
+            return !r;
+          })
+        }
+      >
+        {isReady ? "Ready" : "Not Ready"}
+      </PrimaryButton>
+    </>
+  );
+}
+
+function PlayersList({ playersMap }: { playersMap: Map<string, boolean> }) {
+  return <></>;
 }

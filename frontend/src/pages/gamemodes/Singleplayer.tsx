@@ -37,14 +37,17 @@ export default function Singleplayer(): JSX.Element {
           <GameOptionsSelector
             gameOptionsState={[gameOptions, setGameOptions]}
           />
-          <PrimaryButton text="Generate" onClick={handleClickGenerate} />
+          <PrimaryButton className="text-3xl" onClick={handleClickGenerate}>
+            Generate
+          </PrimaryButton>
         </div>
         <div className="mx-auto w-fit">
           <PrimaryButton
-            text="Home"
-            buttonSize={ButtonSize.Large}
+            className="text-4xl"
             onClick={() => navigate(RoutePath.Home)}
-          />
+          >
+            Home
+          </PrimaryButton>
         </div>
       </div>
     </>

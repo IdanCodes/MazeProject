@@ -14,15 +14,18 @@ function Home() {
       <PageTitle text="Maze Game" />
       <div className="flex flex-col justify-center w-3/10 py-20 mx-auto gap-3">
         <PrimaryButton
-          text="Singleplayer"
-          buttonSize={ButtonSize.Large}
+          className="text-4xl"
           onClick={() => navigate(RoutePath.GameModes.Singleplayer)}
-        />
+        >
+          Singleplayer
+        </PrimaryButton>
         <PrimaryButton
+          className="text-4xl"
           text="Multiplayer"
-          buttonSize={ButtonSize.Large}
           onClick={() => navigate(RoutePath.GameModes.Multiplayer)}
-        />
+        >
+          Multiplayer
+        </PrimaryButton>
       </div>
     </>
   );
