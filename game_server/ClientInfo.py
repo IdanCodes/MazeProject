@@ -3,6 +3,10 @@ import websockets
 class ClientInfo:
     def __init__(self, websocket: websockets.ServerConnection, name: str):
         self.websocket = websocket
+        self.position = {
+            "x": 0,
+            "y": 0
+        }
         self.name = name
 
     async def send(self, message: str):

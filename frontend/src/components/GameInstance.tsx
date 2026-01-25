@@ -9,7 +9,7 @@ import React, {
 import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight } from "../types/maze-size";
 import { Maze } from "../types/Maze";
-import GameCanvas, { GameCanvasHandle } from "./GameCanvas";
+import GameCanvas, { GameCanvasHandle, PLAYER_RADIUS } from "./GameCanvas";
 import { CellType } from "../types/Grid";
 import { lerp } from "../utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
@@ -59,9 +59,9 @@ const GameInstance = forwardRef<
   }, [maze]);
 
   // cells per second
-  const playerSpeed = 3.25;
-  const accelerationRate = 0.27;
-  const decelerationRate = 0.2;
+  const playerSpeed = 3;
+  const accelerationRate = 0.2;
+  const decelerationRate = 0.13;
 
   const speedAmplifier = useMemo(() => {
     return (playerSpeed * cellScale * 4) / GAME_FPS;
@@ -88,43 +88,62 @@ const GameInstance = forwardRef<
   useAnimationUpdate(GAME_FPS, () => {
     setPlayerPos((cp: Vector2): Vector2 => {
       if (!gameCanvasRef.current) return cp;
+      const checkCollision = (pos: Vector2) =>
+        gameCanvasRef.current?.checkCircleCollision(pos, PLAYER_RADIUS);
 
       const newPos: Vector2 = {
         x: cp.x + velocity.current.x,
         y: cp.y + velocity.current.y,
       };
 
-      const newGridPos: Vector2 = gameCanvasRef.current.canvasToGrid(newPos);
+      // Check full movement
+      if (!checkCollision(newPos)) return newPos;
 
-      if (
-        maze.inBounds(newGridPos) &&
-        maze.getCell(newGridPos) !== CellType.Wall
-      )
-        return newPos;
-
+      // Try horizontal only
       const onlyHorizontal: Vector2 = {
         x: newPos.x,
         y: cp.y,
       };
-      const onlyHorizontalGP: Vector2 =
-        gameCanvasRef.current.canvasToGrid(onlyHorizontal);
-      if (
-        maze.inBounds(onlyHorizontalGP) &&
-        maze.getCell(onlyHorizontalGP) === CellType.Passage
-      )
-        return onlyHorizontal;
+      if (!checkCollision(onlyHorizontal)) return onlyHorizontal;
 
+      // Try vertical only
       const onlyVertical: Vector2 = {
         x: cp.x,
         y: newPos.y,
       };
-      const onlyVerticalGP: Vector2 =
-        gameCanvasRef.current.canvasToGrid(onlyVertical);
-      if (
-        maze.inBounds(onlyVerticalGP) &&
-        maze.getCell(onlyVerticalGP) === CellType.Passage
-      )
-        return onlyVertical;
+      if (!checkCollision(onlyVertical)) return onlyVertical;
+
+      // const newGridPos: Vector2 = gameCanvasRef.current.canvasToGrid(newPos);
+
+      // if (
+      //   maze.inBounds(newGridPos) &&
+      //   maze.getCell(newGridPos) !== CellType.Wall
+      // )
+      //   return newPos;
+
+      // const onlyHorizontal: Vector2 = {
+      //   x: newPos.x,
+      //   y: cp.y,
+      // };
+      // const onlyHorizontalGP: Vector2 =
+      //   gameCanvasRef.current.canvasToGrid(onlyHorizontal);
+      // if (
+      //   maze.inBounds(onlyHorizontalGP) &&
+      //   maze.getCell(onlyHorizontalGP) === CellType.Passage
+      // )
+      //   return onlyHorizontal;
+
+      // const onlyVertical: Vector2 = {
+      //   x: cp.x,
+      //   y: newPos.y,
+      // };
+      // const onlyVerticalGP: Vector2 =
+      //   gameCanvasRef.current.canvasToGrid(onlyVertical);
+      // if (
+      //   maze.inBounds(onlyVerticalGP) &&
+      //   maze.getCell(onlyVerticalGP) === CellType.Passage
+      // )
+      //   return onlyVertical;
 
       return cp;
     });
@@ -141,7 +160,7 @@ const GameInstance = forwardRef<
       y: lerp(
         velocity.current.y,
         targetVelocity.current.y,
-        targetVelocity.current.x != 0 ? accelerationSpeed : decelerationSpeed,
+        targetVelocity.current.y != 0 ? accelerationSpeed : decelerationSpeed,
       ),
     };
 

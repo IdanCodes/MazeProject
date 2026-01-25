@@ -10,11 +10,17 @@ import { CellType } from "../types/Grid";
 import { Vector2 } from "../interfaces/Vector2";
 
 const bgColor = "rgb(245, 245, 245)";
+export const PLAYER_RADIUS = 0.25; // in grid cells
 
 export interface GameCanvasHandle {
   dimensions: { width: number; height: number };
   gridToCanvas: (gridPos: Vector2) => Vector2;
   canvasToGrid: (canvasPos: Vector2) => Vector2;
+  checkCircleCollision: (
+    pos: Vector2,
+    radius: number,
+    cellType?: CellType,
+  ) => boolean;
 }
 
 const GameCanvas = forwardRef<
@@ -43,6 +49,13 @@ const GameCanvas = forwardRef<
 
     const canvasWidth: number = cellScale * (maze.width + 1);
     const canvasHeight: number = cellScale * (maze.height + 1);
+    const dimensions = useMemo(
+      () => ({
+        width: canvasWidth,
+        height: canvasHeight,
+      }),
+      [canvasWidth, canvasHeight],
+    );
 
     function gridToCanvas(gridPos: Vector2): Vector2 {
       return {
@@ -66,13 +79,49 @@ const GameCanvas = forwardRef<
       };
     }
 
+    // check if a circle at pos with radius collides with another CellType in the maze or the boundary.
+    // defaults to checking for walls.
+    function checkCircleCollision(
+      pos: Vector2,
+      radius: number,
+      cellType: CellType = CellType.Wall,
+    ): boolean {
+      // Check multiple points around the circle's perimeter
+      const checkPoints = [
+        { x: 0, y: -radius }, // top
+        { x: radius, y: 0 }, // right
+        { x: 0, y: radius }, // bottom
+        { x: -radius, y: 0 }, // left
+        { x: radius * 0.7, y: -radius * 0.7 }, // diagonals
+        { x: radius * 0.7, y: radius * 0.7 },
+        { x: -radius * 0.7, y: radius * 0.7 },
+        { x: -radius * 0.7, y: -radius * 0.7 },
+      ];
+
+      for (const offset of checkPoints) {
+        const checkPos = {
+          x: pos.x + (offset.x * dimensions.width) / (maze.width * 2),
+          y: pos.y + (offset.y * dimensions.height) / (maze.height * 2),
+        };
+
+        const gridPos = canvasToGrid(checkPos);
+
+        // Check bounds or other collisions
+        if (!maze.inBounds(gridPos) || maze.getCell(gridPos) === cellType)
+          return true;
+      }
+
+      return false;
+    }
+
     // export functions
     useImperativeHandle(
       ref,
       () => ({
-        dimensions: { width: canvasWidth, height: canvasHeight },
+        dimensions,
         gridToCanvas,
         canvasToGrid,
+        checkCircleCollision,
       }),
       [canvasWidth, canvasHeight],
     );
@@ -164,7 +213,7 @@ const GameCanvas = forwardRef<
       ctx.arc(
         position.x + cellScale,
         position.y + cellScale,
-        cellScale * 0.5,
+        cellScale * PLAYER_RADIUS * 2,
         0,
         2 * Math.PI,
       );

@@ -1,8 +1,8 @@
-import websockets
 from enum import Enum
 import json
 
 from ClientInfo import ClientInfo
+from helpers import is_number
 
 # message structure:
 """
@@ -24,6 +24,8 @@ Message Structure
 IP_ADDR = "127.0.0.1"
 PORT = 3003
 
+SERVER_NAME = "SERVER"
+
 def get_addr_str(remote_addr: tuple[str, int]) -> str:
     return remote_addr[0] + ":" + str(remote_addr[1])
 
@@ -37,6 +39,7 @@ class MsgType(Enum):
     ERR_NAME_TAKEN = "err_name_taken"
     PLAYER_CONNECTED = "player_connected"
     PLAYER_DISCONNECTED = "player_disconnected"
+    SET_READY = "set_ready"
 
 
 INCLUDE_DATA_MSG_TYPES: list[MsgType] = [MsgType.CONNECT_REQUEST, MsgType.UPDATE_POS, MsgType.MAZE, MsgType.UPDATE_POS, MsgType.SET_NAME]
@@ -59,14 +62,20 @@ def parse_request(request_str: str) -> tuple[MsgType | None, str | None]:
         return None, None
 
 
-def build_broadcast_msg(source: ClientInfo, bc_type: MsgType, bc_data: str | None = None) -> str:
+# source = None -> source="SERVER"
+def build_broadcast_msg(source: ClientInfo | None, bc_type: MsgType, bc_data: str | None = None) -> str:
     bc_dict = {
         "msgType": bc_type.value,
-        "source": source.name
+        "source": SERVER_NAME
     }
+
+    if source:
+        bc_dict["source"] = source.name
     if bc_data:
         bc_dict["data"] = bc_data
     
     return json.dumps(bc_dict)
 
 
+def is_valid_position(pos_dict: dict) -> bool:
+    return ("x" in pos_dict) and ("y" in pos_dict) and is_number(pos_dict["x"]) and is_number(pos_dict["y"])

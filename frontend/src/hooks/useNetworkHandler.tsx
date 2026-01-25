@@ -27,7 +27,7 @@ export function useNetworkHandler(
   setMaze: (maze: Maze) => void,
   onError: (e: WebSocketEventMap["error"]) => void = (_) => {},
   onClose: (e: WebSocketEventMap["close"]) => void = (_) => {},
-  posUpdateRate: number = 10,
+  posUpdateRate: number = 25,
 ): {
   otherPlayers: Map<string, Vector2>;
   sendMaze: (maze: Maze) => void;
@@ -53,7 +53,6 @@ export function useNetworkHandler(
   );
 
   function onReceiveMessage(msg: NetworkMessage) {
-    console.log(msg);
     handleServerMessage(msg);
   }
 
@@ -80,27 +79,37 @@ export function useNetworkHandler(
     setMaze(maze);
   }
 
-  const updatePlayerPos = (src: string, pos: Vector2) => {
+  const updatePlayerPos = (posList: [string, Vector2][]) => {
     setOtherPlayers((op) => {
       const newOp = new Map(op);
-      newOp.set(src, pos);
+      for (const [src, pos] of posList) newOp.set(src, pos);
       return newOp;
     });
   };
 
   function handleMessageUpdatePos(msg: NetworkMessage) {
-    const normalizedPos: Vector2 | undefined = parseVector2(msg.data);
-    if (!normalizedPos) return;
+    const data = msg.data;
+    if (!data || typeof data !== "object") return;
 
-    const newPlayerPos: Vector2 = {
-      x: normalizedPos.x * canvasSize.width,
-      y: normalizedPos.y * canvasSize.height,
-    } as Vector2;
+    const posList: [string, Vector2][] = [];
+    Object.entries(data).forEach(([name, rawPos]) => {
+      if (name === clientName.current) return;
 
-    const oldPlayerPos = otherPlayers.get(msg.source);
-    if (oldPlayerPos && equalVec(oldPlayerPos, newPlayerPos)) return;
+      const normalized = parseVector2(rawPos);
+      if (!normalized) return;
 
-    updatePlayerPos(msg.source, newPlayerPos);
+      const newPos: Vector2 = {
+        x: normalized.x * canvasSize.width,
+        y: normalized.y * canvasSize.height,
+      };
+
+      const oldPos = otherPlayers.get(name);
+      if (oldPos && equalVec(oldPos, newPos)) return;
+
+      posList.push([name, newPos]);
+    });
+
+    if (posList) updatePlayerPos(posList);
   }
 
   function handlePlayerConnected() {

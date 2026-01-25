@@ -35,6 +35,10 @@ const MultiplayerGameManager = forwardRef<
 >(({ gameOptions, maze, otherPlayers, playerPosState }, ref) => {
   const [playerPos, setPlayerPos] = usePassedState(playerPosState);
 
+  useEffect(() => {
+    console.log("Maze updated:", maze);
+  }, [maze]);
+
   return (
     <>
       <GameInstance
@@ -176,7 +180,8 @@ export function Multiplayer(): JSX.Element {
           )}
         </div>
         <div className="w-full">
-          <PlayersList playersMap={} />
+          // TODO: Implement players list
+          <PlayersList playersMap={new Map()} />
         </div>
       </div>
     </>

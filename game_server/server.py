@@ -1,12 +1,17 @@
 import asyncio
+import json
+import time
 import websockets
 from ClientInfo import ClientInfo
 import protocol
-from protocol import MsgType, parse_request, build_broadcast_msg
+from protocol import MsgType, is_valid_position, parse_request, build_broadcast_msg
 
+# Game Loop Calls Per Second
+GAME_LOOP_RATE = 20
 class Server:
     def __init__(self):
         self.clients = []
+        self.dirty_pos_dict = {} # clients whose information was not updated yet. format: { clientName: pos }
         self.running = True
         self.curr_maze = None
 
@@ -14,8 +19,9 @@ class Server:
         print(f"Server listening on ws://{protocol.IP_ADDR}:{protocol.PORT}")
         server_task = asyncio.create_task(self.server_loop())
         terminal_task = asyncio.create_task(self.handle_terminal_input())
+        game_task = asyncio.create_task(self.game_loop())
 
-        await asyncio.gather(server_task, terminal_task)
+        await asyncio.gather(server_task, game_task, terminal_task)
 
     async def server_loop(self):
         async with websockets.serve(self.init_connection, protocol.IP_ADDR, protocol.PORT):
@@ -48,33 +54,39 @@ class Server:
                 return c
         return None
 
+
     async def handle_client(self, client: ClientInfo):
-        await self.onClientConnect(client)
+        await self.on_client_connect(client)
         try:
             if self.curr_maze:
                 await client.send(build_broadcast_msg(client, MsgType.MAZE, self.curr_maze))
             async for msg in client.websocket:
-                await self.onReceiveMessage(client, msg)
+                await self.on_receive_message(client, msg)
         finally:
-            await self.onClientDisconnect(client)
+            await self.on_client_disconnect(client)
             await client.websocket.close()
     
-    async def onClientDisconnect(self, client: ClientInfo):
+    async def on_client_disconnect(self, client: ClientInfo):
         self.clients.remove(client)
-        await self.broadcast(build_broadcast_msg(client, MsgType.PLAYER_DISCONNECTED))
+        await self.send_broadcast(build_broadcast_msg(client, MsgType.PLAYER_DISCONNECTED))
         print(f"{client.to_string()} disconnected");
 
 
-    async def onClientConnect(self, client: ClientInfo):
+    async def on_client_connect(self, client: ClientInfo):
         self.clients.append(client)
-        await self.broadcast(build_broadcast_msg(client, MsgType.PLAYER_CONNECTED), client)
+        await self.send_broadcast(build_broadcast_msg(client, MsgType.PLAYER_CONNECTED), client)
         print(f"{client.to_string()} connected")
 
 
-    async def onReceiveMessage(self, sender: ClientInfo, msg_str: str):
+    async def on_receive_message(self, sender: ClientInfo, msg_str: str):
         req_type, req_data = parse_request(msg_str)
-        if not req_type: return
-        
+        if req_type:
+            await self.fulfill_request(sender, req_type, req_data)
+
+    async def fulfill_request(self, sender: ClientInfo, req_type: MsgType, req_data: dict | None):
+        if req_type == MsgType.UPDATE_POS:
+            asyncio.create_task(self.update_pos(sender, req_data))
+
         bc_msg = self.generate_broadcast(req_type, req_data)
         if not bc_msg: return
 
@@ -83,10 +95,18 @@ class Server:
         exclude = None
         if exclude_sender: exclude = sender
 
-        await self.broadcast(build_broadcast_msg(sender, bc_type, bc_data), exclude)
-    
+        await self.send_broadcast(build_broadcast_msg(sender, bc_type, bc_data), exclude)
+
+
+    async def update_pos(self, sender: ClientInfo, pos: dict):
+        if is_valid_position(pos):
+            self.dirty_pos_dict[sender.name] = sender.position = {
+                "x": pos["x"],
+                "y": pos["y"]
+            }
     
     # generate a broadcast from an incoming message
+    # returns: (bc_type, bc_data, exclude_sender) | None
     def generate_broadcast(self, req_type: MsgType, req_data: str | None) -> tuple[MsgType, str | None, bool] | None:
         match req_type:
             case MsgType.CONNECT_REQUEST:
@@ -96,14 +116,17 @@ class Server:
                 self.curr_maze = req_data
                 return MsgType.MAZE, self.curr_maze, True
             
-            case MsgType.UPDATE_POS:
-                return MsgType.UPDATE_POS, req_data, True
+            # case MsgType.UPDATE_POS:
+            #     return MsgType.UPDATE_POS, req_data, True
+            
+            case MsgType.SET_READY:
+                return MsgType.SET_READY, req_data, True
             
             case _:
                 return None
     
     
-    async def broadcast(self, message: str, exclude: ClientInfo | None = None):
+    async def send_broadcast(self, message: str, exclude: ClientInfo | None = None):
         if len(self.clients) == 0:
             return
 
@@ -128,6 +151,18 @@ class Server:
                 print(self.curr_maze)
             else:
                 print(f"Unknown command: {user_input}")
+
+    async def game_loop(self):
+        while self.running:
+            start = time.perf_counter()
+
+            # send dirty positions
+            if len(self.dirty_pos_dict):
+                dirty_pos_msg = build_broadcast_msg(None, MsgType.UPDATE_POS, self.dirty_pos_dict)
+                self.dirty_pos_dict.clear()
+                await self.send_broadcast(dirty_pos_msg, None)
+
+            await asyncio.sleep(max(1. / GAME_LOOP_RATE - (time.perf_counter() - start), 0))
 
 
 if __name__ == "__main__":
