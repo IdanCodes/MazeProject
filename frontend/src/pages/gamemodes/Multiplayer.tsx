@@ -52,8 +52,34 @@ const MultiplayerGameManager = forwardRef<
 });
 
 export function Multiplayer(): JSX.Element {
-  const [playerPos, setPlayerPos] = useState<Vector2>(ZERO_VEC);
-  const [playerName, setPlayerName] = useState<string>("");
+  const [localPlayer, setLocalPlayer] = useState<PlayerInfo>({
+    name: "",
+    position: ZERO_VEC,
+    isReady: false,
+  } as PlayerInfo);
+  // #region Player Attributes
+  const playerName = useMemo(() => localPlayer.name, [localPlayer.name]);
+  const setPlayerName = (action: React.SetStateAction<string>) => {
+    const newVal =
+      typeof action == "function" ? action(localPlayer.name) : action;
+    setLocalPlayer((lp) => ({ ...lp, name: newVal }));
+  };
+  const isReady = useMemo(() => localPlayer.isReady, [localPlayer.isReady]);
+  const setIsReady: SetStateFunc<boolean> = (
+    action: React.SetStateAction<boolean>,
+  ) => {
+    const newVal =
+      typeof action == "function" ? action(localPlayer.isReady) : action;
+    setLocalPlayer((lp) => ({ ...lp, isReady: newVal }));
+  };
+  const playerPos = useMemo(() => localPlayer.position, [localPlayer.position]);
+  const setPlayerPos = (action: React.SetStateAction<Vector2>) => {
+    const newVal =
+      typeof action == "function" ? action(localPlayer.position) : action;
+    setLocalPlayer((lp) => ({ ...lp, position: newVal }));
+  };
+  // #endregion
+
   const [gameOptions, setGameOptions] = useState<GameOptions>({
     mazeScale: 15,
     mazeSize: MazeSize.Medium,
@@ -73,7 +99,6 @@ export function Multiplayer(): JSX.Element {
         }
       : { width: 1, height: 1 };
   }, [gameInstanceRef.current]);
-  const [isReady, setIsReady] = useState<boolean>(false);
 
   const handleNetworkError = (e: WebSocketEventMap["error"]) => {
     console.error("Network error:", e);
@@ -98,6 +123,12 @@ export function Multiplayer(): JSX.Element {
     () => setMaze(generateMaze(gameOptions.mazeScale)),
     [gameOptions],
   );
+
+  useEffect(() => {
+    return () => {
+      disconnectFromServer();
+    };
+  }, []);
 
   return (
     <>
@@ -177,8 +208,9 @@ export function Multiplayer(): JSX.Element {
           )}
         </div>
         <div className="w-full">
-          // TODO: Implement players list
-          <PlayersList players={[]} />
+          {isConnected && (
+            <PlayersList players={[localPlayer, ...otherPlayers]} />
+          )}
         </div>
       </div>
     </>
@@ -297,11 +329,9 @@ function PlayersList({ players }: { players: PlayerInfo[] }) {
   return (
     <>
       {players.map((p) => (
-        <>
-          <p key={p.name} className="text-2xl">
-            {p.name} - {p.isReady ? "Ready" : "Not Ready"}
-          </p>
-        </>
+        <p key={p.name} className="text-2xl">
+          {p.name} - {p.isReady ? "Ready" : "Not Ready"}
+        </p>
       ))}
     </>
   );
