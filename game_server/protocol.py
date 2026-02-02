@@ -42,7 +42,7 @@ class MsgType(Enum):
     SET_READY = "set_ready"
 
 
-INCLUDE_DATA_MSG_TYPES: list[MsgType] = [MsgType.CONNECT_REQUEST, MsgType.UPDATE_POS, MsgType.MAZE, MsgType.UPDATE_POS, MsgType.SET_NAME]
+INCLUDE_DATA_MSG_TYPES: list[MsgType] = [MsgType.CONNECT_REQUEST, MsgType.UPDATE_POS, MsgType.MAZE, MsgType.UPDATE_POS, MsgType.SET_NAME, MsgType.SET_READY]
 
 # Returns - req_type, req_data
 # or - None, None
@@ -71,7 +71,7 @@ def build_broadcast_msg(source: ClientInfo | None, bc_type: MsgType, bc_data: st
 
     if source:
         bc_dict["source"] = source.name
-    if bc_data:
+    if bc_data != None:
         bc_dict["data"] = bc_data
     
     return json.dumps(bc_dict)

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { GameMsgType } from "@src/components/game-msg-type";
+import { GameMsgType } from "@src/constants/game-msg-type";
 import {
   buildGameRequest,
   getUsernameError,

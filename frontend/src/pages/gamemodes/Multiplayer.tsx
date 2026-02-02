@@ -113,7 +113,7 @@ export function Multiplayer(): JSX.Element {
     connectToServer,
     disconnectFromServer,
   } = useNetworkHandler(
-    playerPos,
+    localPlayer,
     canvasDimensions,
     setMaze,
     handleNetworkError,
@@ -309,8 +309,8 @@ function ReadyButton({
         className={clsx(
           "text-3xl",
           isReady
-            ? "bg-green-500 hover:bg-green-500/80 active:bg-green-600/80"
-            : "bg-emerald-400 hover:bg-emerald-400/80 active:bg-emerald-500/80",
+            ? "bg-emerald-400 hover:bg-emerald-400/80 active:bg-emerald-500/80"
+            : "bg-green-500 hover:bg-green-500/80 active:bg-green-600/80",
         )}
         disabled={disabled}
         onClick={() =>
@@ -319,7 +319,7 @@ function ReadyButton({
           })
         }
       >
-        {isReady ? "Ready" : "Not Ready"}
+        {isReady ? "Unready" : "Ready"}
       </PrimaryButton>
     </>
   );
@@ -327,12 +327,20 @@ function ReadyButton({
 
 function PlayersList({ players }: { players: PlayerInfo[] }) {
   return (
-    <>
+    <div className="text-xl flex flex-col truncate ">
       {players.map((p) => (
-        <p key={p.name} className="text-2xl">
-          {p.name} - {p.isReady ? "Ready" : "Not Ready"}
-        </p>
+        <>
+          <span key={p.name} className="">
+            {p.name}
+            {" - "}
+            {p.isReady ? (
+              <span className="text-green-500">Ready</span>
+            ) : (
+              <span className="text-red-500">Not Ready</span>
+            )}
+          </span>
+        </>
       ))}
-    </>
+    </div>
   );
 }

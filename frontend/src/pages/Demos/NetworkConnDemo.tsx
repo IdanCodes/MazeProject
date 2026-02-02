@@ -18,7 +18,7 @@ import {
   buildGameRequest,
   parseGameServerMessage,
 } from "../../utils/game-protocol";
-import { GameMsgType } from "../../components/game-msg-type";
+import { GameMsgType } from "../../constants/game-msg-type";
 
 const SERVER_PORT = 3003;
 const SERVER_IP = "127.0.0.1";

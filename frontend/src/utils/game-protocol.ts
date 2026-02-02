@@ -1,4 +1,4 @@
-import { GameMsgType, isGameMsgType } from "../components/game-msg-type";
+import { GameMsgType, isGameMsgType } from "../constants/game-msg-type";
 import { NetworkMessage } from "@src/hooks/useNetworkHandler";
 
 export function buildGameRequest(

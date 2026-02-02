@@ -4,8 +4,8 @@ import {
   Vector2,
   ZERO_VEC,
 } from "@src/interfaces/Vector2";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { GameMsgType } from "@src/components/game-msg-type";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GameMsgType } from "@src/constants/game-msg-type";
 import { CellType, Grid } from "@src/types/Grid";
 import { Maze } from "@src/types/Maze";
 import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
@@ -23,7 +23,7 @@ export interface NetworkMessage {
 }
 
 export function useNetworkHandler(
-  localPlayerPos: Vector2,
+  localPlayer: PlayerInfo,
   canvasSize: { width: number; height: number },
   setMaze: (maze: Maze) => void,
   onError: (e: WebSocketEventMap["error"]) => void = (_) => {},
@@ -36,6 +36,10 @@ export function useNetworkHandler(
   connectToServer: (name: string) => Promise<string>;
   disconnectFromServer: () => void;
 } {
+  const localPlayerPos = useMemo(
+    () => localPlayer.position,
+    [localPlayer.position],
+  );
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
   const [otherPlayers, setOtherPlayers] = useState<PlayerInfo[]>([]);
   const clientName = useRef<string>("");
@@ -71,6 +75,8 @@ export function useNetworkHandler(
         return handlePlayerConnected(msg);
       case GameMsgType.PLAYER_DISCONNECTED:
         return handlePlayerDisconnected(msg);
+      case GameMsgType.SET_READY:
+        return handleReadyUpdate(msg);
       default:
         break;
     }
@@ -138,6 +144,16 @@ export function useNetworkHandler(
       return newOp;
     });
   }
+
+  function handleReadyUpdate(msg: NetworkMessage) {
+    if (typeof msg.data != "boolean") return;
+    setOtherPlayers((op) => {
+      const newOp = [...op];
+      const index = newOp.findIndex((p) => p.name === msg.source);
+      if (index >= 0) newOp[index].isReady = msg.data;
+      return newOp;
+    });
+  }
   // #endregion
 
   function sendPos() {
@@ -152,6 +168,11 @@ export function useNetworkHandler(
   function sendMaze(maze: Maze) {
     sendMessage(GameMsgType.MAZE, maze.getMatrix());
   }
+
+  function sendReady() {
+    sendMessage(GameMsgType.SET_READY, localPlayer.isReady);
+  }
+  useEffect(sendReady, [localPlayer.isReady]);
 
   useAnimationUpdate(posUpdateRate, () => {
     if (!equalVec(localPlayerPos, lastSentPos.current)) sendPos();

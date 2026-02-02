@@ -74,6 +74,8 @@ class Server:
 
     async def on_client_connect(self, client: ClientInfo):
         await self.send_broadcast(build_broadcast_msg(client, MsgType.PLAYER_CONNECTED), client)
+        # TODO: replace with sending PlayerInfos instead of individually connecting and update posing each player
+
         # create position dict
         pos_dict = {}
         for c in self.clients:
@@ -112,6 +114,10 @@ class Server:
                 "x": pos["x"],
                 "y": pos["y"]
             }
+
+    async def set_ready(self, sender: ClientInfo, isReady: bool):
+        if isinstance(isReady, bool):
+            sender.ready = isReady
     
     # generate a broadcast from an incoming message
     # returns: (bc_type, bc_data, exclude_sender) | None
@@ -125,7 +131,8 @@ class Server:
                 return MsgType.MAZE, self.curr_maze, True
             
             case MsgType.SET_READY:
-                return MsgType.SET_READY, req_data, True
+                if isinstance(req_data, bool):
+                    return MsgType.SET_READY, req_data, True
             
             case _:
                 return None

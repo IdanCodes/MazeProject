@@ -8,6 +8,7 @@ class ClientInfo:
             "y": 0
         }
         self.name = name
+        self.ready = False
 
     async def send(self, message: str):
         return await self.websocket.send(message)
