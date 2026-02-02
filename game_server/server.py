@@ -73,8 +73,14 @@ class Server:
 
 
     async def on_client_connect(self, client: ClientInfo):
-        self.clients.append(client)
         await self.send_broadcast(build_broadcast_msg(client, MsgType.PLAYER_CONNECTED), client)
+        # create position dict
+        pos_dict = {}
+        for c in self.clients:
+            await client.send(build_broadcast_msg(c, MsgType.PLAYER_CONNECTED));
+            pos_dict[c.name] = c.position
+        await client.send(build_broadcast_msg(client, MsgType.UPDATE_POS, pos_dict));
+        self.clients.append(client)
         print(f"{client.to_string()} connected")
 
 
@@ -86,6 +92,8 @@ class Server:
     async def fulfill_request(self, sender: ClientInfo, req_type: MsgType, req_data: dict | None):
         if req_type == MsgType.UPDATE_POS:
             asyncio.create_task(self.update_pos(sender, req_data))
+        if req_type == MsgType.SET_READY:
+            asyncio.create_task(self.set_ready(sender, req_data))
 
         bc_msg = self.generate_broadcast(req_type, req_data)
         if not bc_msg: return
@@ -115,9 +123,6 @@ class Server:
             case MsgType.MAZE:
                 self.curr_maze = req_data
                 return MsgType.MAZE, self.curr_maze, True
-            
-            # case MsgType.UPDATE_POS:
-            #     return MsgType.UPDATE_POS, req_data, True
             
             case MsgType.SET_READY:
                 return MsgType.SET_READY, req_data, True
@@ -159,8 +164,8 @@ class Server:
             # send dirty positions
             if len(self.dirty_pos_dict):
                 dirty_pos_msg = build_broadcast_msg(None, MsgType.UPDATE_POS, self.dirty_pos_dict)
-                self.dirty_pos_dict.clear()
                 await self.send_broadcast(dirty_pos_msg, None)
+                self.dirty_pos_dict.clear()
 
             await asyncio.sleep(max(1. / GAME_LOOP_RATE - (time.perf_counter() - start), 0))
 

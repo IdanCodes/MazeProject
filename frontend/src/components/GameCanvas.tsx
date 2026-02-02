@@ -8,6 +8,7 @@ import React, {
 import { Maze } from "../types/Maze";
 import { CellType } from "../types/Grid";
 import { Vector2 } from "../interfaces/Vector2";
+import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 
 const bgColor = "rgb(245, 245, 245)";
 export const PLAYER_RADIUS = 0.25; // in grid cells
@@ -29,7 +30,7 @@ const GameCanvas = forwardRef<
     maze: Maze;
     cellScale: number;
     playerPos: Vector2;
-    otherPlayers: Map<string, Vector2>;
+    otherPlayers: PlayerInfo[];
     playerColor?: string;
   }
 >(
@@ -237,8 +238,8 @@ const GameCanvas = forwardRef<
       );
       highlightCell(ctx, playerCell, "rgba(242,251,2,0.6)");
 
-      for (const [otherAddr, otherPos] of otherPlayers)
-        drawPlayer(ctx, otherPos, "green");
+      for (const playerInfo of otherPlayers)
+        drawPlayer(ctx, playerInfo.position, "green");
 
       drawPlayer(ctx, playerPos, playerColor);
 

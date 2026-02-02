@@ -23,21 +23,18 @@ import { usePassedState } from "@src/hooks/usePassedState";
 import { PassedState, SetStateFunc } from "@src/types/passed-state";
 import { getUsernameError } from "@src/utils/game-protocol";
 import clsx from "clsx";
+import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 
 const MultiplayerGameManager = forwardRef<
   GameInstanceHandle,
   {
     gameOptions: GameOptions;
     maze: Maze;
-    otherPlayers: Map<string, Vector2>;
+    otherPlayers: PlayerInfo[];
     playerPosState: PassedState<Vector2>;
   }
 >(({ gameOptions, maze, otherPlayers, playerPosState }, ref) => {
   const [playerPos, setPlayerPos] = usePassedState(playerPosState);
-
-  useEffect(() => {
-    console.log("Maze updated:", maze);
-  }, [maze]);
 
   return (
     <>
@@ -181,7 +178,7 @@ export function Multiplayer(): JSX.Element {
         </div>
         <div className="w-full">
           // TODO: Implement players list
-          <PlayersList playersMap={new Map()} />
+          <PlayersList players={[]} />
         </div>
       </div>
     </>
@@ -286,7 +283,6 @@ function ReadyButton({
         disabled={disabled}
         onClick={() =>
           setIsReady((r) => {
-            console.log(`from ${r} to ${!r}`);
             return !r;
           })
         }
@@ -297,6 +293,16 @@ function ReadyButton({
   );
 }
 
-function PlayersList({ playersMap }: { playersMap: Map<string, boolean> }) {
-  return <></>;
+function PlayersList({ players }: { players: PlayerInfo[] }) {
+  return (
+    <>
+      {players.map((p) => (
+        <>
+          <p key={p.name} className="text-2xl">
+            {p.name} - {p.isReady ? "Ready" : "Not Ready"}
+          </p>
+        </>
+      ))}
+    </>
+  );
 }

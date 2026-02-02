@@ -4,12 +4,13 @@ import {
   Vector2,
   ZERO_VEC,
 } from "@src/interfaces/Vector2";
-import { useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { GameMsgType } from "@src/components/game-msg-type";
 import { CellType, Grid } from "@src/types/Grid";
 import { Maze } from "@src/types/Maze";
 import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
 import { useMazePlayerSocket } from "@src/hooks/useMazePlayerSocket";
+import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 
 const SERVER_PORT = 3003;
 const SERVER_IP = "127.0.0.1";
@@ -29,16 +30,14 @@ export function useNetworkHandler(
   onClose: (e: WebSocketEventMap["close"]) => void = (_) => {},
   posUpdateRate: number = 25,
 ): {
-  otherPlayers: Map<string, Vector2>;
+  otherPlayers: PlayerInfo[];
   sendMaze: (maze: Maze) => void;
   isConnected: boolean;
   connectToServer: (name: string) => Promise<string>;
   disconnectFromServer: () => void;
 } {
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
-  const [otherPlayers, setOtherPlayers] = useState<Map<string, Vector2>>(
-    new Map(),
-  );
+  const [otherPlayers, setOtherPlayers] = useState<PlayerInfo[]>([]);
   const clientName = useRef<string>("");
   const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
     SERVER_WS_URL,
@@ -52,11 +51,16 @@ export function useNetworkHandler(
     },
   );
 
+  const playerIndexByName = useCallback(
+    (name: string) => otherPlayers.findIndex((p) => p.name == name),
+    [otherPlayers],
+  );
+
   function onReceiveMessage(msg: NetworkMessage) {
     handleServerMessage(msg);
   }
 
-  // region Server Message Handlers
+  // #region Server Message Handlers
   function handleServerMessage(msg: NetworkMessage) {
     switch (msg.msgType) {
       case GameMsgType.MAZE:
@@ -64,7 +68,7 @@ export function useNetworkHandler(
       case GameMsgType.UPDATE_POS:
         return handleMessageUpdatePos(msg);
       case GameMsgType.PLAYER_CONNECTED:
-        return handlePlayerConnected();
+        return handlePlayerConnected(msg);
       case GameMsgType.PLAYER_DISCONNECTED:
         return handlePlayerDisconnected(msg);
       default:
@@ -81,8 +85,12 @@ export function useNetworkHandler(
 
   const updatePlayerPos = (posList: [string, Vector2][]) => {
     setOtherPlayers((op) => {
-      const newOp = new Map(op);
-      for (const [src, pos] of posList) newOp.set(src, pos);
+      const newOp = [...op];
+      for (const [src, pos] of posList) {
+        const index = newOp.findIndex((p) => p.name === src);
+        if (index >= 0) newOp[index].position = pos;
+        else newOp.push({ name: src, position: pos, isReady: false });
+      }
       return newOp;
     });
   };
@@ -103,27 +111,34 @@ export function useNetworkHandler(
         y: normalized.y * canvasSize.height,
       };
 
-      const oldPos = otherPlayers.get(name);
-      if (oldPos && equalVec(oldPos, newPos)) return;
-
+      const index = playerIndexByName(name);
+      if (index >= 0 && equalVec(otherPlayers[index].position, newPos)) return;
       posList.push([name, newPos]);
     });
 
     if (posList) updatePlayerPos(posList);
   }
 
-  function handlePlayerConnected() {
-    sendPos();
+  function handlePlayerConnected(msg: NetworkMessage) {
+    // add to otherPlayers
+    const index = playerIndexByName(msg.source);
+    if (index < 0) {
+      setOtherPlayers((op) => [
+        ...op,
+        { name: msg.source, position: ZERO_VEC, isReady: false },
+      ]);
+    }
   }
 
   function handlePlayerDisconnected(msg: NetworkMessage) {
     setOtherPlayers((op) => {
-      const newOp = new Map(op);
-      newOp.delete(msg.source);
+      const newOp = [...op];
+      const index = newOp.findIndex((p) => p.name === msg.source);
+      if (index >= 0) newOp.splice(index, 1);
       return newOp;
     });
   }
-  // endregion
+  // #endregion
 
   function sendPos() {
     const posToSend = {
@@ -150,13 +165,11 @@ export function useNetworkHandler(
 
     clientName.current = name;
     return connect(name);
-    // setConnectOnDemand(true);
   }
 
   function disconnectFromServer() {
-    setOtherPlayers(new Map());
+    setOtherPlayers([]);
     disconnect();
-    // setConnectOnDemand(false);
   }
 
   return {

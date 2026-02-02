@@ -10,7 +10,6 @@ import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight } from "../types/maze-size";
 import { Maze } from "../types/Maze";
 import GameCanvas, { GameCanvasHandle, PLAYER_RADIUS } from "./GameCanvas";
-import { CellType } from "../types/Grid";
 import { lerp } from "../utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
 import {
@@ -21,6 +20,7 @@ import {
   ZERO_VEC,
 } from "../interfaces/Vector2";
 import { GameOptions } from "@src/components/GameOptionsSelector";
+import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 
 const GAME_FPS = 60;
 const PHYSICS_UPDATE_FPS = 50;
@@ -34,7 +34,7 @@ const GameInstance = forwardRef<
   {
     gameOptions: GameOptions;
     maze: Maze;
-    otherPlayers: Map<string, Vector2>;
+    otherPlayers: PlayerInfo[];
     onPlayerMove?: (pos: Vector2) => void;
   }
 >(({ gameOptions, maze, otherPlayers, onPlayerMove = undefined }, ref) => {

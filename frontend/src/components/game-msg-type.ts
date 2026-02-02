@@ -8,6 +8,7 @@ export enum GameMsgType {
   ERR_NAME_TAKEN = "err_name_taken",
   PLAYER_CONNECTED = "player_connected",
   PLAYER_DISCONNECTED = "player_disconnected",
+  SET_READY = "set_ready",
 }
 
 export function isGameMsgType(value: string): value is GameMsgType {
