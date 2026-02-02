@@ -10,7 +10,11 @@ import { CellType, Grid } from "@src/types/Grid";
 import { Maze } from "@src/types/Maze";
 import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
 import { useMazePlayerSocket } from "@src/hooks/useMazePlayerSocket";
-import { PlayerInfo } from "@src/interfaces/PlayerInfo";
+import {
+  isPlayerInfo,
+  parsePlayerInfo,
+  PlayerInfo,
+} from "@src/interfaces/PlayerInfo";
 
 const SERVER_PORT = 3003;
 const SERVER_IP = "127.0.0.1";
@@ -126,14 +130,10 @@ export function useNetworkHandler(
   }
 
   function handlePlayerConnected(msg: NetworkMessage) {
-    // add to otherPlayers
-    const index = playerIndexByName(msg.source);
-    if (index < 0) {
-      setOtherPlayers((op) => [
-        ...op,
-        { name: msg.source, position: ZERO_VEC, isReady: false },
-      ]);
-    }
+    const newPlayer = parsePlayerInfo(msg.data);
+    if (!newPlayer) return;
+    const index = otherPlayers.findIndex((p) => p.name === newPlayer.name);
+    if (index < 0) setOtherPlayers((op) => [...op, newPlayer]);
   }
 
   function handlePlayerDisconnected(msg: NetworkMessage) {

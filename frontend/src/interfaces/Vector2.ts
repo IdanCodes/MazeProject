@@ -30,13 +30,16 @@ export function equalVec(v1: Vector2, v2: Vector2) {
   return v1.x === v2.x && v1.y === v2.y;
 }
 
+export function isVector2(value: any): value is Vector2 {
+  return (
+    value &&
+    typeof value === "object" &&
+    typeof value.x === "number" &&
+    typeof value.y === "number"
+  );
+}
+
 export function parseVector2(obj: any): Vector2 | undefined {
-  if (
-    "x" in obj &&
-    typeof obj.x === "number" &&
-    "y" in obj &&
-    typeof obj.y === "number"
-  )
-    return { x: obj.x, y: obj.y };
+  if (isVector2(obj)) return { x: obj.x, y: obj.y };
   return undefined;
 }

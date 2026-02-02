@@ -77,11 +77,11 @@ class Server:
         # TODO: replace with sending PlayerInfos instead of individually connecting and update posing each player
 
         # create position dict
-        pos_dict = {}
+        # pos_dict = {}
         for c in self.clients:
-            await client.send(build_broadcast_msg(c, MsgType.PLAYER_CONNECTED));
-            pos_dict[c.name] = c.position
-        await client.send(build_broadcast_msg(client, MsgType.UPDATE_POS, pos_dict));
+            await client.send(build_broadcast_msg(None, MsgType.PLAYER_CONNECTED, c.get_player_info()));
+            # pos_dict[c.name] = c.position
+        # await client.send(build_broadcast_msg(client, MsgType.UPDATE_POS, pos_dict));
         self.clients.append(client)
         print(f"{client.to_string()} connected")
 
@@ -117,7 +117,7 @@ class Server:
 
     async def set_ready(self, sender: ClientInfo, isReady: bool):
         if isinstance(isReady, bool):
-            sender.ready = isReady
+            sender.isReady = isReady
     
     # generate a broadcast from an incoming message
     # returns: (bc_type, bc_data, exclude_sender) | None

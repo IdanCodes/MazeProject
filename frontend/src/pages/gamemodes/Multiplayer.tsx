@@ -329,17 +329,15 @@ function PlayersList({ players }: { players: PlayerInfo[] }) {
   return (
     <div className="text-xl flex flex-col truncate ">
       {players.map((p) => (
-        <>
-          <span key={p.name} className="">
-            {p.name}
-            {" - "}
-            {p.isReady ? (
-              <span className="text-green-500">Ready</span>
-            ) : (
-              <span className="text-red-500">Not Ready</span>
-            )}
-          </span>
-        </>
+        <span key={p.name} className="">
+          {p.name}
+          {" - "}
+          {p.isReady ? (
+            <span className="text-green-500">Ready</span>
+          ) : (
+            <span className="text-red-500">Not Ready</span>
+          )}
+        </span>
       ))}
     </div>
   );
