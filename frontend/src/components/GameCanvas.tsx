@@ -1,5 +1,6 @@
 import React, {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -124,7 +125,7 @@ const GameCanvas = forwardRef<
         canvasToGrid,
         checkCircleCollision,
       }),
-      [canvasWidth, canvasHeight],
+      [canvasWidth, canvasHeight, maze],
     );
 
     const drawGrid = (ctx: CanvasRenderingContext2D): void => {

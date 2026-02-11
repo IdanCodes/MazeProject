@@ -38,15 +38,13 @@ const GameInstance = forwardRef<
     onPlayerMove?: (pos: Vector2) => void;
   }
 >(({ gameOptions, maze, otherPlayers, onPlayerMove = undefined }, ref) => {
-  if (!maze) return;
-
   const gameCanvasRef = useRef<GameCanvasHandle | null>(null);
   const targetVelocity = useRef<Vector2>({ x: 0, y: 0 });
   const velocity = useRef<Vector2>({ x: 0, y: 0 });
 
   const cellScale = useMemo(
     () => getMazeRenderHeight(gameOptions.mazeSize) / maze.height,
-    [maze.height, gameOptions],
+    [maze, gameOptions],
   );
   const [playerPos, setPlayerPos] = useState<Vector2>(ZERO_VEC);
 
@@ -172,7 +170,7 @@ const GameInstance = forwardRef<
     () => ({
       gameCanvasRef: gameCanvasRef.current,
     }),
-    [gameCanvasRef.current],
+    [gameCanvasRef.current, maze],
   );
 
   if (onPlayerMove)

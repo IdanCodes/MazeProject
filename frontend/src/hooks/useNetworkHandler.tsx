@@ -35,7 +35,6 @@ export function useNetworkHandler(
   posUpdateRate: number = 25,
 ): {
   otherPlayers: PlayerInfo[];
-  sendMaze: (maze: Maze) => void;
   isConnected: boolean;
   connectToServer: (name: string) => Promise<string>;
   disconnectFromServer: () => void;
@@ -165,10 +164,6 @@ export function useNetworkHandler(
     lastSentPos.current = localPlayerPos;
   }
 
-  function sendMaze(maze: Maze) {
-    sendMessage(GameMsgType.MAZE, maze.getMatrix());
-  }
-
   function sendReady() {
     sendMessage(GameMsgType.SET_READY, localPlayer.isReady);
   }
@@ -195,7 +190,6 @@ export function useNetworkHandler(
 
   return {
     otherPlayers,
-    sendMaze,
     isConnected,
     connectToServer,
     disconnectFromServer,

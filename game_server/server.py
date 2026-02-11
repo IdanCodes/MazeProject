@@ -1,19 +1,24 @@
 import asyncio
 import json
 import time
+from types import SimpleNamespace
 import websockets
 from ClientInfo import ClientInfo
+from MazeGen.MazeGenerator import generateDFSRectMaze
+from MazeGen.Maze import Maze
 import protocol
 from protocol import MsgType, is_valid_position, parse_request, build_broadcast_msg
 
 # Game Loop Calls Per Second
 GAME_LOOP_RATE = 20
+DEFAULT_MAZE_DIMENSIONS = SimpleNamespace(width=13, height=13)
 class Server:
     def __init__(self):
         self.clients = []
         self.dirty_pos_dict = {} # clients whose information was not updated yet. format: { clientName: pos }
         self.running = True
-        self.curr_maze = None
+        self.stored_maze: Maze = generateDFSRectMaze(DEFAULT_MAZE_DIMENSIONS.width, DEFAULT_MAZE_DIMENSIONS.height)
+
 
     async def start_server(self):
         print(f"Server listening on ws://{protocol.IP_ADDR}:{protocol.PORT}")
@@ -23,9 +28,11 @@ class Server:
 
         await asyncio.gather(server_task, game_task, terminal_task)
 
+
     async def server_loop(self):
         async with websockets.serve(self.init_connection, protocol.IP_ADDR, protocol.PORT):
             await asyncio.Future()
+
 
     # initialize the connection with a client - "handshake" before connection
     async def init_connection(self, websocket: websockets.ServerConnection):
@@ -46,6 +53,7 @@ class Server:
         await new_client.send(build_broadcast_msg(new_client, MsgType.ACCEPT_CONNECTION))
         await self.handle_client(new_client)
 
+
     # Get ClientInfo by the client's id
     # Returns None if the client isn't connected
     def get_client_info(self, client_name: str) -> ClientInfo | None:
@@ -58,8 +66,6 @@ class Server:
     async def handle_client(self, client: ClientInfo):
         await self.on_client_connect(client)
         try:
-            if self.curr_maze:
-                await client.send(build_broadcast_msg(client, MsgType.MAZE, self.curr_maze))
             async for msg in client.websocket:
                 await self.on_receive_message(client, msg)
         finally:
@@ -74,14 +80,9 @@ class Server:
 
     async def on_client_connect(self, client: ClientInfo):
         await self.send_broadcast(build_broadcast_msg(client, MsgType.PLAYER_CONNECTED), client)
-        # TODO: replace with sending PlayerInfos instead of individually connecting and update posing each player
-
-        # create position dict
-        # pos_dict = {}
+        await client.send(build_broadcast_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
         for c in self.clients:
-            await client.send(build_broadcast_msg(None, MsgType.PLAYER_CONNECTED, c.get_player_info()));
-            # pos_dict[c.name] = c.position
-        # await client.send(build_broadcast_msg(client, MsgType.UPDATE_POS, pos_dict));
+            await client.send(build_broadcast_msg(None, MsgType.PLAYER_CONNECTED, c.get_player_info()))
         self.clients.append(client)
         print(f"{client.to_string()} connected")
 
@@ -127,8 +128,8 @@ class Server:
                 return MsgType.PLAYER_CONNECTED, None, True
 
             case MsgType.MAZE:
-                self.curr_maze = req_data
-                return MsgType.MAZE, self.curr_maze, True
+                self.stored_maze = req_data
+                return MsgType.MAZE, self.stored_maze, True
             
             case MsgType.SET_READY:
                 if isinstance(req_data, bool):
@@ -150,7 +151,12 @@ class Server:
 
         await asyncio.gather(*send_tasks, return_exceptions=True)
     
-    
+    async def regen_maze(self):
+        self.stored_maze = generateDFSRectMaze(DEFAULT_MAZE_DIMENSIONS.width, DEFAULT_MAZE_DIMENSIONS.height)
+        for c in self.clients:
+            await c.send(build_broadcast_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
+        print("Sent new maze successfully!")
+
     async def handle_terminal_input(self):
         while self.running:
             user_input = (await asyncio.to_thread(input)).upper()
@@ -160,7 +166,9 @@ class Server:
                 self.running = False
                 break
             elif user_input == 'MAZE':
-                print(self.curr_maze)
+                print(self.stored_maze.get_matrix())
+            elif user_input == 'NEW_MAZE':
+                asyncio.create_task(self.regen_maze())
             else:
                 print(f"Unknown command: {user_input}")
 

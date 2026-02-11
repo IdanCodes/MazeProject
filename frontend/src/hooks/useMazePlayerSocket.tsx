@@ -56,7 +56,6 @@ export function useMazePlayerSocket(
       const handleConnectResponse = (e: MessageEvent) => {
         if (!ws.current) return;
         ws.current.onmessage = null;
-        console.log("message", e);
 
         const serverMsg = parseGameServerMessage(e.data);
         if (!serverMsg) {

@@ -29,7 +29,7 @@ const MultiplayerGameManager = forwardRef<
   GameInstanceHandle,
   {
     gameOptions: GameOptions;
-    maze: Maze;
+    maze: Maze | undefined;
     otherPlayers: PlayerInfo[];
     playerPosState: PassedState<Vector2>;
   }
@@ -38,15 +38,19 @@ const MultiplayerGameManager = forwardRef<
 
   return (
     <>
-      <GameInstance
-        ref={ref}
-        gameOptions={gameOptions}
-        maze={maze}
-        otherPlayers={otherPlayers}
-        onPlayerMove={(newPos) => {
-          if (!equalVec(newPos, playerPos)) setPlayerPos(newPos);
-        }}
-      />
+      {maze ? (
+        <GameInstance
+          ref={ref}
+          gameOptions={gameOptions}
+          maze={maze}
+          otherPlayers={otherPlayers}
+          onPlayerMove={(newPos) => {
+            if (!equalVec(newPos, playerPos)) setPlayerPos(newPos);
+          }}
+        />
+      ) : (
+        <p className="text-3xl">Loading Maze...</p>
+      )}
     </>
   );
 });
@@ -84,7 +88,7 @@ export function Multiplayer(): JSX.Element {
     mazeScale: 15,
     mazeSize: MazeSize.Medium,
   });
-  const [maze, setMaze] = useState<Maze>(generateMaze(13));
+  const [maze, setMaze] = useState<Maze | undefined>(undefined);
   const [errorText, setErrorText] = useState<string>("");
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
   const navigate = useNavigate();
@@ -106,23 +110,19 @@ export function Multiplayer(): JSX.Element {
     setPlayerName("");
   };
 
-  const {
-    otherPlayers,
-    sendMaze,
-    isConnected,
-    connectToServer,
-    disconnectFromServer,
-  } = useNetworkHandler(
-    localPlayer,
-    canvasDimensions,
-    setMaze,
-    handleNetworkError,
-  );
+  const handleOnClose = (e: WebSocketEventMap["close"]) => {
+    console.log("Disconnected from server.");
+    setMaze(undefined);
+  };
 
-  const handleGenerateMaze = useCallback(
-    () => setMaze(generateMaze(gameOptions.mazeScale)),
-    [gameOptions],
-  );
+  const { otherPlayers, isConnected, connectToServer, disconnectFromServer } =
+    useNetworkHandler(
+      localPlayer,
+      canvasDimensions,
+      setMaze,
+      handleNetworkError,
+      handleOnClose,
+    );
 
   useEffect(() => {
     return () => {
@@ -152,6 +152,7 @@ export function Multiplayer(): JSX.Element {
                 isConnected={isConnected}
                 nameState={[playerName, setPlayerName]}
                 connectToServer={async () => {
+                  setPlayerName(playerName.trim());
                   connectToServer(playerName.trim())
                     .then(() => {
                       setErrorText("");
@@ -168,16 +169,6 @@ export function Multiplayer(): JSX.Element {
               />
             </div>
             <ErrorLabel text={errorText} />
-            {isConnected && (
-              <>
-                <PrimaryButton
-                  className="text-3xl"
-                  onClick={() => sendMaze(maze)}
-                >
-                  Send Maze
-                </PrimaryButton>
-              </>
-            )}
           </div>
         </div>
         <div className="w-full">
@@ -193,12 +184,6 @@ export function Multiplayer(): JSX.Element {
                 gameOptionsState={[gameOptions, setGameOptions]}
               />
               <div className="flex justify-around">
-                <PrimaryButton
-                  className="text-3xl"
-                  onClick={handleGenerateMaze}
-                >
-                  Generate
-                </PrimaryButton>
                 <ReadyButton
                   readyState={[isReady, setIsReady]}
                   disabled={!isConnected}
