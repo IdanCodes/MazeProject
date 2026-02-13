@@ -9,11 +9,12 @@ import React, {
 } from "react";
 import PageTitle from "@src/components/PageTitle";
 import GameInstance, { GameInstanceHandle } from "@src/components/GameInstance";
-import { MazeSize } from "@src/types/maze-size";
+import { getMazeRenderHeight, MazeSize } from "@src/types/maze-size";
 import { equalVec, Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
 import { generateMaze, Maze } from "@src/types/Maze";
 import GameOptionsSelector, {
   GameOptions,
+  MazeSizeSelector,
 } from "@src/components/GameOptionsSelector";
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { useNavigate } from "react-router-dom";
@@ -28,12 +29,12 @@ import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 const MultiplayerGameManager = forwardRef<
   GameInstanceHandle,
   {
-    gameOptions: GameOptions;
+    mazeSize: MazeSize;
     maze: Maze | undefined;
     otherPlayers: PlayerInfo[];
     playerPosState: PassedState<Vector2>;
   }
->(({ gameOptions, maze, otherPlayers, playerPosState }, ref) => {
+>(({ mazeSize, maze, otherPlayers, playerPosState }, ref) => {
   const [playerPos, setPlayerPos] = usePassedState(playerPosState);
 
   return (
@@ -41,7 +42,7 @@ const MultiplayerGameManager = forwardRef<
       {maze ? (
         <GameInstance
           ref={ref}
-          gameOptions={gameOptions}
+          mazeSize={mazeSize}
           maze={maze}
           otherPlayers={otherPlayers}
           onPlayerMove={(newPos) => {
@@ -84,10 +85,23 @@ export function Multiplayer(): JSX.Element {
   };
   // #endregion
 
-  const [gameOptions, setGameOptions] = useState<GameOptions>({
-    mazeScale: 15,
-    mazeSize: MazeSize.Medium,
-  });
+  const [mazeSize, setMazeSizeVal] = useState<MazeSize>(MazeSize.Medium);
+  const setMazeSize = (action: React.SetStateAction<MazeSize>) => {
+    const newVal = typeof action == "function" ? action(mazeSize) : action;
+
+    setMazeSizeVal(action);
+    const newHeight = getMazeRenderHeight(newVal);
+    const oldHeight = getMazeRenderHeight(mazeSize);
+    const canvasRatio = canvasDimensions.height / canvasDimensions.width;
+    const posChangeRatio = newHeight / oldHeight; // multiply by the canvas ratio
+    setPlayerPos((oldPos: Vector2) => {
+      return {
+        x: oldPos.x * posChangeRatio * canvasRatio,
+        y: oldPos.y * posChangeRatio,
+      } as Vector2;
+    });
+  };
+
   const [maze, setMaze] = useState<Maze | undefined>(undefined);
   const [errorText, setErrorText] = useState<string>("");
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
@@ -129,6 +143,8 @@ export function Multiplayer(): JSX.Element {
       disconnectFromServer();
     };
   }, []);
+
+  useEffect(() => {}, [mazeSize]);
 
   return (
     <>
@@ -175,14 +191,12 @@ export function Multiplayer(): JSX.Element {
           {isConnected && (
             <>
               <MultiplayerGameManager
-                gameOptions={gameOptions}
+                mazeSize={mazeSize}
                 maze={maze}
                 otherPlayers={otherPlayers}
                 playerPosState={[playerPos, setPlayerPos]}
               />
-              <GameOptionsSelector
-                gameOptionsState={[gameOptions, setGameOptions]}
-              />
+              <MazeSizeSelector mazeSizeState={[mazeSize, setMazeSize]} />
               <div className="flex justify-around">
                 <ReadyButton
                   readyState={[isReady, setIsReady]}

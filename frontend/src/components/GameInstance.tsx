@@ -7,7 +7,7 @@ import React, {
   useState,
 } from "react";
 import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
-import { getMazeRenderHeight } from "../types/maze-size";
+import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
 import { Maze } from "../types/Maze";
 import GameCanvas, { GameCanvasHandle, PLAYER_RADIUS } from "./GameCanvas";
 import { lerp } from "../utils/common-helpers";
@@ -32,19 +32,19 @@ export interface GameInstanceHandle {
 const GameInstance = forwardRef<
   GameInstanceHandle,
   {
-    gameOptions: GameOptions;
+    mazeSize: MazeSize;
     maze: Maze;
     otherPlayers: PlayerInfo[];
     onPlayerMove?: (pos: Vector2) => void;
   }
->(({ gameOptions, maze, otherPlayers, onPlayerMove = undefined }, ref) => {
+>(({ mazeSize, maze, otherPlayers, onPlayerMove = undefined }, ref) => {
   const gameCanvasRef = useRef<GameCanvasHandle | null>(null);
   const targetVelocity = useRef<Vector2>({ x: 0, y: 0 });
   const velocity = useRef<Vector2>({ x: 0, y: 0 });
 
   const cellScale = useMemo(
-    () => getMazeRenderHeight(gameOptions.mazeSize) / maze.height,
-    [maze, gameOptions],
+    () => getMazeRenderHeight(mazeSize) / maze.height,
+    [maze, mazeSize],
   );
   const [playerPos, setPlayerPos] = useState<Vector2>(ZERO_VEC);
 
