@@ -1,5 +1,9 @@
-import { GameMsgType, isGameMsgType } from "../constants/game-msg-type";
-import { NetworkMessage } from "@src/hooks/useNetworkHandler";
+import {
+  GameMsgType,
+  isGameMsgType,
+  isResponseCode,
+} from "../constants/game-msg-type";
+import { NetworkMessage, ServerResponse } from "@src/hooks/useNetworkHandler";
 
 export function buildGameRequest(
   msgType: GameMsgType,
@@ -39,6 +43,30 @@ export function parseGameServerMessage(
   } catch {
     return undefined;
   }
+}
+
+export function parseGameServerResponse(
+  msgData: any | undefined,
+): ServerResponse | undefined {
+  if (!msgData || typeof msgData !== "object") return undefined;
+  if (
+    !("code" in msgData) ||
+    typeof msgData.code !== "number" ||
+    !isResponseCode(msgData.code)
+  )
+    return undefined;
+  if (
+    !("responseTo" in msgData) ||
+    typeof msgData.responseTo !== "string" ||
+    !isGameMsgType(msgData.responseTo)
+  )
+    return undefined;
+
+  return {
+    code: msgData.code,
+    responseTo: msgData.responseTo,
+    data: "data" in msgData ? msgData.data : undefined,
+  } as ServerResponse;
 }
 
 export const minNameLen: number = 4;

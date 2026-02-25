@@ -1,50 +1,72 @@
-from enum import Enum, StrEnum
-import json
-from typing import TypedDict
+# from enum import Enum, StrEnum
+# import json
+# from typing import TypedDict
 
-class TestEnum(Enum):
-    A = "red"
-    B = "blue"
-    C = "c"
+# class TestEnum(Enum):
+#     A = "red"
+#     B = "blue"
+#     C = "c"
 
-# print(TestEnum.A) # TestEnum.A
-# print(TestEnum.A.name) # A
-# print(TestEnum.A.value) # red
+# # print(TestEnum.A) # TestEnum.A
+# # print(TestEnum.A.name) # A
+# # print(TestEnum.A.value) # red
 
-myVal = TestEnum.A
-# print(myVal.name)
+# myVal = TestEnum.A
+# # print(myVal.name)
 
-myobj = {
-    "a": "red",
-    "b": "blue"
-}
+# myobj = {
+#     "a": "red",
+#     "b": "blue"
+# }
 
-# print(TestEnum("red"))
+# # print(TestEnum("red"))
 
-# print(myobj["a"])
-# print("c" in myobj)
+# # print(myobj["a"])
+# # print("c" in myobj)
 
-class Message(TypedDict):
-    msgType: str
-    source: str
-    data: str | None
+# class Message(TypedDict):
+#     msgType: str
+#     source: str
+#     data: str | None
 
-myobj = {
-    "msgType": "maze",
-    "source": "localhost",
-    "data": None
-}
+# myobj = {
+#     "msgType": "maze",
+#     "source": "localhost",
+#     "data": None
+# }
 
-msg_keys = myobj.keys()
-# print("data" in myobj)
+# msg_keys = myobj.keys()
+# # print("data" in myobj)
 
-def my_func(x: bool) -> tuple[str, str] | None:
-    if x: return "x1", "x2"
-    else: return None
+# def my_func(x: bool) -> tuple[str, str] | None:
+#     if x: return "x1", "x2"
+#     else: return None
 
-# a, b = my_func(False)
-# print(f"a: {a}, b: {b}")
+# # a, b = my_func(False)
+# # print(f"a: {a}, b: {b}")
 
-request_str = "{\"msgType\":\"update_pos\",\"data\":{\"x\":10.526315789473685,\"y\":10.526315789473685}}"
-json_msg = json.loads(request_str)
-print(json_msg["data"])
+# request_str = "{\"msgType\":\"update_pos\",\"data\":{\"x\":10.526315789473685,\"y\":10.526315789473685}}"
+# json_msg = json.loads(request_str)
+# print(json_msg["data"])
+
+
+# my_obj = {
+#     "name": "room1234",
+#     "capacity": 5,
+# }
+
+# name = my_obj["name"]
+# capacity = my_obj["capacity"]
+# password = my_obj["password"]
+# print(f"name: {name},\ncapacity: {capacity},\npassword: {password}")
+
+def test_func(x: bool) -> tuple[int, str | None]:
+    if x:
+        return 7, "hello"
+    else:
+        return 45, None
+
+a, b = test_func(True)
+print(f"a: {a}, b: {b}")
+a, b = test_func(False)
+print(f"a: {a}, b: {b}")

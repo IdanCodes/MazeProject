@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { GameMsgType } from "@src/constants/game-msg-type";
+import {
+  GameMsgType,
+  ResponseCode as ResponseCode,
+} from "@src/constants/game-msg-type";
 import {
   buildGameRequest,
   getUsernameError,
   parseGameServerMessage,
+  parseGameServerResponse,
 } from "@src/utils/game-protocol";
-import { NetworkMessage } from "@src/hooks/useNetworkHandler";
+import { NetworkMessage, ServerResponse } from "@src/hooks/useNetworkHandler";
 
 export function useMazePlayerSocket(
   url: string,
   handlers: {
     onMessage?: (msg: NetworkMessage) => void;
+    onResponse?: (response: ServerResponse) => void;
     onConnect?: () => void;
     onDisconnect?: (e: CloseEvent) => void;
   } = {},
@@ -18,7 +23,7 @@ export function useMazePlayerSocket(
   isConnected: boolean;
   connect: (name: string) => Promise<string>;
   disconnect: () => void;
-  sendMessage: (msgType: GameMsgType, data: any | undefined) => void;
+  sendMessage: (msgType: GameMsgType, data?: any | undefined) => void;
 } {
   const ws = useRef<WebSocket | undefined>(undefined);
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -36,7 +41,12 @@ export function useMazePlayerSocket(
   const handleMessage = (e: MessageEvent) => {
     const serverMsg = parseGameServerMessage(e.data);
     if (!serverMsg) return;
-    if (handlers.onMessage) handlers.onMessage(serverMsg);
+    if (serverMsg.msgType == GameMsgType.RESPONSE) {
+      const response = parseGameServerResponse(serverMsg.data);
+      if (!response)
+        console.error(`Received invalid response from server`, serverMsg.data);
+      else if (handlers.onResponse) handlers.onResponse(response);
+    } else if (handlers.onMessage) handlers.onMessage(serverMsg);
   };
 
   const handleError = (e: WebSocketEventMap["error"]) => {
@@ -46,10 +56,8 @@ export function useMazePlayerSocket(
   // connect to the server with a name
   function connect(name: string): Promise<string> {
     return new Promise((res, rej) => {
-      if (isConnected || getUsernameError(name) !== null) {
-        rej("Invalid name");
-        return;
-      }
+      if (isConnected) return rej("Already connected");
+      if (getUsernameError(name) !== null) return rej("Invalid name");
 
       console.log("Connecting...");
 
@@ -58,20 +66,33 @@ export function useMazePlayerSocket(
         ws.current.onmessage = null;
 
         const serverMsg = parseGameServerMessage(e.data);
-        if (!serverMsg) {
-          console.error("Received invalid server message");
-          rej("Invalid name from server");
-        } else if (serverMsg.msgType === GameMsgType.ACCEPT_CONNECTION) {
-          // register event handlers
-          setIsConnected(true);
-          handleOpen();
-          ws.current.addEventListener("close", handleClose);
-          ws.current.addEventListener("message", handleMessage);
-          ws.current.addEventListener("error", handleError);
-          res("Connected");
-        } else if (serverMsg.msgType === GameMsgType.ERR_NAME_TAKEN) {
-          rej(`The name "${name}" is taken. Please use another name`);
+        if (!serverMsg || serverMsg.msgType !== GameMsgType.RESPONSE) {
+          console.error("Received unexpected message from server", serverMsg);
+          return rej("Invalid response from server");
         }
+
+        const serverResponse = parseGameServerResponse(serverMsg.data);
+        if (
+          !serverResponse ||
+          serverResponse.responseTo != GameMsgType.SET_NAME
+        ) {
+          console.error(
+            "Received unexpected response from server:",
+            serverResponse,
+          );
+          return rej("Unexpected server resposne");
+        }
+
+        if (serverResponse.code != ResponseCode.SUCCESS)
+          return rej(`Server Error: ${serverResponse.data}`);
+
+        // register event handlers
+        setIsConnected(true);
+        handleOpen();
+        ws.current.addEventListener("close", handleClose);
+        ws.current.addEventListener("message", handleMessage);
+        ws.current.addEventListener("error", handleError);
+        res("Connected");
       };
 
       const handleConnectOpen = () => {
@@ -102,7 +123,7 @@ export function useMazePlayerSocket(
     ws.current.close(1000);
   }
 
-  function sendMessage(msgType: GameMsgType, data: any | undefined) {
+  function sendMessage(msgType: GameMsgType, data?: any | undefined) {
     if (!isConnected || !ws.current) return;
     ws.current.send(buildGameRequest(msgType, data));
   }

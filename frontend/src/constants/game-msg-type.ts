@@ -9,8 +9,24 @@ export enum GameMsgType {
   PLAYER_CONNECTED = "player_connected",
   PLAYER_DISCONNECTED = "player_disconnected",
   SET_READY = "set_ready",
+
+  ROOMS_LIST = "rooms_list",
+  CREATE_ROOM = "create_room",
+  JOIN_ROOM = "join_room",
+  LEAVE_ROOM = "leave_room",
+
+  RESPONSE = "response",
+}
+
+export enum ResponseCode {
+  ERROR,
+  SUCCESS,
 }
 
 export function isGameMsgType(value: string): value is GameMsgType {
   return Object.values<string>(GameMsgType).includes(value);
+}
+
+export function isResponseCode(value: number): value is ResponseCode {
+  return Object.values(ResponseCode).includes(value);
 }

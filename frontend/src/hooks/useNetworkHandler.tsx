@@ -5,7 +5,10 @@ import {
   ZERO_VEC,
 } from "@src/interfaces/Vector2";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GameMsgType } from "@src/constants/game-msg-type";
+import {
+  GameMsgType,
+  ResponseCode as ResponseCode,
+} from "@src/constants/game-msg-type";
 import { CellType, Grid } from "@src/types/Grid";
 import { Maze } from "@src/types/Maze";
 import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
@@ -18,11 +21,17 @@ import {
 
 const SERVER_PORT = 3003;
 const SERVER_IP = "127.0.0.1";
-const SERVER_WS_URL: string = `ws://${SERVER_IP}:${SERVER_PORT}`;
+export const SERVER_WS_URL: string = `ws://${SERVER_IP}:${SERVER_PORT}`;
 
 export interface NetworkMessage {
   msgType: GameMsgType;
   source: string;
+  data: any | undefined;
+}
+
+export interface ServerResponse {
+  code: ResponseCode;
+  responseTo: GameMsgType;
   data: any | undefined;
 }
 

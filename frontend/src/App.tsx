@@ -3,9 +3,8 @@ import "./index.css";
 import Home from "./pages/Home";
 import { RoutePath } from "@src/constants/route-path";
 import Singleplayer from "@src/pages/gamemodes/Singleplayer";
-import { Multiplayer } from "@src/pages/gamemodes/Multiplayer";
-import React from "react";
-import NetworkConnDemo from "@src/pages/Demos/NetworkConnDemo";
+import Multiplayer from "./pages/gamemodes/Multiplayer";
+// import { Multiplayer } from "@src/pages/gamemodes/Multiplayer_OLD";
 
 function App() {
   return (

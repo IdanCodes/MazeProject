@@ -34,15 +34,26 @@ class MsgType(Enum):
     MAZE = "maze"
     UPDATE_POS = "update_pos"
     SET_NAME = "set_name"
-    
+
     ACCEPT_CONNECTION = "accept_connection"
     ERR_NAME_TAKEN = "err_name_taken"
     PLAYER_CONNECTED = "player_connected"
     PLAYER_DISCONNECTED = "player_disconnected"
     SET_READY = "set_ready"
 
+    ROOMS_LIST = "rooms_list" # params: count?: int -> list[room]
+    CREATE_ROOM = "create_room" # params: { name: string, capacity: int, password: string }
+    JOIN_ROOM = "join_room" # params: { room_id: number, password: str| None }
+    LEAVE_ROOM = "leave_room" # params: { room_id: number }
 
-INCLUDE_DATA_MSG_TYPES: list[MsgType] = [MsgType.CONNECT_REQUEST, MsgType.UPDATE_POS, MsgType.MAZE, MsgType.UPDATE_POS, MsgType.SET_NAME, MsgType.SET_READY]
+    RESPONSE = "response" # data = { code: ResponseType, response_to: MsgType, data: dict | None }
+
+class ResponseCode(Enum):
+    ERROR = 0
+    SUCCESS = 1
+
+
+# INCLUDE_DATA_MSG_TYPES: list[MsgType] = [MsgType.CONNECT_REQUEST, MsgType.UPDATE_POS, MsgType.MAZE, MsgType.UPDATE_POS, MsgType.SET_NAME, MsgType.SET_READY, MsgType]
 
 # Returns - req_type, req_data
 # or - None, None
@@ -53,9 +64,9 @@ def parse_request(request_str: str) -> tuple[MsgType | None, str | None]:
         req_type = MsgType(json_msg["msgType"])
         req_data = None
     
-        if req_type in INCLUDE_DATA_MSG_TYPES:
-            req_data = json_msg["data"]
-        
+        try: req_data = json_msg["data"]
+        except: pass
+
         return req_type, req_data
     except Exception as e:
         print("exception:", e)
@@ -63,9 +74,9 @@ def parse_request(request_str: str) -> tuple[MsgType | None, str | None]:
 
 
 # source = None -> source="SERVER"
-def build_broadcast_msg(source: ClientInfo | None, bc_type: MsgType, bc_data: str | None = None) -> str:
+def build_network_msg(source: ClientInfo | None, msg_type: MsgType, bc_data: str | None = None) -> str:
     bc_dict = {
-        "msgType": bc_type.value,
+        "msgType": msg_type.value,
         "source": SERVER_NAME
     }
 
@@ -76,6 +87,26 @@ def build_broadcast_msg(source: ClientInfo | None, bc_type: MsgType, bc_data: st
     
     return json.dumps(bc_dict)
 
+def build_response(response_code: ResponseCode, response_to: MsgType, data: object | None = None) -> str:
+    response_data = {
+        "code": response_code.value,
+        "responseTo": response_to.value,
+    }
+    if data != None:
+        response_data["data"] = data
+    
+    return build_network_msg(None, MsgType.RESPONSE, response_data)
+
+def build_success_msg(response_to: MsgType, data: object | None = None) -> str:
+    return build_response(ResponseCode.SUCCESS, response_to, data)
+
+def build_error_msg(response_to: MsgType, data: object | None = None) -> str:
+    return build_response(ResponseCode.ERROR, response_to, data)
+
+def build_error_obj(error: str) -> dict:
+    return {
+        "error": error
+    }
 
 def is_valid_position(pos_dict: dict) -> bool:
     return ("x" in pos_dict) and ("y" in pos_dict) and is_number(pos_dict["x"]) and is_number(pos_dict["y"])

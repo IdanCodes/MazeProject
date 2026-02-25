@@ -23,7 +23,7 @@ export default function PrimaryButton({
   buttonSize?: ButtonSize;
   btnType?: React.ButtonHTMLAttributes<HTMLButtonElement>["type"];
   colors?: { normal: string; hover: string; click: string };
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }): JSX.Element {
   return (

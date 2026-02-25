@@ -23,7 +23,7 @@ import { GameOptions } from "@src/components/GameOptionsSelector";
 import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 
 const GAME_FPS = 60;
-const PHYSICS_UPDATE_FPS = 50;
+const PHYSICS_UPDATE_FPS = 60;
 
 export interface GameInstanceHandle {
   gameCanvasRef: GameCanvasHandle | null;
@@ -57,9 +57,9 @@ const GameInstance = forwardRef<
   }, [maze]);
 
   // cells per second
-  const playerSpeed = 3;
-  const accelerationRate = 0.2;
-  const decelerationRate = 0.13;
+  const playerSpeed = 2.5;
+  const accelerationRate = 0.14;
+  const decelerationRate = 0.1;
 
   const speedAmplifier = useMemo(() => {
     return (playerSpeed * cellScale * 4) / GAME_FPS;
@@ -87,7 +87,10 @@ const GameInstance = forwardRef<
     setPlayerPos((cp: Vector2): Vector2 => {
       if (!gameCanvasRef.current) return cp;
       const checkCollision = (pos: Vector2) =>
-        gameCanvasRef.current?.checkCircleCollision(pos, PLAYER_RADIUS);
+        gameCanvasRef.current?.checkCircleCollision(
+          pos,
+          PLAYER_RADIUS / (PHYSICS_UPDATE_FPS * 0.5),
+        );
 
       const newPos: Vector2 = {
         x: cp.x + velocity.current.x,
