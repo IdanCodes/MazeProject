@@ -69,8 +69,8 @@ export function parseGameServerResponse(
   } as ServerResponse;
 }
 
-export const minNameLen: number = 4;
-export const maxNameLen: number = 10;
+export const minNameLen: number = 3;
+export const maxNameLen: number = 16;
 export function getUsernameError(name: string): string | null {
   if (name.length === 0) return "";
   else if (name.length < minNameLen)

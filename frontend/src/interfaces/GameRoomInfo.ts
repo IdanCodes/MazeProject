@@ -4,4 +4,9 @@ export interface GameRoomInfo {
   playerCount: number;
   capacity: number;
   gameActive: boolean;
+  hasPassword: boolean;
+}
+
+export function gameIsFull(room: GameRoomInfo): boolean {
+  return room.playerCount >= room.capacity;
 }

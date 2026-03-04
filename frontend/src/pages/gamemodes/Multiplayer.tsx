@@ -1,4 +1,5 @@
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
+import { ErrorLabel } from "@src/components/ErrorLabel";
 import { GameInstanceHandle } from "@src/components/GameInstance";
 import PageTitle from "@src/components/PageTitle";
 import { GameMsgType, ResponseCode } from "@src/constants/game-msg-type";
@@ -10,14 +11,13 @@ import {
   useNetworkHandler,
 } from "@src/hooks/useNetworkHandler";
 import { usePassedState } from "@src/hooks/usePassedState";
-import { GameRoomInfo } from "@src/interfaces/GameRoomInfo";
-import { PlayerInfo } from "@src/interfaces/PlayerInfo";
-import { Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
-import { Maze } from "@src/types/Maze";
-import { PassedState, SetStateFunc } from "@src/types/passed-state";
-import { getUsernameError } from "@src/utils/game-protocol";
-import clsx from "clsx";
-import { JSX, useEffect, useMemo, useRef, useState } from "react";
+import {
+  gameIsFull as roomIsFull,
+  GameRoomInfo,
+} from "@src/interfaces/GameRoomInfo";
+import { PassedState } from "@src/types/passed-state";
+import { getUsernameError, maxNameLen } from "@src/utils/game-protocol";
+import { JSX, useEffect, useMemo, useState } from "react";
 
 export default function Multiplayer(): JSX.Element {
   //   const [localPlayer, setLocalPlayer] = useState<PlayerInfo>({
@@ -70,6 +70,10 @@ export default function Multiplayer(): JSX.Element {
 
   const [playerName, setPlayerName] = useState<string>("");
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
+  const [createRoomError, setCreateRoomError] = useState<string>("");
+  const [currentRoom, setCurrentRoom] = useState<GameRoomInfo | undefined>(
+    undefined,
+  ); // undefined -> in lobby
 
   const handleOnClose = (e: WebSocketEventMap["close"]) => {
     console.log("Disconnected from server.");
@@ -84,7 +88,6 @@ export default function Multiplayer(): JSX.Element {
           console.error("Encountered error when retrieving rooms list");
           return;
         }
-        console.log("Received rooms:", res.data);
         setRoomsList(res.data);
         return;
       }
@@ -92,10 +95,10 @@ export default function Multiplayer(): JSX.Element {
       case GameMsgType.CREATE_ROOM: {
         if (res.code != ResponseCode.SUCCESS) {
           console.error("Encountered an error when creating a room", res.data);
+          setCreateRoomError(res.data.error);
           return;
         }
         console.log("Room created successfuly!");
-        refreshRoomsList();
         return;
       }
 
@@ -117,6 +120,7 @@ export default function Multiplayer(): JSX.Element {
   );
 
   function refreshRoomsList() {
+    setRoomsList([]);
     sendMessage(GameMsgType.ROOMS_LIST);
   }
 
@@ -129,6 +133,7 @@ export default function Multiplayer(): JSX.Element {
             nameState={[playerName, setPlayerName]}
             disabled={isConnected}
           />
+          <ErrorLabel text={getUsernameError(playerName) ?? ""} />
           <ConnectButton
             handleConnect={() => {
               setPlayerName(playerName.trim());
@@ -138,7 +143,7 @@ export default function Multiplayer(): JSX.Element {
           />
         </>
       )}
-      {isConnected && (
+      {isConnected && !currentRoom && (
         <>
           <p className="text-3xl">Name: {playerName}</p>
           <DisconnectButton
@@ -148,18 +153,21 @@ export default function Multiplayer(): JSX.Element {
           />
           <RoomsPanel
             handleCreateRoom={(name, capacity, password) => {
-              console.log("message");
+              setCreateRoomError("");
               sendMessage(GameMsgType.CREATE_ROOM, {
                 name,
                 capacity,
                 password,
               });
+              refreshRoomsList();
             }}
             refreshList={refreshRoomsList}
             roomsList={roomsList}
+            createRoomError={createRoomError}
           />
         </>
       )}
+      {isConnected && currentRoom && <GamePanel />}
     </>
   );
 }
@@ -213,7 +221,7 @@ function NameInput({
         className="bg-white text-2xl rounded-md p-2"
         disabled={disabled}
         placeholder="Name"
-        maxLength={15}
+        maxLength={maxNameLen}
         value={name}
         onChange={(e) => {
           e.preventDefault();
@@ -224,19 +232,18 @@ function NameInput({
   );
 }
 
-// TODO: implement
-function NameErrorLabel({ text }: { text: string }) {}
-
 function RoomsPanel({
   refreshList,
   handleCreateRoom,
   roomsList,
   refreshTimeoutMS = 500,
+  createRoomError = "",
 }: {
   refreshList: () => void;
   handleCreateRoom: (name: string, capacity: number, password: string) => void;
   roomsList: GameRoomInfo[];
   refreshTimeoutMS?: number;
+  createRoomError?: string;
 }): JSX.Element {
   const [disabledRefresh, setDisabledRefresh] = useState<boolean>(false);
   function handleRefresh() {
@@ -246,14 +253,29 @@ function RoomsPanel({
     setTimeout(() => setDisabledRefresh(false), refreshTimeoutMS);
   }
 
+  useEffect(() => {
+    if (roomsList.length > 0) setDisabledRefresh(false);
+  }, [roomsList]);
+
+  const roomCountStr = useMemo<string>(() => {
+    if (roomsList.length == 0) return "There are no rooms open";
+    if (roomsList.length == 1) return "There is 1 room open";
+    return `There are ${roomsList.length} rooms open`;
+  }, [roomsList]);
   return (
     <div>
-      <RefreshRoomListBtn
-        handleRefresh={handleRefresh}
-        disabled={disabledRefresh}
+      <CreateRoomPanel
+        handleCreateRoom={handleCreateRoom}
+        error={createRoomError}
       />
-      <CreateRoomPanel handleCreateRoom={handleCreateRoom} />
-      <RoomList rooms={roomsList} />
+      <div className="w-7/10 mx-auto">
+        <RefreshRoomListBtn
+          handleRefresh={handleRefresh}
+          disabled={disabledRefresh}
+        />
+        <p className="text-2xl">{roomCountStr}</p>
+        <RoomList rooms={roomsList} />
+      </div>
     </div>
   );
 }
@@ -262,9 +284,13 @@ function RefreshRoomListBtn({
   handleRefresh,
   disabled,
 }: {
-  handleRefresh: React.MouseEventHandler<HTMLDivElement>;
+  handleRefresh: () => void;
   disabled: boolean;
 }): JSX.Element {
+  useEffect(() => {
+    handleRefresh();
+  }, []);
+
   return (
     <PrimaryButton
       className="text-2xl p-3 rounded-2xl"
@@ -278,10 +304,12 @@ function RefreshRoomListBtn({
 
 function CreateRoomPanel({
   handleCreateRoom,
+  error,
 }: {
   handleCreateRoom: (name: string, capacity: number, password: string) => void;
+  error: string;
 }): JSX.Element {
-  const [name, setName] = useState<string>("Awesome Room");
+  const [name, setName] = useState<string>("New Room");
   const [capacity, setCapacity] = useState<number>(2);
   const [password, setPassword] = useState<string>("");
   const btnDisabled = useMemo(
@@ -308,7 +336,7 @@ function CreateRoomPanel({
           <p className="text-3xl">Room Name: </p>
           <input
             type="text"
-            placeholder="Awesome Room"
+            placeholder="Room Name"
             className="bg-white w-50 py-1 rounded-md"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -342,13 +370,61 @@ function CreateRoomPanel({
       >
         Create Room
       </PrimaryButton>
+      <div className="mx-auto">
+        <ErrorLabel text={error} />
+      </div>
     </div>
   );
 }
 
 function RoomList({ rooms }: { rooms: GameRoomInfo[] }) {
-  // TODO: implement
-  return <></>;
+  return (
+    <div className="flex flex-col gap-3">
+      {rooms.map((roomInfo) => (
+        <RoomDisplay key={roomInfo.id} room={roomInfo} />
+      ))}
+    </div>
+  );
+
+  function RoomDisplay({ room }: { room: GameRoomInfo }) {
+    const [password, setPassword] = useState<string>("");
+    const hasPasswordStr = useMemo(
+      () => (room.hasPassword ? "Has Password" : "No Password"),
+      [room],
+    );
+    return (
+      <div className="bg-gray-300 border-black border-4 rounded-2xl flex-row flex px-5 justify-between gap-5">
+        <div className="flex flex-col w-1/2">
+          <p className="font-semibold text-4xl">{room.name}</p>
+          <div className="flex flex-row justify-between">
+            <p className="text-xl">
+              Active: {room.playerCount}/{room.capacity}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-row justify-between w-full">
+          {room.hasPassword ? (
+            <div className="flex flex-row my-1 gap-2">
+              <p className="text-2xl my-auto">Password:</p>
+              <input
+                type="text"
+                className="bg-white text-2xl w-50 h-10 my-auto rounded-md"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          ) : (
+            <p className="text-2xl my-auto">No Password</p>
+          )}
+          <PrimaryButton className="text-5xl" disabled={roomIsFull(room)}>
+            Join
+          </PrimaryButton>
+        </div>
+      </div>
+    );
+
+    function RoomPassword() {}
+  }
 }
 
 function GamePanel(): JSX.Element {

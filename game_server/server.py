@@ -6,12 +6,11 @@
 import asyncio
 from uuid import UUID
 import websockets
-from ClientInfo import ClientInfo
+from ClientInfo import ClientInfo, get_username_error
 from GameRoom import GameRoom, valid_room_capacity, valid_room_name, valid_room_password
 import protocol
 from protocol import MsgType, ResponseCode, build_error_msg, build_error_obj, build_network_msg, build_response, build_success_msg, parse_request
-from constants import MAIN_SERVER
-
+# TODO: TODO - when rooms get to playercount = 0, they start a 5 minute countdown until they expire and close by themselves
 class Server:
     def __init__(self):
         self.clients: list[ClientInfo] = []
@@ -40,8 +39,11 @@ class Server:
                     return
 
                 # check if the name is already registered
-                if self.get_client_info(new_client.name) != None:
-                    await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken."))
+                name_err = get_username_error(client_name)
+                if name_err != None:
+                    await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is invalid: {name_err}"))
+                elif self.get_client_info(new_client.name) != None:
+                    await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
                 else:
                     break
         except websockets.exceptions.ConnectionClosedOK:
@@ -95,7 +97,7 @@ class Server:
                 room_name = room_capacity = room_password = ""
                 try:
                     room_name = req_data["name"]
-                    room_capacity = req_data["capacity"]
+                    room_capacity = int(req_data["capacity"])
                     room_password = req_data["password"]
                 except:
                     return ResponseCode.ERROR, build_error_obj("Invalid arguments (required name, capacity, password)")
@@ -150,7 +152,7 @@ class Server:
             return False, f"Invalid room password"
         if self.get_room_by_name(name) != None:
             return False, "A room with this name already exists"
-        new_room = GameRoom(name, capacity, password)
+        new_room = GameRoom(self, name, capacity, password)
         self.rooms.append(new_room)
         return True, None
 
@@ -165,11 +167,20 @@ class Server:
             return False, "Could not join room"
         self.clients.remove(client)
         return True, None
+    
+    # remove a room from the server
+    # returns whether removing was successful
+    async def remove_room_by_id(self, room_id: UUID) -> bool:
+        room = self.get_room_by_id(room_id)
+        if room == None: return False
+        self.rooms.remove(room)
+        return True
+
 
 if __name__ == "__main__":
-    MAIN_SERVER = Server()
+    server = Server()
 
     try:
-        asyncio.run(MAIN_SERVER.start_server())
+        asyncio.run(server.start_server())
     except KeyboardInterrupt:
         print("\nServer stopped manually")
