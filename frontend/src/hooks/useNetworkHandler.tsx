@@ -39,14 +39,14 @@ export function useNetworkHandler(
   localPlayer: PlayerInfo,
   canvasSize: { width: number; height: number },
   setMaze: (maze: Maze) => void,
-  onError: (e: WebSocketEventMap["error"]) => void = (_) => {},
-  onClose: (e: WebSocketEventMap["close"]) => void = (_) => {},
+  sendMessage: (msgType: GameMsgType, data?: any | undefined) => void,
   posUpdateRate: number = 25,
 ): {
   otherPlayers: PlayerInfo[];
-  isConnected: boolean;
-  connectToServer: (name: string) => Promise<string>;
-  disconnectFromServer: () => void;
+  // isConnected: boolean;
+  // connectToServer: (name: string) => Promise<string>;
+  // disconnectFromServer: () => void;
+  onMessage: (msg: NetworkMessage) => void;
 } {
   const localPlayerPos = useMemo(
     () => localPlayer.position,
@@ -55,26 +55,26 @@ export function useNetworkHandler(
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
   const [otherPlayers, setOtherPlayers] = useState<PlayerInfo[]>([]);
   const clientName = useRef<string>("");
-  const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
-    SERVER_WS_URL,
-    {
-      onConnect: () => {
-        console.log("Connection is open!");
-      },
-      onMessage: (msg) => onReceiveMessage(msg),
-      // onError: (e: WebSocketEventMap["error"]) => onError(e),
-      onDisconnect: (e: WebSocketEventMap["close"]) => onClose(e),
-    },
-  );
+  // const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
+  //   SERVER_WS_URL,
+  //   {
+  //     onConnect: () => {
+  //       console.log("Connection is open!");
+  //     },
+  //     onMessage: (msg) => onReceiveMessage(msg),
+  //     // onError: (e: WebSocketEventMap["error"]) => onError(e),
+  //     onDisconnect: (e: WebSocketEventMap["close"]) => onClose(e),
+  //   },
+  // );
 
   const playerIndexByName = useCallback(
     (name: string) => otherPlayers.findIndex((p) => p.name == name),
     [otherPlayers],
   );
 
-  function onReceiveMessage(msg: NetworkMessage) {
-    handleServerMessage(msg);
-  }
+  // function onReceiveMessage(msg: NetworkMessage) {
+  //   handleServerMessage(msg);
+  // }
 
   // #region Server Message Handlers
   function handleServerMessage(msg: NetworkMessage) {
@@ -182,25 +182,26 @@ export function useNetworkHandler(
     if (!equalVec(localPlayerPos, lastSentPos.current)) sendPos();
   });
 
-  function connectToServer(name: string): Promise<string> {
-    if (!name.length) {
-      console.warn("Not connecting - no name was provided");
-      return new Promise((res, rej) => rej("No name was provided"));
-    }
+  // function connectToServer(name: string): Promise<string> {
+  //   if (!name.length) {
+  //     console.warn("Not connecting - no name was provided");
+  //     return new Promise((res, rej) => rej("No name was provided"));
+  //   }
 
-    clientName.current = name;
-    return connect(name);
-  }
+  //   clientName.current = name;
+  //   return connect(name);
+  // }
 
-  function disconnectFromServer() {
-    setOtherPlayers([]);
-    disconnect();
-  }
+  // function disconnectFromServer() {
+  //   setOtherPlayers([]);
+  //   disconnect();
+  // }
 
   return {
     otherPlayers,
-    isConnected,
-    connectToServer,
-    disconnectFromServer,
+    // isConnected,
+    // connectToServer,
+    // disconnectFromServer,
+    onMessage: handleServerMessage,
   };
 }

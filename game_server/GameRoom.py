@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 import time
 from types import SimpleNamespace
 import uuid
@@ -9,7 +9,7 @@ from ClientInfo import ClientInfo
 from MazeGen.Maze import Maze
 from MazeGen.MazeGenerator import generateDFSRectMaze
 from Structures.Vector2 import Vector2
-from protocol import MsgType, build_network_msg, is_valid_position, parse_request
+from protocol import MsgType, ResponseCode, build_network_msg, build_response, is_valid_position, parse_request
 
 if TYPE_CHECKING:
     import server # This only runs for IDEs/Linters, not the actual code
@@ -19,13 +19,38 @@ class RoomClientRole(Enum):
     PLAYER = 1
     SPECTATOR = 2
 
-class Player(ClientInfo):
+class Player:
     def __init__(self, client_info: ClientInfo, role: RoomClientRole):
-        super().__init__(client_info.websocket, client_info.name)
-        self.role: RoomClientRole = role
+        self.client_info = client_info
+        self.role = role
         self.position = Vector2(0, 0)
         self.isReady = False
         self.connected = True
+
+    async def send(self, message: str):
+        return await self.client_info.send(message)
+
+    def on_receive(self, recv_cb: Callable[[object, str], None], disconnect_cb: Callable[[object], None]):
+        self.client_info.on_receive(recv_cb, disconnect_cb)
+
+    @property
+    def websocket(self):
+        return self.client_info.websocket
+
+    @property
+    def name(self):
+        return self.client_info.name
+
+    def to_string(self) -> str:
+        return self.client_info.to_string()
+
+    def get_player_info(self) -> dict:
+        return {
+            "name": self.name,
+            "role": self.role.value,
+            "position": self.position.__dict__,
+            "isReady": self.isReady,
+        }
 
 ROOM_MAX_PLAYERS = 10
 ROOM_MIN_PLAYERS = 2
@@ -64,26 +89,24 @@ class GameRoom:
             "hasPassword": self.password != None and len(self.password) > 0
         }
 
-    async def add_client(self, client: ClientInfo, role: RoomClientRole = RoomClientRole.PLAYER) -> bool:
-        if self.is_full(): return False
+    async def add_client(self, client: ClientInfo, role: RoomClientRole = RoomClientRole.PLAYER):
         new_player = Player(client, role)
-        self.players.append(new_player)
+        await new_player.send(build_network_msg(None, MsgType.JOIN_ROOM, self.get_room_info()))
+        new_player.on_receive(
+            lambda sender, msg: self.on_receive_message(new_player, msg),
+            lambda sender: self.on_client_disconnect(new_player)
+        )
         asyncio.create_task(self.handle_client(new_player))
-        await new_player.send(build_network_msg(None, MsgType.JOIN_ROOM))
-        await self.send_broadcast(build_network_msg(client, MsgType.PLAYER_CONNECTED))
-        return True
+
+    def find_player_by_name(self, client_name: str) -> Player | None:
+        for player in self.players:
+            if player.name == client_name:
+                return player
+        return None
 
     # handle a client's requests to the server
     async def handle_client(self, player: Player):
         await self.on_player_connect(player)
-        try:
-            async for msg in player.websocket:
-                if not player.connected: return
-                await self.on_receive_message(player, msg)
-        except:
-                await player.websocket.close()
-        finally:
-            await self.on_client_disconnect(player)
     
     async def on_player_connect(self, player: Player):
         await self.send_broadcast(build_network_msg(player, MsgType.PLAYER_CONNECTED), player)
@@ -94,41 +117,48 @@ class GameRoom:
         print(f"{player.to_string()} connected to room {self.name}")
 
     async def on_client_disconnect(self, player: Player):
+        if not player in self.players: return
         self.players.remove(player)
         print(f"{player.to_string()} disconnected from room {self.name}")
         player.connected = False
         if len(self.players) == 0:
-            self.parent_server.remove_room_by_id(self.id)
+            await self.parent_server.remove_room_by_id(self.id)
             return
         
         await self.send_broadcast(build_network_msg(player, MsgType.PLAYER_DISCONNECTED))
         try:
             await player.send(build_network_msg(None, MsgType.LEAVE_ROOM, None))
         except: pass
-        self.parent_server.handle_client(ClientInfo(player.websocket, player.name))
     
     async def on_receive_message(self, sender: Player, msg_str: str):
+        if not sender in self.players: return
         req_type, req_data = parse_request(msg_str)
         if req_type:
-            await self.fulfill_request(sender, req_type, req_data)
+            res_code, res_data = await self.fulfill_request(sender, req_type, req_data)
+            if res_code == None: return
+            await sender.send(build_response(res_code, req_type, res_data))
 
-    async def fulfill_request(self, sender: Player, req_type: MsgType, req_data: dict | None):
-        if req_type == MsgType.UPDATE_POS:
-            asyncio.create_task(self.update_pos(sender, req_data))
-        if req_type == MsgType.SET_READY:
-            asyncio.create_task(self.set_ready(sender, req_data))
-        if req_type == MsgType.LEAVE_ROOM:
-            sender.connected = False
-
+    async def fulfill_request(self, sender: Player, req_type: MsgType, req_data: dict | None) -> tuple[ResponseCode | None, dict | None]:
         bc_msg = self.generate_broadcast(req_type, req_data)
-        if not bc_msg: return
+        if not bc_msg: return None, None
 
         bc_type, bc_data, exclude_sender = bc_msg
 
         exclude = None
         if exclude_sender: exclude = sender
-
         asyncio.create_task(self.send_broadcast(build_network_msg(sender, bc_type, bc_data), exclude))
+        
+        match req_type:
+            case MsgType.UPDATE_POS:
+                asyncio.create_task(self.update_pos(sender, req_data))
+            case MsgType.SET_READY:
+                asyncio.create_task(self.set_ready(sender, req_data))
+                return ResponseCode.SUCCESS, None
+            case MsgType.LEAVE_ROOM:
+                sender.connected = False
+                await self.on_client_disconnect(sender)
+                return ResponseCode.SUCCESS, None
+        return None, None
 
     async def update_pos(self, sender: Player, pos: dict):
         if is_valid_position(pos):

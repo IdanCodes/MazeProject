@@ -35,6 +35,7 @@ class Server:
                 new_client = ClientInfo(websocket, client_name)
 
                 if not req_type or not isinstance(req_data, str) or req_type != MsgType.SET_NAME:
+                    print("Closing websocket - invalid req for init")
                     await websocket.close()
                     return
 
@@ -48,9 +49,15 @@ class Server:
                     break
         except websockets.exceptions.ConnectionClosedOK:
             return
-            
+
+        new_client.start_recv()
         await new_client.send(build_success_msg(MsgType.SET_NAME))
+        new_client.on_receive(self.on_receive_message, self.on_client_disconnect)
         await self.handle_client(new_client)
+
+        # Keep this handler alive until the client actually disconnects.
+        # websockets.serve will close the connection when this coroutine returns.
+        await websocket.wait_closed()
 
     # Get ClientInfo by the client's id
     # Returns None if the client isn't connected
@@ -63,14 +70,6 @@ class Server:
     # handle a client's requests to the server
     async def handle_client(self, client: ClientInfo):
         await self.on_client_connect(client)
-        try:
-            async for msg in client.websocket:
-                if not client in self.clients: return
-                await self.on_receive_message(client, msg)
-        finally:
-            if not client in self.clients: return
-            await self.on_client_disconnect(client)
-            await client.websocket.close()
     
     async def on_client_connect(self, client: ClientInfo):
         self.clients.append(client)
@@ -80,16 +79,16 @@ class Server:
         self.clients.remove(client)
         print(f"{client.to_string()} disconnected")
     
-    # returns whether the client should stay connected
-    async def on_receive_message(self, sender: ClientInfo, msg_str: str) -> bool:
+    async def on_receive_message(self, sender: ClientInfo, msg_str: str):
+        if not sender in self.clients: return # TODO: unsubscribe recv when transferred into room
         req_type, req_data = parse_request(msg_str)
         if req_type:
             response_type, response_data =  await self.fulfill_request(sender, req_type, req_data)
+            if response_type == None: return
             await sender.send(build_response(response_type, req_type, response_data))
-        return True
 
     # returns (response type, data | None)
-    async def fulfill_request(self, sender: ClientInfo, req_type: MsgType, req_data: dict | None) -> tuple[ResponseCode, dict | None]:
+    async def fulfill_request(self, sender: ClientInfo, req_type: MsgType, req_data: dict | None) -> tuple[ResponseCode | None, dict | None]:
         match req_type:
             case MsgType.ROOMS_LIST:
                 return ResponseCode.SUCCESS, self.get_rooms_info()
@@ -118,13 +117,13 @@ class Server:
                 except:
                     return ResponseCode.ERROR, build_error_obj("Invalid arguemnts (required id, password)")
                 
-                successful, reason = self.join_room(sender, room_id, room_password)
+                successful, reason = await self.join_room(sender, room_id, room_password)
                 if not successful:
                     return ResponseCode.ERROR, build_error_obj(reason)
                 return ResponseCode.SUCCESS, None
             case _:
-                return ResponseCode.ERROR, None
-        return ResponseCode.ERROR, None
+                return None, None
+        # return ResponseCode.ERROR, None
 
     def get_rooms_info(self) -> list[GameRoom]:
         return [room.get_room_info() for room in self.rooms]
@@ -141,7 +140,7 @@ class Server:
                 return room
         return None
     
-    # TOOD: Implement ANDDD return whether the room can be created - valid name, password, capacity, ...
+    # TODO: Implement ANDDD return whether the room can be created - valid name, password, capacity, ...
     # returns: (whether creating the room was successful, reason for failing)
     def create_room(self, name: str, capacity: int, password: str | None) -> tuple[bool, str | None]:
         if not valid_room_capacity(capacity):
@@ -157,15 +156,15 @@ class Server:
         return True, None
 
     # returns: (whether joining the room was successful, reason for failing)
-    def join_room(self, client: ClientInfo, room_id: UUID, password: str | None) -> tuple[bool, str | None]:
+    async def join_room(self, client: ClientInfo, room_id: UUID, password: str | None) -> tuple[bool, str | None]:
         room = self.get_room_by_id(room_id)
         if not room:
             return False, "Invalid room id"
         if not room.check_password(password):
             return False, "Invalid password"
-        if not room.add_client(client):
-            return False, "Could not join room"
-        self.clients.remove(client)
+        if room.is_full:
+            return False, "Room is full - can not join"
+        await room.add_client(client)
         return True, None
     
     # remove a room from the server
