@@ -37,9 +37,6 @@ class Player:
     def unsubscribe_disconnect(self, cb_id: UUID | None) -> bool:
         return self.client_info.unsubscribe_disconnect(cb_id)
 
-    # def on_receive(self, recv_cb: Callable[[object, str], None], disconnect_cb: Callable[[object], None]):
-    #     self.client_info.on_receive(recv_cb, disconnect_cb)
-
     def set_room(self, room: GameRoom):
         self.client_info.set_room(room)
 

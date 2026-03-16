@@ -24,4 +24,7 @@ class EventBus:
         # Use .values() to iterate over the actual functions
         handlers = self._subscribers.get(event_type, {}).values()
         for callback in list(handlers):
-            asyncio.create_task(callback(*args, **kwargs))
+            result = callback(*args, **kwargs)
+            if inspect.iscoroutine(result):
+                asyncio.create_task(result)
+
