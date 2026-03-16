@@ -26,63 +26,17 @@ import { Maze } from "@src/types/Maze";
 import { MazeSize } from "@src/types/maze-size";
 import { PassedState, SetStateFunc } from "@src/types/passed-state";
 import { getUsernameError, maxNameLen } from "@src/utils/game-protocol";
+import clsx from "clsx";
 import { JSX, useEffect, useMemo, useRef, useState } from "react";
 
 export default function Multiplayer(): JSX.Element {
-  //   const [localPlayer, setLocalPlayer] = useState<PlayerInfo>({
-  //     name: "",
-  //     position: ZERO_VEC,
-  //     isReady: false,
-  //   } as PlayerInfo);
-  //   // #region Player Attributes
-  //   const playerName = useMemo(() => localPlayer.name, [localPlayer.name]);
-  //   const setPlayerName = (action: React.SetStateAction<string>) => {
-  //     const newVal =
-  //       typeof action == "function" ? action(localPlayer.name) : action;
-  //     setLocalPlayer((lp) => ({ ...lp, name: newVal }));
-  //   };
-  //   const isReady = useMemo(() => localPlayer.isReady, [localPlayer.isReady]);
-  //   const setIsReady: SetStateFunc<boolean> = (
-  //     action: React.SetStateAction<boolean>,
-  //   ) => {
-  //     const newVal =
-  //       typeof action == "function" ? action(localPlayer.isReady) : action;
-  //     setLocalPlayer((lp) => ({ ...lp, isReady: newVal }));
-  //   };
-  //   const playerPos = useMemo(() => localPlayer.position, [localPlayer.position]);
-  //   const setPlayerPos = (action: React.SetStateAction<Vector2>) => {
-  //     const newVal =
-  //       typeof action == "function" ? action(localPlayer.position) : action;
-  //     setLocalPlayer((lp) => ({ ...lp, position: newVal }));
-  //   };
-  //   // #endregion
-  //   const [maze, setMaze] = useState<Maze | undefined>(undefined);
-  //   const [errorText, setErrorText] = useState<string>("");
-  //   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
-
-  //   const canvasDimensions = useMemo<{
-  //     width: number;
-  //     height: number;
-  //   }>(() => {
-  //     return gameInstanceRef.current && gameInstanceRef.current.gameCanvasRef
-  //       ? {
-  //           ...gameInstanceRef.current.gameCanvasRef.dimensions,
-  //         }
-  //       : { width: 1, height: 1 };
-  //   }, [gameInstanceRef.current]);
-
-  //   const handleNetworkError = (e: WebSocketEventMap["error"]) => {
-  //     console.error("Network error:", e);
-  //     setErrorText(`A network error occurred. Please refresh the page`);
-  //     setPlayerName("");
-  //   };
-
   const gameOnMessageCb = useRef<{ cb: (msg: NetworkMessage) => void }>({
     cb: () => {},
   });
   const [playerName, setPlayerName] = useState<string>("");
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
   const [createRoomError, setCreateRoomError] = useState<string>("");
+  const [roomsError, setRoomsError] = useState<string>("");
   const [currentRoom, setCurrentRoom] = useState<GameRoomInfo | undefined>(
     undefined,
   ); // undefined -> in lobby
@@ -111,6 +65,11 @@ export default function Multiplayer(): JSX.Element {
       case GameMsgType.ROOMS_LIST: {
         if (res.code != ResponseCode.SUCCESS) {
           console.error("Encountered error when retrieving rooms list");
+          setRoomsError(
+            "Could not retrieve rooms list" +
+              (res.data.error && ` - ${res.data.error}`),
+          );
+          setRoomsList([]);
           return;
         }
         setRoomsList(res.data);
@@ -130,13 +89,31 @@ export default function Multiplayer(): JSX.Element {
       case GameMsgType.JOIN_ROOM: {
         if (res.code == ResponseCode.SUCCESS) {
           console.log("Successfuly joined room");
-          return;
-        }
-
-        console.error("Could not join room");
+          setRoomsError("");
+        } else
+          setRoomsError(
+            "Could not join room" + (res.data.error && ` - ${res.data.error}`),
+          );
         return;
       }
     }
+  };
+
+  const createRoom = (name: string, capacity: number, password: string) => {
+    setCreateRoomError("");
+    sendMessage(GameMsgType.CREATE_ROOM, {
+      name,
+      capacity,
+      password,
+    });
+    refreshRoomsList();
+  };
+
+  const joinRoom = (room_id: string, room_password: string) => {
+    sendMessage(GameMsgType.JOIN_ROOM, {
+      id: room_id,
+      password: room_password,
+    });
   };
 
   const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
@@ -190,24 +167,12 @@ export default function Multiplayer(): JSX.Element {
               }}
             />
             <RoomsPanel
-              handleCreateRoom={(name, capacity, password) => {
-                setCreateRoomError("");
-                sendMessage(GameMsgType.CREATE_ROOM, {
-                  name,
-                  capacity,
-                  password,
-                });
-                refreshRoomsList();
-              }}
-              handleJoinRoom={(room_id: string, room_password: string) => {
-                sendMessage(GameMsgType.JOIN_ROOM, {
-                  id: room_id,
-                  password: room_password,
-                });
-              }}
+              handleCreateRoom={createRoom}
+              handleJoinRoom={joinRoom}
               refreshList={refreshRoomsList}
               roomsList={roomsList}
               createRoomError={createRoomError}
+              roomsError={roomsError}
             />
           </>
         )}
@@ -287,6 +252,7 @@ function RoomsPanel({
   refreshList,
   handleCreateRoom,
   handleJoinRoom,
+  roomsError,
   roomsList,
   refreshTimeoutMS = 500,
   createRoomError = "",
@@ -294,6 +260,7 @@ function RoomsPanel({
   refreshList: () => void;
   handleCreateRoom: (name: string, capacity: number, password: string) => void;
   handleJoinRoom: (room_id: string, room_password: string) => void;
+  roomsError: string;
   roomsList: GameRoomInfo[];
   refreshTimeoutMS?: number;
   createRoomError?: string;
@@ -326,6 +293,7 @@ function RoomsPanel({
           handleRefresh={handleRefresh}
           disabled={disabledRefresh}
         />
+        <ErrorLabel text={roomsError} />
         <p className="text-2xl">{roomCountStr}</p>
         <RoomList rooms={roomsList} handleJoinRoom={handleJoinRoom} />
       </div>
@@ -459,10 +427,6 @@ function RoomList({
     joinRoom: (room_password: string) => void;
   }) {
     const [password, setPassword] = useState<string>("");
-    const hasPasswordStr = useMemo(
-      () => (room.hasPassword ? "Has Password" : "No Password"),
-      [room],
-    );
     return (
       <div className="bg-gray-300 border-black border-4 rounded-2xl flex-row flex px-5 justify-between gap-5">
         <div className="flex flex-col w-1/2">
@@ -499,8 +463,6 @@ function RoomList({
         </div>
       </div>
     );
-
-    function RoomPassword() {}
   }
 }
 
@@ -549,12 +511,6 @@ function GamePanel({
       : { width: 1, height: 1 };
   }, [gameInstanceRef.current]);
 
-  // const handleNetworkError = (e: WebSocketEventMap["error"]) => {
-  //   console.error("Network error:", e);
-  //   setErrorText(`A network error occurred. Please refresh the page`);
-  //   setPlayerName("");
-  // };
-
   const { otherPlayers, onMessage } = useNetworkHandler(
     localPlayer,
     canvasDimensions,
@@ -567,17 +523,69 @@ function GamePanel({
     <>Waiting for maze...</>
   ) : (
     <div>
-      <PrimaryButton className="bg-red-500" onClick={leaveRoom}>
-        Leave Room
+      <DisconnectButton handleDisconnect={leaveRoom} />
+      <div className="flex flex-row gap-5">
+        <div>
+          <GameInstance
+            mazeSize={MazeSize.Medium}
+            maze={maze}
+            otherPlayers={otherPlayers}
+            onPlayerMove={(pos: Vector2) => {
+              setPlayerPos(pos);
+            }}
+          />
+          <ReadyButton readyState={[isReady, setIsReady]} disabled={false} />
+        </div>
+        <PlayersList players={[localPlayer, ...otherPlayers]} />
+      </div>
+    </div>
+  );
+}
+
+function ReadyButton({
+  readyState,
+  disabled,
+}: {
+  readyState: PassedState<boolean>;
+  disabled: boolean;
+}) {
+  const [isReady, setIsReady] = usePassedState(readyState);
+  return (
+    <>
+      <PrimaryButton
+        className={clsx(
+          "text-3xl",
+          isReady
+            ? "bg-emerald-400 hover:bg-emerald-400/80 active:bg-emerald-500/80"
+            : "bg-green-500 hover:bg-green-500/80 active:bg-green-600/80",
+        )}
+        disabled={disabled}
+        onClick={() =>
+          setIsReady((r) => {
+            return !r;
+          })
+        }
+      >
+        {isReady ? "Unready" : "Ready"}
       </PrimaryButton>
-      <GameInstance
-        mazeSize={MazeSize.Medium}
-        maze={maze}
-        otherPlayers={otherPlayers}
-        onPlayerMove={(pos: Vector2) => {
-          setPlayerPos(pos);
-        }}
-      />
+    </>
+  );
+}
+
+function PlayersList({ players }: { players: PlayerInfo[] }) {
+  return (
+    <div className="text-xl flex flex-col truncate ">
+      {players.map((p) => (
+        <span key={p.name} className="">
+          {p.name}
+          {" - "}
+          {p.isReady ? (
+            <span className="text-green-500">Ready</span>
+          ) : (
+            <span className="text-red-500">Not Ready</span>
+          )}
+        </span>
+      ))}
     </div>
   );
 }

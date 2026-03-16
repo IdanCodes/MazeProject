@@ -43,9 +43,6 @@ export function useNetworkHandler(
   posUpdateRate: number = 25,
 ): {
   otherPlayers: PlayerInfo[];
-  // isConnected: boolean;
-  // connectToServer: (name: string) => Promise<string>;
-  // disconnectFromServer: () => void;
   onMessage: (msg: NetworkMessage) => void;
 } {
   const localPlayerPos = useMemo(
@@ -54,26 +51,10 @@ export function useNetworkHandler(
   );
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
   const [otherPlayers, setOtherPlayers] = useState<PlayerInfo[]>([]);
-  // const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
-  //   SERVER_WS_URL,
-  //   {
-  //     onConnect: () => {
-  //       console.log("Connection is open!");
-  //     },
-  //     onMessage: (msg) => onReceiveMessage(msg),
-  //     // onError: (e: WebSocketEventMap["error"]) => onError(e),
-  //     onDisconnect: (e: WebSocketEventMap["close"]) => onClose(e),
-  //   },
-  // );
-
   const playerIndexByName = useCallback(
     (name: string) => otherPlayers.findIndex((p) => p.name == name),
     [otherPlayers],
   );
-
-  // function onReceiveMessage(msg: NetworkMessage) {
-  //   handleServerMessage(msg);
-  // }
 
   // #region Server Message Handlers
   function handleServerMessage(msg: NetworkMessage) {

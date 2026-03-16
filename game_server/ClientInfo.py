@@ -15,8 +15,6 @@ class ClientInfo:
         self.websocket = websocket
         self.name = name
         self.event_bus = EventBus()
-        # self.on_recv_cb = []
-        # self.on_disconnect_cb = []
         self.is_receiving = False
         self.curr_room = None # None -> lobby
 
@@ -53,7 +51,7 @@ class ClientInfo:
             print(f"Exception occurred while receiving for client {self.to_string()}:", e)
         finally:
             await self.emit_disconnect()
-            self.websocket.close()
+            await self.websocket.close()
 
     async def emit_recv(self, msg):
         await self.event_bus.emit(RECV_EVENT_NAME, self, msg)
