@@ -3,6 +3,13 @@ import json
 
 from ClientInfo import ClientInfo
 from helpers import is_number
+from Structures.Vector2 import Vector2
+
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Vector2):
+            return {"x": obj.x, "y": obj.y}
+        return super().default(obj)
 
 # message structure:
 """
@@ -53,8 +60,6 @@ class ResponseCode(Enum):
     SUCCESS = 1
 
 
-# INCLUDE_DATA_MSG_TYPES: list[MsgType] = [MsgType.CONNECT_REQUEST, MsgType.UPDATE_POS, MsgType.MAZE, MsgType.UPDATE_POS, MsgType.SET_NAME, MsgType.SET_READY, MsgType]
-
 # Returns - req_type, req_data
 # or - None, None
 # when the request is invalid
@@ -85,7 +90,7 @@ def build_network_msg(source: ClientInfo | None, msg_type: MsgType, bc_data: str
     if bc_data != None:
         bc_dict["data"] = bc_data
     
-    return json.dumps(bc_dict)
+    return json.dumps(bc_dict, cls=CustomJSONEncoder)
 
 def build_response(response_code: ResponseCode, response_to: MsgType, data: object | None = None) -> str:
     response_data = {

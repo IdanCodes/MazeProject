@@ -35,25 +35,26 @@ class Server:
                 new_client = ClientInfo(websocket, client_name)
 
                 if not req_type or not isinstance(req_data, str) or req_type != MsgType.SET_NAME:
-                    print("Closing websocket - invalid req for init")
-                    await websocket.close()
+                    print("Closing websocket - invalid request for init")
+                    websocket.close()
                     return
 
                 # check if the name is already registered
                 name_err = get_username_error(client_name)
                 if name_err != None:
                     await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is invalid: {name_err}"))
-                elif self.get_client_info(new_client.name) != None:
+                elif self.find_client_by_name(new_client.name) != None:
                     await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
                 else:
                     break
         except websockets.exceptions.ConnectionClosedOK:
             return
 
-        new_client.start_recv()
         await new_client.send(build_success_msg(MsgType.SET_NAME))
-        new_client.on_receive(self.on_receive_message, self.on_client_disconnect)
-        await self.handle_client(new_client)
+        new_client.on_receive(None, self.on_receive_message)
+        new_client.on_disconnect(None, self.on_client_disconnect)
+        new_client.start_recv()
+        self.on_client_connect(new_client)
 
         # Keep this handler alive until the client actually disconnects.
         # websockets.serve will close the connection when this coroutine returns.
@@ -61,26 +62,22 @@ class Server:
 
     # Get ClientInfo by the client's id
     # Returns None if the client isn't connected
-    def get_client_info(self, client_name: str) -> ClientInfo | None:
+    def find_client_by_name(self, client_name: str) -> ClientInfo | None:
         for c in self.clients:
             if c.name == client_name:
                 return c
         return None
 
-    # handle a client's requests to the server
-    async def handle_client(self, client: ClientInfo):
-        await self.on_client_connect(client)
-    
-    async def on_client_connect(self, client: ClientInfo):
+    def on_client_connect(self, client: ClientInfo):
         self.clients.append(client)
         print(f"{client.to_string()} connected")
 
-    async def on_client_disconnect(self, client: ClientInfo):
+    def on_client_disconnect(self, client: ClientInfo):
         self.clients.remove(client)
         print(f"{client.to_string()} disconnected")
     
     async def on_receive_message(self, sender: ClientInfo, msg_str: str):
-        if not sender in self.clients: return # TODO: unsubscribe recv when transferred into room
+        if not sender.in_lobby: return # TODO: unsubscribe recv when transferred into room
         req_type, req_data = parse_request(msg_str)
         if req_type:
             response_type, response_data =  await self.fulfill_request(sender, req_type, req_data)
@@ -121,9 +118,7 @@ class Server:
                 if not successful:
                     return ResponseCode.ERROR, build_error_obj(reason)
                 return ResponseCode.SUCCESS, None
-            case _:
-                return None, None
-        # return ResponseCode.ERROR, None
+        return ResponseCode.ERROR, None
 
     def get_rooms_info(self) -> list[GameRoom]:
         return [room.get_room_info() for room in self.rooms]
@@ -140,7 +135,6 @@ class Server:
                 return room
         return None
     
-    # TODO: Implement ANDDD return whether the room can be created - valid name, password, capacity, ...
     # returns: (whether creating the room was successful, reason for failing)
     def create_room(self, name: str, capacity: int, password: str | None) -> tuple[bool, str | None]:
         if not valid_room_capacity(capacity):
@@ -173,6 +167,7 @@ class Server:
         room = self.get_room_by_id(room_id)
         if room == None: return False
         self.rooms.remove(room)
+        print(f"Removed room {room.name}")
         return True
 
 

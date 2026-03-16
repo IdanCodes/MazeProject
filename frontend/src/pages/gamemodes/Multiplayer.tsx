@@ -136,9 +136,6 @@ export default function Multiplayer(): JSX.Element {
         console.error("Could not join room");
         return;
       }
-
-      default:
-        break;
     }
   };
 
@@ -216,6 +213,7 @@ export default function Multiplayer(): JSX.Element {
         )}
       {isConnected && currentRoom && (
         <GamePanel
+          playerName={playerName}
           leaveRoom={leaveRoom}
           sendMessage={sendMessage}
           onMessageCb={gameOnMessageCb.current}
@@ -507,26 +505,22 @@ function RoomList({
 }
 
 function GamePanel({
+  playerName,
   onMessageCb,
   sendMessage,
   leaveRoom,
 }: {
+  playerName: string;
   onMessageCb: { cb: (msg: NetworkMessage) => void };
   sendMessage: (msgType: GameMsgType, data?: any | undefined) => void;
   leaveRoom: () => void;
 }): JSX.Element {
   const [localPlayer, setLocalPlayer] = useState<PlayerInfo>({
-    name: "",
+    name: playerName,
     position: ZERO_VEC,
     isReady: false,
   } as PlayerInfo);
   // #region Player Attributes
-  const playerName = useMemo(() => localPlayer.name, [localPlayer.name]);
-  const setPlayerName = (action: React.SetStateAction<string>) => {
-    const newVal =
-      typeof action == "function" ? action(localPlayer.name) : action;
-    setLocalPlayer((lp) => ({ ...lp, name: newVal }));
-  };
   const isReady = useMemo(() => localPlayer.isReady, [localPlayer.isReady]);
   const setIsReady: SetStateFunc<boolean> = (
     action: React.SetStateAction<boolean>,

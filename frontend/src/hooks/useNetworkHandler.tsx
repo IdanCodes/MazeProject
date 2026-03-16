@@ -54,7 +54,6 @@ export function useNetworkHandler(
   );
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
   const [otherPlayers, setOtherPlayers] = useState<PlayerInfo[]>([]);
-  const clientName = useRef<string>("");
   // const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
   //   SERVER_WS_URL,
   //   {
@@ -119,7 +118,7 @@ export function useNetworkHandler(
 
     const posList: [string, Vector2][] = [];
     Object.entries(data).forEach(([name, rawPos]) => {
-      if (name === clientName.current) return;
+      if (name === localPlayer.name) return;
 
       const normalized = parseVector2(rawPos);
       if (!normalized) return;

@@ -1,14 +1,22 @@
+from __future__ import annotations
 import asyncio
-from typing import Callable
-
+from typing import TYPE_CHECKING, Callable
+from uuid import UUID
 import websockets
+from EventBus import EventBus
 
+if TYPE_CHECKING:
+    from GameRoom import GameRoom
+
+RECV_EVENT_NAME = "data_received"
+DISCONNECT_EVENT_NAME = "disconnected"
 class ClientInfo:
     def __init__(self, websocket: websockets.ServerConnection, name: str):
         self.websocket = websocket
         self.name = name
-        self.on_recv_cb = []
-        self.on_disconnect_cb = []
+        self.event_bus = EventBus()
+        # self.on_recv_cb = []
+        # self.on_disconnect_cb = []
         self.is_receiving = False
         self.curr_room = None # None -> lobby
 
@@ -21,31 +29,55 @@ class ClientInfo:
         return await self.websocket.send(message)
     
     # callback: (client: ClientInfo, msg_str: string)
-    def on_receive(self, recv_cb: Callable[[object, str], None], disconnect_cb: Callable[[object], None]):
-        self.on_recv_cb.append(recv_cb)
-        self.on_disconnect_cb.append(disconnect_cb)
+    # def on_receive(self, recv_cb: Callable[[object, str], None], disconnect_cb: Callable[[object], None]):
+    #     self.on_recv_cb.append(recv_cb)
+    #     self.on_disconnect_cb.append(disconnect_cb)
+
+    def on_receive(self, cb_id: UUID | None, recv_cb: Callable[[object, str], None]):
+        return self.event_bus.subscribe(RECV_EVENT_NAME, cb_id, recv_cb)
+    
+    def unsubscribe_receive(self, cb_id: UUID | None) -> bool:
+        return self.event_bus.unsubscribe(RECV_EVENT_NAME, cb_id)
+    
+    def on_disconnect(self, cb_id: UUID | None, disconnect_cb: Callable[[object], None]):
+        return self.event_bus.subscribe(DISCONNECT_EVENT_NAME, cb_id, disconnect_cb)
+    
+    def unsubscribe_disconnect(self, cb_id: UUID | None) -> bool:
+        return self.event_bus.unsubscribe(DISCONNECT_EVENT_NAME, cb_id)
 
     async def receive_loop(self):
         try:
             async for msg in self.websocket:
-                await self.call_recv_callbacks(msg)
+                await self.emit_recv(msg)
         except Exception as e:
             print(f"Exception occurred while receiving for client {self.to_string()}:", e)
         finally:
-            await self.call_disconnect_callbacks()
+            await self.emit_disconnect()
+            self.websocket.close()
 
-    async def call_recv_callbacks(self, msg: str):
-        for cb in self.on_recv_cb:
-            asyncio.create_task(cb(self, msg))
+    async def emit_recv(self, msg):
+        await self.event_bus.emit(RECV_EVENT_NAME, self, msg)
 
-    async def call_disconnect_callbacks(self):
-        for cb in self.on_disconnect_cb:
-            asyncio.create_task(cb(self))
-        await self.websocket.close()
+    async def emit_disconnect(self):
+        await self.event_bus.emit(DISCONNECT_EVENT_NAME, self)
 
     def to_string(self) -> str:
         return f"[{self.name} ({self.websocket.remote_address})]"
     
+    def in_room(self, room: GameRoom | None) -> bool:
+        if self.in_lobby: return room == None
+        return False if room == None else self.room.id == room.id
+
+    # is the client in the lobby?
+    @property
+    def in_lobby(self) -> bool:
+        return self.curr_room == None
+    
+    # set which room the client is currently in
+    # None -> lobby
+    def set_room(self, room: GameRoom | None):
+        self.curr_room = None if room == None else room.id
+
     # { name }
     def get_client_info(self) -> dict:
         return {

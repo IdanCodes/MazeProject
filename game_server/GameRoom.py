@@ -1,63 +1,25 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable
 import time
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 import uuid
 import asyncio
-from enum import Enum
 from ClientInfo import ClientInfo
 from MazeGen.Maze import Maze
 from MazeGen.MazeGenerator import generateDFSRectMaze
+from Player import Player, RoomClientRole
 from Structures.Vector2 import Vector2
 from protocol import MsgType, ResponseCode, build_network_msg, build_response, is_valid_position, parse_request
 
 if TYPE_CHECKING:
-    import server # This only runs for IDEs/Linters, not the actual code
-
-class RoomClientRole(Enum):
-    ADMIN = 0
-    PLAYER = 1
-    SPECTATOR = 2
-
-class Player:
-    def __init__(self, client_info: ClientInfo, role: RoomClientRole):
-        self.client_info = client_info
-        self.role = role
-        self.position = Vector2(0, 0)
-        self.isReady = False
-        self.connected = True
-
-    async def send(self, message: str):
-        return await self.client_info.send(message)
-
-    def on_receive(self, recv_cb: Callable[[object, str], None], disconnect_cb: Callable[[object], None]):
-        self.client_info.on_receive(recv_cb, disconnect_cb)
-
-    @property
-    def websocket(self):
-        return self.client_info.websocket
-
-    @property
-    def name(self):
-        return self.client_info.name
-
-    def to_string(self) -> str:
-        return self.client_info.to_string()
-
-    def get_player_info(self) -> dict:
-        return {
-            "name": self.name,
-            "role": self.role.value,
-            "position": self.position.__dict__,
-            "isReady": self.isReady,
-        }
+    from server import Server
 
 ROOM_MAX_PLAYERS = 10
 ROOM_MIN_PLAYERS = 2
 GAME_LOOP_RATE = 20
-DEFAULT_MAZE_DIMENSIONS = SimpleNamespace(width=13, height=13)
+DEFAULT_MAZE_DIMENSIONS = SimpleNamespace(width=25, height=25)
 class GameRoom:
-    def __init__(self, parent_server: server.Server, room_name: str, capacity: int, password: str | None):
+    def __init__(self, parent_server: Server, room_name: str, capacity: int, password: str | None):
         self.parent_server = parent_server
         self.name: str = room_name
         self.capacity = max(ROOM_MIN_PLAYERS, min(ROOM_MAX_PLAYERS, capacity))
@@ -68,6 +30,8 @@ class GameRoom:
         self.game_active = False
         self.created_at = time.time()
         self.stored_maze: Maze = generateDFSRectMaze(DEFAULT_MAZE_DIMENSIONS.width, DEFAULT_MAZE_DIMENSIONS.height)
+        self.running = True
+        asyncio.create_task(self.game_loop())
 
     @property
     def is_full(self):
@@ -75,9 +39,6 @@ class GameRoom:
 
     def check_password(self, password: str | None) -> bool:
         return self.password == password or (len(password) == 0 and self.password == None)
-
-    async def start_room(self):
-        asyncio.create_task(self.game_loop())
         
     def get_room_info(self) -> dict:
         return {
@@ -92,21 +53,20 @@ class GameRoom:
     async def add_client(self, client: ClientInfo, role: RoomClientRole = RoomClientRole.PLAYER):
         new_player = Player(client, role)
         await new_player.send(build_network_msg(None, MsgType.JOIN_ROOM, self.get_room_info()))
-        new_player.on_receive(
-            lambda sender, msg: self.on_receive_message(new_player, msg),
-            lambda sender: self.on_client_disconnect(new_player)
-        )
-        asyncio.create_task(self.handle_client(new_player))
+        # new_player.on_receive(
+        #     lambda _, msg: self.on_receive_message(new_player, msg),
+        #     lambda _: self.on_client_disconnect(new_player)
+        # )
+        new_player.on_receive(self.id, self.on_receive_message)
+        new_player.on_disconnect(self.id, self.on_client_disconnect)
+        new_player.set_room(self)
+        asyncio.create_task(self.on_player_connect(new_player))
 
     def find_player_by_name(self, client_name: str) -> Player | None:
         for player in self.players:
             if player.name == client_name:
                 return player
         return None
-
-    # handle a client's requests to the server
-    async def handle_client(self, player: Player):
-        await self.on_player_connect(player)
     
     async def on_player_connect(self, player: Player):
         await self.send_broadcast(build_network_msg(player, MsgType.PLAYER_CONNECTED), player)
@@ -118,9 +78,11 @@ class GameRoom:
 
     async def on_client_disconnect(self, player: Player):
         if not player in self.players: return
+        player.unsubscribe_receive(self.id)
+        player.unsubscribe_disconnect(self.id)
+        player.set_room(None)
         self.players.remove(player)
         print(f"{player.to_string()} disconnected from room {self.name}")
-        player.connected = False
         if len(self.players) == 0:
             await self.parent_server.remove_room_by_id(self.id)
             return
@@ -140,31 +102,28 @@ class GameRoom:
 
     async def fulfill_request(self, sender: Player, req_type: MsgType, req_data: dict | None) -> tuple[ResponseCode | None, dict | None]:
         bc_msg = self.generate_broadcast(req_type, req_data)
-        if not bc_msg: return None, None
+        if bc_msg:
+            bc_type, bc_data, exclude_sender = bc_msg
+            exclude = None
+            if exclude_sender: exclude = sender
+            asyncio.create_task(self.send_broadcast(build_network_msg(sender, bc_type, bc_data), exclude))
 
-        bc_type, bc_data, exclude_sender = bc_msg
-
-        exclude = None
-        if exclude_sender: exclude = sender
-        asyncio.create_task(self.send_broadcast(build_network_msg(sender, bc_type, bc_data), exclude))
-        
         match req_type:
             case MsgType.UPDATE_POS:
-                asyncio.create_task(self.update_pos(sender, req_data))
+                self.update_pos(sender, req_data)
             case MsgType.SET_READY:
-                asyncio.create_task(self.set_ready(sender, req_data))
+                self.set_ready(sender, req_data)
                 return ResponseCode.SUCCESS, None
             case MsgType.LEAVE_ROOM:
-                sender.connected = False
                 await self.on_client_disconnect(sender)
                 return ResponseCode.SUCCESS, None
         return None, None
 
-    async def update_pos(self, sender: Player, pos: dict):
+    def update_pos(self, sender: Player, pos: dict):
         if is_valid_position(pos):
             self.dirty_pos_dict[sender.name] = sender.position = Vector2(pos["x"], pos["y"])
 
-    async def set_ready(self, sender: ClientInfo, isReady: bool):
+    def set_ready(self, sender: ClientInfo, isReady: bool):
         if isinstance(isReady, bool):
             sender.isReady = isReady
 
