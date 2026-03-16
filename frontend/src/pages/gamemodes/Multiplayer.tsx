@@ -34,6 +34,7 @@ export default function Multiplayer(): JSX.Element {
     cb: () => {},
   });
   const [playerName, setPlayerName] = useState<string>("");
+  const [usernameError, setUsernameError] = useState<string>("");
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
   const [createRoomError, setCreateRoomError] = useState<string>("");
   const [roomsError, setRoomsError] = useState<string>("");
@@ -114,6 +115,7 @@ export default function Multiplayer(): JSX.Element {
       id: room_id,
       password: room_password,
     });
+    refreshRoomsList();
   };
 
   const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
@@ -144,14 +146,22 @@ export default function Multiplayer(): JSX.Element {
       {!isConnected && (
         <>
           <NameInput
-            nameState={[playerName, setPlayerName]}
+            nameState={[
+              playerName,
+              (action: React.SetStateAction<string>) => {
+                const newVal =
+                  typeof action == "function" ? action(playerName) : action;
+                setPlayerName(newVal);
+                setUsernameError(getUsernameError(newVal) ?? "");
+              },
+            ]}
             disabled={isConnected}
           />
-          <ErrorLabel text={getUsernameError(playerName) ?? ""} />
+          <ErrorLabel text={usernameError} />
           <ConnectButton
             handleConnect={() => {
               setPlayerName(playerName.trim());
-              connect(playerName.trim());
+              connect(playerName.trim()).catch(setUsernameError);
             }}
             disabled={getUsernameError(playerName) !== null || isConnected}
           />
