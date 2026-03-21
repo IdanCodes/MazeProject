@@ -25,11 +25,6 @@ class ClientInfo:
 
     async def send(self, message: str):
         return await self.websocket.send(message)
-    
-    # callback: (client: ClientInfo, msg_str: string)
-    # def on_receive(self, recv_cb: Callable[[object, str], None], disconnect_cb: Callable[[object], None]):
-    #     self.on_recv_cb.append(recv_cb)
-    #     self.on_disconnect_cb.append(disconnect_cb)
 
     def on_receive(self, cb_id: UUID | None, recv_cb: Callable[[object, str], None]):
         return self.event_bus.subscribe(RECV_EVENT_NAME, cb_id, recv_cb)

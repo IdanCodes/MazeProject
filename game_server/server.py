@@ -10,7 +10,6 @@ from ClientInfo import ClientInfo, get_username_error
 from GameRoom import GameRoom, valid_room_capacity, valid_room_name, valid_room_password
 import protocol
 from protocol import MsgType, ResponseCode, build_error_msg, build_error_obj, build_network_msg, build_response, build_success_msg, parse_request
-# TODO: TODO - when rooms get to playercount = 0, they start a 5 minute countdown until they expire and close by themselves
 class Server:
     def __init__(self):
         self.clients: list[ClientInfo] = []

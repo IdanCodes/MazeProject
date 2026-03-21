@@ -53,10 +53,6 @@ class GameRoom:
     async def add_client(self, client: ClientInfo, role: RoomClientRole = RoomClientRole.PLAYER):
         new_player = Player(client, role)
         await new_player.send(build_network_msg(None, MsgType.JOIN_ROOM, self.get_room_info()))
-        # new_player.on_receive(
-        #     lambda _, msg: self.on_receive_message(new_player, msg),
-        #     lambda _: self.on_client_disconnect(new_player)
-        # )
         new_player.on_receive(self.id, self.on_receive_message)
         new_player.on_disconnect(self.id, self.on_client_disconnect)
         new_player.set_room(self)
