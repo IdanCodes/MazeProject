@@ -19,12 +19,10 @@ class EventBus:
             return self._subscribers[event_type].pop(callback_id, None) is not None
         return False
 
-    async def emit(self, event_type, *args, **kwargs):
+    def emit(self, event_type, *args, **kwargs):
         """Triggers all listeners for an event."""
         # Use .values() to iterate over the actual functions
         handlers = self._subscribers.get(event_type, {}).values()
         for callback in list(handlers):
-            result = callback(*args, **kwargs)
-            if inspect.iscoroutine(result):
-                asyncio.create_task(result)
+            callback(*args, **kwargs)
 

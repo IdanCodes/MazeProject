@@ -1,9 +1,12 @@
 from __future__ import annotations
 import asyncio
+import socket
+import threading
 from typing import TYPE_CHECKING, Callable
 from uuid import UUID
 import websockets
 from EventBus import EventBus
+import protocol
 
 if TYPE_CHECKING:
     from GameRoom import GameRoom
@@ -11,20 +14,22 @@ if TYPE_CHECKING:
 RECV_EVENT_NAME = "data_received"
 DISCONNECT_EVENT_NAME = "disconnected"
 class ClientInfo:
-    def __init__(self, websocket: websockets.ServerConnection, name: str):
-        self.websocket = websocket
+    def __init__(self, sock: socket.socket, remote_addr: socket._RetAddress, name: str):
+        self.sock = sock
+        self.remote_addr = remote_addr
         self.name = name
         self.event_bus = EventBus()
-        self.is_receiving = False
+        self.recv_thread = None
         self.curr_room = None # None -> lobby
 
     def start_recv(self):
-        if self.is_receiving: return
-        self.is_receiving = True
-        asyncio.create_task(self.receive_loop())
+        if self.recv_thread != None: return
+        self.recv_thread = threading.Thread(target=self.receive_loop)
+        self.recv_thread.start()
 
-    async def send(self, message: str):
-        return await self.websocket.send(message)
+    def send(self, message: str):
+        encoded = message.encode(encoding=protocol.NETWORK_ENCODING)
+        return self.sock.send(encoded)
 
     def on_receive(self, cb_id: UUID | None, recv_cb: Callable[[object, str], None]):
         return self.event_bus.subscribe(RECV_EVENT_NAME, cb_id, recv_cb)
@@ -38,24 +43,26 @@ class ClientInfo:
     def unsubscribe_disconnect(self, cb_id: UUID | None) -> bool:
         return self.event_bus.unsubscribe(DISCONNECT_EVENT_NAME, cb_id)
 
-    async def receive_loop(self):
+    def receive_loop(self):
         try:
-            async for msg in self.websocket:
-                await self.emit_recv(msg)
+            while True:
+                encoded_data = self.sock.recv(protocol.SOCK_RECV_CHUNK_SIZE)
+                recv_data = encoded_data.decode(encoding=protocol.NETWORK_ENCODING)
+                self.emit_recv(recv_data)
         except Exception as e:
             print(f"Exception occurred while receiving for client {self.to_string()}:", e)
         finally:
-            await self.emit_disconnect()
-            await self.websocket.close()
+            self.emit_disconnect()
+            self.sock.close()
 
-    async def emit_recv(self, msg):
-        await self.event_bus.emit(RECV_EVENT_NAME, self, msg)
+    def emit_recv(self, msg):
+        self.event_bus.emit(RECV_EVENT_NAME, self, msg)
 
-    async def emit_disconnect(self):
-        await self.event_bus.emit(DISCONNECT_EVENT_NAME, self)
+    def emit_disconnect(self):
+        self.event_bus.emit(DISCONNECT_EVENT_NAME, self)
 
     def to_string(self) -> str:
-        return f"[{self.name} ({self.websocket.remote_address})]"
+        return f"[{self.name} ({self.sock.remote_address})]"
     
     def in_room(self, room: GameRoom | None) -> bool:
         if self.in_lobby: return room == None

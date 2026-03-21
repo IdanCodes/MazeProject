@@ -1,9 +1,12 @@
+from __future__ import annotations
 from enum import Enum
 import json
-
-from ClientInfo import ClientInfo
+from typing import TYPE_CHECKING
 from helpers import is_number
 from Structures.Vector2 import Vector2
+
+if TYPE_CHECKING:
+    from ClientInfo import ClientInfo
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -30,6 +33,8 @@ Message Structure
 
 IP_ADDR = "127.0.0.1"
 PORT = 3003
+SOCK_RECV_CHUNK_SIZE = 1024
+NETWORK_ENCODING = "utf-8"
 
 SERVER_NAME = "SERVER"
 

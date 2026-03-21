@@ -6,50 +6,78 @@
 import asyncio
 from uuid import UUID
 import websockets
+import socket
+import threading
 from ClientInfo import ClientInfo, get_username_error
 from GameRoom import GameRoom, valid_room_capacity, valid_room_name, valid_room_password
 import protocol
-from protocol import MsgType, ResponseCode, build_error_msg, build_error_obj, build_network_msg, build_response, build_success_msg, parse_request
+from protocol import SOCK_RECV_CHUNK_SIZE, MsgType, ResponseCode, build_error_msg, build_error_obj, build_network_msg, build_response, build_success_msg, parse_request
 class Server:
     def __init__(self):
         self.clients: list[ClientInfo] = []
         self.rooms: list[GameRoom] = []
     
-    async def start_server(self):
-        print(f"Server listening on ws://{protocol.IP_ADDR}:{protocol.PORT}")
-        server_task = asyncio.create_task(self.server_loop())
-        await asyncio.gather(server_task)
+    def start_server(self):
+        self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_sock.bind((protocol.IP_ADDR, protocol.PORT))
+        self.server_sock.listen(10)
+        print(f"Server listening on {protocol.IP_ADDR}:{protocol.PORT}")
 
-    async def server_loop(self):
-        async with websockets.serve(self.init_connection, protocol.IP_ADDR, protocol.PORT):
-            await asyncio.Future()
+        self.accept_thread = threading.Thread(target=self.accept_connections)
+        self.accept_thread.start()
+        # server_task = asyncio.create_task(self.accept_connections())
+        # await asyncio.gather(server_task)
+
+    def accept_connections(self):
+        client_sock, remote_addr = self.server_sock.accept()
+        threading.Thread(target=self.init_connection, args=[client_sock, remote_addr]).start()
+        # async with websockets.serve(self.init_connection, protocol.IP_ADDR, protocol.PORT):
+        #     await asyncio.Future()
 
     # initialize the connection with a client - "handshake" before connection
-    async def init_connection(self, websocket: websockets.ServerConnection):
+    def init_connection(self, client_sock: socket.socket, remote_addr):
         try:
             while True:
-                rec_text = await websocket.recv()
+                rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE).decode(encoding=protocol.ENCODING)
                 req_type, req_data = protocol.parse_request(rec_text)
                 client_name: str = req_data
-                new_client = ClientInfo(websocket, client_name)
-
                 if not req_type or not isinstance(req_data, str) or req_type != MsgType.SET_NAME:
-                    print("Closing websocket - invalid request for init")
-                    websocket.close()
+                    print("Closing connection - invalid request for init")
                     return
-
-                # check if the name is already registered
+                
+                new_client = ClientInfo(client_sock, remote_addr, client_name)
+                
                 name_err = get_username_error(client_name)
                 if name_err != None:
-                    await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is invalid: {name_err}"))
+                    new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is invalid: {name_err}"))
                 elif self.find_client_by_name(new_client.name) != None:
-                    await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
+                    new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
                 else:
                     break
-        except websockets.exceptions.ConnectionClosedOK:
+
+
+                # rec_text = await websocket.recv()
+                # req_type, req_data = protocol.parse_request(rec_text)
+                # client_name: str = req_data
+                # new_client = ClientInfo(websocket, client_name)
+
+                # if not req_type or not isinstance(req_data, str) or req_type != MsgType.SET_NAME:
+                #     print("Closing websocket - invalid request for init")
+                #     websocket.close()
+                #     return
+
+                # # check if the name is already registered
+                # name_err = get_username_error(client_name)
+                # if name_err != None:
+                #     await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is invalid: {name_err}"))
+                # elif self.find_client_by_name(new_client.name) != None:
+                #     await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
+                # else:
+                #     break
+        except:
             return
 
-        await new_client.send(build_success_msg(MsgType.SET_NAME))
+        new_client.send(build_success_msg(MsgType.SET_NAME))
         new_client.on_receive(None, self.on_receive_message)
         new_client.on_disconnect(None, self.on_client_disconnect)
         new_client.start_recv()
@@ -57,7 +85,7 @@ class Server:
 
         # Keep this handler alive until the client actually disconnects.
         # websockets.serve will close the connection when this coroutine returns.
-        await websocket.wait_closed()
+        # await websocket.wait_closed()
 
     # Get ClientInfo by the client's id
     # Returns None if the client isn't connected
@@ -75,16 +103,16 @@ class Server:
         self.clients.remove(client)
         print(f"{client.to_string()} disconnected")
     
-    async def on_receive_message(self, sender: ClientInfo, msg_str: str):
-        if not sender.in_lobby: return # TODO: unsubscribe recv when transferred into room
+    def on_receive_message(self, sender: ClientInfo, msg_str: str):
+        if not sender.in_lobby: return
         req_type, req_data = parse_request(msg_str)
         if req_type:
-            response_type, response_data =  await self.fulfill_request(sender, req_type, req_data)
+            response_type, response_data =  self.fulfill_request(sender, req_type, req_data)
             if response_type == None: return
-            await sender.send(build_response(response_type, req_type, response_data))
+            sender.send(build_response(response_type, req_type, response_data))
 
     # returns (response type, data | None)
-    async def fulfill_request(self, sender: ClientInfo, req_type: MsgType, req_data: dict | None) -> tuple[ResponseCode | None, dict | None]:
+    def fulfill_request(self, sender: ClientInfo, req_type: MsgType, req_data: dict | None) -> tuple[ResponseCode | None, dict | None]:
         match req_type:
             case MsgType.ROOMS_LIST:
                 return ResponseCode.SUCCESS, self.get_rooms_info()
@@ -113,7 +141,7 @@ class Server:
                 except:
                     return ResponseCode.ERROR, build_error_obj("Invalid arguemnts (required id, password)")
                 
-                successful, reason = await self.join_room(sender, room_id, room_password)
+                successful, reason = self.join_room(sender, room_id, room_password)
                 if not successful:
                     return ResponseCode.ERROR, build_error_obj(reason)
                 return ResponseCode.SUCCESS, None
@@ -149,7 +177,7 @@ class Server:
         return True, None
 
     # returns: (whether joining the room was successful, reason for failing)
-    async def join_room(self, client: ClientInfo, room_id: UUID, password: str | None) -> tuple[bool, str | None]:
+    def join_room(self, client: ClientInfo, room_id: UUID, password: str | None) -> tuple[bool, str | None]:
         room = self.get_room_by_id(room_id)
         if not room:
             return False, "Invalid room id"
@@ -157,12 +185,12 @@ class Server:
             return False, "Invalid password"
         if room.is_full:
             return False, "Room is full - can not join"
-        await room.add_client(client)
+        room.add_client(client)
         return True, None
     
     # remove a room from the server
     # returns whether removing was successful
-    async def remove_room_by_id(self, room_id: UUID) -> bool:
+    def remove_room_by_id(self, room_id: UUID) -> bool:
         room = self.get_room_by_id(room_id)
         if room == None: return False
         self.rooms.remove(room)
@@ -174,6 +202,6 @@ if __name__ == "__main__":
     server = Server()
 
     try:
-        asyncio.run(server.start_server())
+        server.start_server()
     except KeyboardInterrupt:
         print("\nServer stopped manually")
