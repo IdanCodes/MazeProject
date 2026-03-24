@@ -19,7 +19,7 @@ import {
   PlayerInfo,
 } from "@src/interfaces/PlayerInfo";
 
-const SERVER_PORT = 3003;
+const SERVER_PORT = 8080;
 const SERVER_IP = "127.0.0.1";
 export const SERVER_WS_URL: string = `ws://${SERVER_IP}:${SERVER_PORT}`;
 

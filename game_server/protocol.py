@@ -35,6 +35,7 @@ IP_ADDR = "127.0.0.1"
 PORT = 3003
 SOCK_RECV_CHUNK_SIZE = 1024
 NETWORK_ENCODING = "utf-8"
+MESSAGE_DELIMITER = '\n'
 
 SERVER_NAME = "SERVER"
 
@@ -69,6 +70,8 @@ class ResponseCode(Enum):
 # or - None, None
 # when the request is invalid
 def parse_request(request_str: str) -> tuple[MsgType | None, str | None]:
+    if len(request_str) == 0: return None, None
+
     try:
         json_msg = json.loads(request_str)
         req_type = MsgType(json_msg["msgType"])
@@ -79,7 +82,7 @@ def parse_request(request_str: str) -> tuple[MsgType | None, str | None]:
 
         return req_type, req_data
     except Exception as e:
-        print("exception:", e)
+        print(f"parsing request {request_str} exception: {e}")
         return None, None
 
 

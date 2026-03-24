@@ -28,7 +28,7 @@ class ClientInfo:
         self.recv_thread.start()
 
     def send(self, message: str):
-        encoded = message.encode(encoding=protocol.NETWORK_ENCODING)
+        encoded = (message + '\n').encode(encoding=protocol.NETWORK_ENCODING)
         return self.sock.send(encoded)
 
     def on_receive(self, cb_id: UUID | None, recv_cb: Callable[[object, str], None]):
@@ -48,8 +48,12 @@ class ClientInfo:
             while True:
                 encoded_data = self.sock.recv(protocol.SOCK_RECV_CHUNK_SIZE)
                 recv_data = encoded_data.decode(encoding=protocol.NETWORK_ENCODING)
-                self.emit_recv(recv_data)
-        except Exception as e:
+
+                messages = recv_data.split(protocol.MESSAGE_DELIMITER)
+                for message in messages:
+                    if len(message) > 0:
+                        self.emit_recv(message)
+        except any as e:
             print(f"Exception occurred while receiving for client {self.to_string()}:", e)
         finally:
             self.emit_disconnect()
@@ -62,7 +66,7 @@ class ClientInfo:
         self.event_bus.emit(DISCONNECT_EVENT_NAME, self)
 
     def to_string(self) -> str:
-        return f"[{self.name} ({self.sock.remote_address})]"
+        return f"[{self.name} ({self.remote_addr})]"
     
     def in_room(self, room: GameRoom | None) -> bool:
         if self.in_lobby: return room == None

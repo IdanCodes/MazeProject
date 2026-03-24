@@ -18,19 +18,25 @@ class Server:
         self.rooms: list[GameRoom] = []
     
     def start_server(self):
-        self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_sock.bind((protocol.IP_ADDR, protocol.PORT))
-        self.server_sock.listen(10)
-        print(f"Server listening on {protocol.IP_ADDR}:{protocol.PORT}")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.server_sock:
+            self.server_sock.bind((protocol.IP_ADDR, protocol.PORT))
+            self.server_sock.listen(10)
+            print(f"Server listening on {protocol.IP_ADDR}:{protocol.PORT}")
 
-        self.accept_thread = threading.Thread(target=self.accept_connections)
-        self.accept_thread.start()
+            self.accept_connections()
+        # self.accept_thread = threading.Thread(target=)
+        # self.accept_thread.start()
         # server_task = asyncio.create_task(self.accept_connections())
         # await asyncio.gather(server_task)
 
+    def close(self):
+        self.server_sock.close()
+
     def accept_connections(self):
-        client_sock, remote_addr = self.server_sock.accept()
-        threading.Thread(target=self.init_connection, args=[client_sock, remote_addr]).start()
+        while True:
+            client_sock, remote_addr = self.server_sock.accept()
+            print("accepted connection from", remote_addr)
+            threading.Thread(target=self.init_connection, args=[client_sock, remote_addr]).start()
         # async with websockets.serve(self.init_connection, protocol.IP_ADDR, protocol.PORT):
         #     await asyncio.Future()
 
@@ -38,13 +44,18 @@ class Server:
     def init_connection(self, client_sock: socket.socket, remote_addr):
         try:
             while True:
-                rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE).decode(encoding=protocol.ENCODING)
+                print("Waiting for message from", remote_addr)
+                rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE)
+                print("received message:", rec_text)
+                rec_text = rec_text.decode()
+                print("decoded message:", rec_text)
                 req_type, req_data = protocol.parse_request(rec_text)
                 client_name: str = req_data
                 if not req_type or not isinstance(req_data, str) or req_type != MsgType.SET_NAME:
                     print("Closing connection - invalid request for init")
                     return
                 
+                print("New client init protocol: ", client_name)
                 new_client = ClientInfo(client_sock, remote_addr, client_name)
                 
                 name_err = get_username_error(client_name)
@@ -204,4 +215,5 @@ if __name__ == "__main__":
     try:
         server.start_server()
     except KeyboardInterrupt:
+        server.close()
         print("\nServer stopped manually")
