@@ -48,16 +48,20 @@ class ClientInfo:
             while True:
                 encoded_data = self.sock.recv(protocol.SOCK_RECV_CHUNK_SIZE)
                 recv_data = encoded_data.decode(encoding=protocol.NETWORK_ENCODING)
+                if len(recv_data) == 0: break
 
                 messages = recv_data.split(protocol.MESSAGE_DELIMITER)
                 for message in messages:
                     if len(message) > 0:
                         self.emit_recv(message)
-        except any as e:
+        except ConnectionError as ce:
+            print(f"ConnectionError occurred while receiving for client {self.to_string()}:", ce)
+        except all as e:
             print(f"Exception occurred while receiving for client {self.to_string()}:", e)
         finally:
-            self.emit_disconnect()
+            print(f"Closing connection to {self.to_string()}...")
             self.sock.close()
+            self.emit_disconnect()
 
     def emit_recv(self, msg):
         self.event_bus.emit(RECV_EVENT_NAME, self, msg)

@@ -3686,22 +3686,22 @@ function requireWebsocketServer() {
 }
 var websocketServerExports = requireWebsocketServer();
 const WebSocketServer = /* @__PURE__ */ getDefaultExportFromCjs(websocketServerExports);
+let mainWindow = null;
 const WS_PORT = 8080;
 const TCP_HOST = "127.0.0.1";
 const TCP_PORT = 3003;
 const MESSAGE_DELIMITER = "\n";
 function startProxy() {
   const wss = new WebSocketServer({ port: WS_PORT });
-  wss.on("connection", (ws) => {
+  wss.on("connection", (ws, req) => {
     const tcpClient = new require$$3.Socket();
     tcpClient.connect(TCP_PORT, TCP_HOST, () => {
       console.log("TCP connection established");
     });
     ws.on("message", (data) => {
       const buffer2 = Buffer.isBuffer(data) ? data : Buffer.from(data);
-      console.log("client->server:", data.toString());
       tcpClient.write(buffer2, (err) => {
-        console.error("tcpClient write error:", err);
+        if (err) console.error("TCP Write Error:", err);
       });
     });
     let buffer = "";
@@ -3710,26 +3710,25 @@ function startProxy() {
       const parts = buffer.split(MESSAGE_DELIMITER);
       buffer = parts.pop() || "";
       parts.forEach((message) => {
-        console.log("server->client:", message);
         if (message.trim()) ws.send(message);
       });
     });
     ws.on("close", () => {
       tcpClient.destroy();
-      console.log("Destroy: wsClient close");
+      console.log("WS Closed Connection");
     });
     tcpClient.on("close", () => {
       ws.close();
-      console.log("Close - tcpClient close");
+      console.log("TCP Closed Connection");
     });
     tcpClient.on("error", (err) => {
       ws.close();
-      console.log("Close - tcpClient error", err);
+      console.log(`TCP Error:`, err);
     });
   });
 }
 function createWindow() {
-  const mainWindow2 = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
@@ -3740,9 +3739,9 @@ function createWindow() {
   });
   if (app.isPackaged) {
     const indexPath = path.join(__dirname, "..", "dist", "index.html");
-    mainWindow2.loadFile(indexPath);
+    mainWindow.loadFile(indexPath);
   } else {
-    mainWindow2.loadURL("http://localhost:5173");
+    mainWindow.loadURL("http://localhost:5173");
   }
 }
 app.whenReady().then(() => {
