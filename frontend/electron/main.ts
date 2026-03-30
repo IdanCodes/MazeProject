@@ -61,8 +61,8 @@ function startProxy(port: number) {
     });
 
     ws.on("message", (data: WebSocket.Data) => {
-      const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data as any);
       data += MESSAGE_DELIMITER;
+      const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data as any);
       tcpClient.write(buffer, (err) => {
         if (err) console.error("TCP Write Error:", err);
       });

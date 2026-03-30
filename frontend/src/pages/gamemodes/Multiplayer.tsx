@@ -543,6 +543,10 @@ function GamePanel({
     setMaze,
     sendMessage,
   );
+  const allPlayersReady = useMemo(
+    () => isReady && !otherPlayers.find((p) => !p.isReady),
+    [isReady, otherPlayers],
+  );
   onMessageCb.cb = onMessage;
 
   return !maze ? (
@@ -552,6 +556,9 @@ function GamePanel({
       <DisconnectButton handleDisconnect={leaveRoom} />
       <div className="flex flex-col items-center">
         <div className="flex flex-col justify-center w-fit">
+          <div className="mx-auto">
+            <StartGameButton canStart={allPlayersReady} />
+          </div>
           <GameInstance
             mazeSize={MazeSize.Medium}
             maze={maze}
@@ -565,7 +572,6 @@ function GamePanel({
             <ReadyButton readyState={[isReady, setIsReady]} disabled={false} />
           </div>
         </div>
-        <div className="flex flex-row justify-between gap-5"></div>
       </div>
     </div>
   );
@@ -616,5 +622,18 @@ function PlayersList({ players }: { players: PlayerInfo[] }) {
         </span>
       ))}
     </div>
+  );
+}
+
+function StartGameButton({ canStart }: { canStart: boolean }) {
+  return (
+    <>
+      <PrimaryButton
+        className="text-2xl bg-blue-500 my-1 hover:bg-blue-600/90 active:bg-blue-500/90"
+        disabled={!canStart}
+      >
+        Start Game
+      </PrimaryButton>
+    </>
   );
 }
