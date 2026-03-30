@@ -20,8 +20,8 @@ class Player:
         self.position = Vector2(0, 0)
         self.isReady = False
 
-    async def send(self, message: str):
-        return await self.client_info.send(message)
+    def send(self, message: str):
+        return self.client_info.send(message)
 
     # callback(Player, msg)
     def on_receive(self, cb_id: UUID | None, recv_cb: Callable[[object, str], None]):

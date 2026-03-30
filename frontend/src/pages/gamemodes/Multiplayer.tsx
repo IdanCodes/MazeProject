@@ -6,7 +6,6 @@ import { GameMsgType, ResponseCode } from "@src/constants/game-msg-type";
 import { useMazePlayerSocket } from "@src/hooks/useMazePlayerSocket";
 import {
   NetworkMessage,
-  SERVER_WS_URL,
   ServerResponse,
   useNetworkHandler,
 } from "@src/hooks/useNetworkHandler";
@@ -28,11 +27,13 @@ import { PassedState, SetStateFunc } from "@src/types/passed-state";
 import { getUsernameError, maxNameLen } from "@src/utils/game-protocol";
 import clsx from "clsx";
 import { JSX, useEffect, useMemo, useRef, useState } from "react";
+import { WS_PORT_PARAM, WS_TOKEN_PARAM } from "../Home";
 
 export default function Multiplayer(): JSX.Element {
   const gameOnMessageCb = useRef<{ cb: (msg: NetworkMessage) => void }>({
     cb: () => {},
   });
+  const url = useRef<string>("");
   const [playerName, setPlayerName] = useState<string>("");
   const [usernameError, setUsernameError] = useState<string>("");
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
@@ -42,8 +43,14 @@ export default function Multiplayer(): JSX.Element {
     undefined,
   ); // undefined -> in lobby
 
+  useEffect(() => {
+    const port = localStorage.getItem(WS_PORT_PARAM);
+    const token = localStorage.getItem(WS_TOKEN_PARAM);
+    url.current = `ws://127.0.0.1:${port}?token=${token}`;
+  }, []);
+
   const handleOnClose = (e: WebSocketEventMap["close"]) => {
-    console.log("Disconnected from server.");
+    console.log("Disconnected from server");
   };
 
   const handleMessage = (msg: NetworkMessage) => {
@@ -119,7 +126,7 @@ export default function Multiplayer(): JSX.Element {
   };
 
   const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
-    SERVER_WS_URL,
+    url.current,
     {
       onConnect: () => {
         console.log("Connection is open!");
