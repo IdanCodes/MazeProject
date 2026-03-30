@@ -20,8 +20,6 @@ function Home() {
       params.get(WS_TOKEN_PARAM) ?? localStorage.getItem(WS_TOKEN_PARAM);
 
     if (!port || !token) {
-      // const socket = new WebSocket(`ws://localhost:${port}?token=${token}`);
-      // socket.onopen = () => console.log("Securely connected to local proxy!");
       console.error("No token or port provided for WebSocket connection");
       alert("No token or port provided for WebSocket connection");
     } else {

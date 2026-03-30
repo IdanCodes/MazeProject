@@ -99,6 +99,7 @@ export function useMazePlayerSocket(
         if (!ws.current) return;
         ws.current.onopen = ws.current.onerror = null;
         ws.current.onmessage = handleConnectResponse;
+        ws.current.onclose = handleClose;
         ws.current.send(buildGameRequest(GameMsgType.SET_NAME, name));
       };
 
@@ -108,10 +109,14 @@ export function useMazePlayerSocket(
         rej(`Could not connect to ${url}.\nError: ${JSON.stringify(e)}`);
       };
 
-      if (ws.current) {
+      if (
+        ws.current &&
+        ws.current.readyState != WebSocket.CLOSING &&
+        ws.current.readyState != WebSocket.CLOSED
+      ) {
         handleConnectOpen();
       } else {
-        ws.current ??= new WebSocket(url);
+        ws.current = new WebSocket(url);
         ws.current.onopen = handleConnectOpen;
         ws.current.onerror = handleConnectError;
       }

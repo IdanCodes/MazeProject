@@ -50,7 +50,7 @@ export default function Multiplayer(): JSX.Element {
   }, []);
 
   const handleOnClose = (e: WebSocketEventMap["close"]) => {
-    console.log("Disconnected from server.");
+    console.log("Disconnected from server");
   };
 
   const handleMessage = (msg: NetworkMessage) => {
