@@ -57,9 +57,9 @@ const GameInstance = forwardRef<
   }, [maze]);
 
   // cells per second
-  const playerSpeed = 2.5;
-  const accelerationRate = 0.14;
-  const decelerationRate = 0.1;
+  const playerSpeed = 3;
+  const accelerationRate = 0.2;
+  const decelerationRate = 0.2;
 
   const speedAmplifier = useMemo(() => {
     return (playerSpeed * cellScale * 4) / GAME_FPS;

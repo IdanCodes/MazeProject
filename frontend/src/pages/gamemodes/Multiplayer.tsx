@@ -35,7 +35,6 @@ export default function Multiplayer(): JSX.Element {
   });
   const url = useRef<string>("");
   const [playerName, setPlayerName] = useState<string>("");
-  const [usernameError, setUsernameError] = useState<string>("");
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
   const [createRoomError, setCreateRoomError] = useState<string>("");
   const [roomsError, setRoomsError] = useState<string>("");
@@ -107,6 +106,18 @@ export default function Multiplayer(): JSX.Element {
     }
   };
 
+  const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
+    url.current,
+    {
+      onConnect: () => {
+        console.log("Connection is open!");
+      },
+      onMessage: (msg: NetworkMessage) => handleMessage(msg),
+      onResponse: (res: ServerResponse) => handleResponse(res),
+      onDisconnect: (e: CloseEvent) => handleOnClose(e),
+    },
+  );
+
   const createRoom = (name: string, capacity: number, password: string) => {
     setCreateRoomError("");
     sendMessage(GameMsgType.CREATE_ROOM, {
@@ -125,18 +136,6 @@ export default function Multiplayer(): JSX.Element {
     refreshRoomsList();
   };
 
-  const { sendMessage, connect, disconnect, isConnected } = useMazePlayerSocket(
-    url.current,
-    {
-      onConnect: () => {
-        console.log("Connection is open!");
-      },
-      onMessage: (msg: NetworkMessage) => handleMessage(msg),
-      onResponse: (res: ServerResponse) => handleResponse(res),
-      onDisconnect: (e: CloseEvent) => handleOnClose(e),
-    },
-  );
-
   function refreshRoomsList() {
     setRoomsList([]);
     sendMessage(GameMsgType.ROOMS_LIST);
@@ -151,48 +150,29 @@ export default function Multiplayer(): JSX.Element {
     <>
       <PageTitle text="Multiplayer" />
       {!isConnected && (
+        <UsernameInputPanel
+          playerNameState={[playerName, setPlayerName]}
+          connect={connect}
+        />
+      )}
+      {isConnected && !currentRoom && (
         <>
-          <NameInput
-            nameState={[
-              playerName,
-              (action: React.SetStateAction<string>) => {
-                const newVal =
-                  typeof action == "function" ? action(playerName) : action;
-                setPlayerName(newVal);
-                setUsernameError(getUsernameError(newVal) ?? "");
-              },
-            ]}
-            disabled={isConnected}
-          />
-          <ErrorLabel text={usernameError} />
-          <ConnectButton
-            handleConnect={() => {
-              setPlayerName(playerName.trim());
-              connect(playerName.trim()).catch(setUsernameError);
+          <p className="text-3xl">Name: {playerName}</p>
+          <DisconnectButton
+            handleDisconnect={() => {
+              disconnect();
             }}
-            disabled={getUsernameError(playerName) !== null || isConnected}
+          />
+          <RoomsPanel
+            handleCreateRoom={createRoom}
+            handleJoinRoom={joinRoom}
+            refreshList={refreshRoomsList}
+            roomsList={roomsList}
+            createRoomError={createRoomError}
+            roomsError={roomsError}
           />
         </>
       )}
-      {isConnected &&
-        !currentRoom && ( // TODO: move to Lobby component
-          <>
-            <p className="text-3xl">Name: {playerName}</p>
-            <DisconnectButton
-              handleDisconnect={() => {
-                disconnect();
-              }}
-            />
-            <RoomsPanel
-              handleCreateRoom={createRoom}
-              handleJoinRoom={joinRoom}
-              refreshList={refreshRoomsList}
-              roomsList={roomsList}
-              createRoomError={createRoomError}
-              roomsError={roomsError}
-            />
-          </>
-        )}
       {isConnected && currentRoom && (
         <GamePanel
           playerName={playerName}
@@ -201,6 +181,35 @@ export default function Multiplayer(): JSX.Element {
           onMessageCb={gameOnMessageCb.current}
         />
       )}
+    </>
+  );
+}
+
+function UsernameInputPanel({
+  playerNameState,
+  connect,
+}: {
+  playerNameState: PassedState<string>;
+  connect: (name: string) => Promise<string>;
+}) {
+  const [playerName, setPlayerName] = usePassedState(playerNameState);
+  const [usernameError, setUsernameError] = useState<string>("");
+
+  useEffect(() => {
+    setUsernameError(getUsernameError(playerName) ?? "");
+  }, [playerName]);
+
+  return (
+    <>
+      <NameInput nameState={playerNameState} disabled={false} />
+      <ErrorLabel text={usernameError} />
+      <ConnectButton
+        handleConnect={() => {
+          setPlayerName(playerName.trim());
+          connect(playerName.trim()).catch(setUsernameError);
+        }}
+        disabled={getUsernameError(playerName) !== null}
+      />
     </>
   );
 }
@@ -541,8 +550,8 @@ function GamePanel({
   ) : (
     <div>
       <DisconnectButton handleDisconnect={leaveRoom} />
-      <div className="flex flex-row gap-5">
-        <div>
+      <div className="flex flex-col items-center">
+        <div className="flex flex-col justify-center w-fit">
           <GameInstance
             mazeSize={MazeSize.Medium}
             maze={maze}
@@ -551,9 +560,12 @@ function GamePanel({
               setPlayerPos(pos);
             }}
           />
-          <ReadyButton readyState={[isReady, setIsReady]} disabled={false} />
+          <div className="flex flex-row justify-between">
+            <PlayersList players={[localPlayer, ...otherPlayers]} />
+            <ReadyButton readyState={[isReady, setIsReady]} disabled={false} />
+          </div>
         </div>
-        <PlayersList players={[localPlayer, ...otherPlayers]} />
+        <div className="flex flex-row justify-between gap-5"></div>
       </div>
     </div>
   );
@@ -591,7 +603,7 @@ function ReadyButton({
 
 function PlayersList({ players }: { players: PlayerInfo[] }) {
   return (
-    <div className="text-xl flex flex-col truncate ">
+    <div className="text-xl flex flex-col truncate text-left">
       {players.map((p) => (
         <span key={p.name} className="">
           {p.name}
