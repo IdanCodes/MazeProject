@@ -40,6 +40,7 @@ export function useNetworkHandler(
   canvasSize: { width: number; height: number },
   setMaze: (maze: Maze) => void,
   sendMessage: (msgType: GameMsgType, data?: any | undefined) => void,
+  onStartGame: (startTime: number) => void,
   posUpdateRate: number = 25,
 ): {
   otherPlayers: PlayerInfo[];
@@ -69,6 +70,8 @@ export function useNetworkHandler(
         return handlePlayerDisconnected(msg);
       case GameMsgType.SET_READY:
         return handleReadyUpdate(msg);
+      case GameMsgType.START_GAME:
+        return handleStartGame(msg);
       default:
         break;
     }
@@ -142,6 +145,24 @@ export function useNetworkHandler(
       return newOp;
     });
   }
+
+  function handleStartGame(msg: NetworkMessage) {
+    const data = msg.data;
+    if (!data || typeof data !== "object" || !data.maze || !data.startTime) {
+      console.error("useNetworkHandler: Invalid format for startGame message");
+      return;
+    }
+    console.log("Received start game...");
+    // update maze
+    const matrix = data.maze as CellType[][];
+    const grid = new Grid(matrix);
+    const maze = new Maze(grid);
+    setMaze(maze);
+    console.log("Finished setting maze.");
+
+    // Trigger game start
+    onStartGame(data.startTime);
+  }
   // #endregion
 
   function sendPos() {
@@ -159,29 +180,13 @@ export function useNetworkHandler(
   useEffect(sendReady, [localPlayer.isReady]);
 
   useAnimationUpdate(posUpdateRate, () => {
-    if (!equalVec(localPlayerPos, lastSentPos.current)) sendPos();
+    if (!equalVec(localPlayerPos, lastSentPos.current)) {
+      sendPos();
+    }
   });
-
-  // function connectToServer(name: string): Promise<string> {
-  //   if (!name.length) {
-  //     console.warn("Not connecting - no name was provided");
-  //     return new Promise((res, rej) => rej("No name was provided"));
-  //   }
-
-  //   clientName.current = name;
-  //   return connect(name);
-  // }
-
-  // function disconnectFromServer() {
-  //   setOtherPlayers([]);
-  //   disconnect();
-  // }
 
   return {
     otherPlayers,
-    // isConnected,
-    // connectToServer,
-    // disconnectFromServer,
     onMessage: handleServerMessage,
   };
 }

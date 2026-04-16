@@ -4,11 +4,11 @@ import time
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 import uuid
-import asyncio
 from ClientInfo import ClientInfo
 from MazeGen.Maze import Maze
 from MazeGen.MazeGenerator import generateDFSRectMaze
 from Player import Player, RoomClientRole
+from Structures import GameOptions
 from Structures.Vector2 import Vector2
 from protocol import MsgType, ResponseCode, build_network_msg, build_response, is_valid_position, parse_request
 
@@ -28,9 +28,11 @@ class GameRoom:
         self.id: uuid.UUID = uuid.uuid4()
         self.players: list[Player] = []
         self.dirty_pos_dict = {}
+        self.start_time = -1
         self.game_active = False
-        self.created_at = time.time()
-        self.stored_maze: Maze = generateDFSRectMaze(DEFAULT_MAZE_DIMENSIONS.width, DEFAULT_MAZE_DIMENSIONS.height)
+        self.game_options = GameOptions.GameOptions()#TODO: implement
+        
+        self.generate_new_maze()
         self.running = True
         self.game_loop_thread = threading.Thread(target=self.game_loop)
         self.game_loop_thread.start()
@@ -53,6 +55,7 @@ class GameRoom:
         }
 
     def add_client(self, client: ClientInfo, role: RoomClientRole = RoomClientRole.PLAYER):
+        if self.is_full or self.game_active: return
         new_player = Player(client, role)
         new_player.send(build_network_msg(None, MsgType.JOIN_ROOM, self.get_room_info()))
         new_player.on_receive(self.id, self.on_receive_message)
@@ -66,6 +69,11 @@ class GameRoom:
                 return player
         return None
     
+    # Generate a new maze for the room with respect to the game options
+    def generate_new_maze(self):
+        self.created_at = time.time()
+        self.stored_maze: Maze = generateDFSRectMaze(DEFAULT_MAZE_DIMENSIONS.width, DEFAULT_MAZE_DIMENSIONS.height)
+
     def on_player_connect(self, player: Player):
         self.send_broadcast(build_network_msg(player, MsgType.PLAYER_CONNECTED), player)
         player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
@@ -115,8 +123,34 @@ class GameRoom:
             case MsgType.LEAVE_ROOM:
                 self.on_client_disconnect(sender)
                 return ResponseCode.SUCCESS, None
+            case MsgType.START_GAME:
+                if self.can_start_game():
+                    self.start_game()
+                    return ResponseCode.SUCCESS, None
+                else:
+                    return ResponseCode.ERROR, None
+                    
         return None, None
 
+    # can_start_game: Check if the requirements for starting a game are fulfilled
+    def can_start_game(self):
+        # Return whether all players are ready
+        return len(self.players) > 1 and all(p.isReady for p in self.players)
+    
+    # start_game: Start the game
+    def start_game(self):
+        # Generate maze
+        self.generate_new_maze()
+
+        # start_time = now + 5 seconds (in ms from epoch)
+        self.start_time = (time.time_ns() // 1_000_000) + (5 * 1_000)
+        self.game_active = True
+        bc_msg = {
+            "maze": self.stored_maze.get_matrix(),
+            "startTime": self.start_time,
+        }
+        self.send_broadcast(build_network_msg(None, MsgType.START_GAME, bc_msg))
+        
     def update_pos(self, sender: Player, pos: dict):
         if is_valid_position(pos):
             self.dirty_pos_dict[sender.name] = sender.position = Vector2(pos["x"], pos["y"])
@@ -129,9 +163,9 @@ class GameRoom:
     # returns: (bc_type, bc_data, exclude_sender) | None
     def generate_broadcast(self, req_type: MsgType, req_data: str | None) -> tuple[MsgType, str | None, bool] | None:
         match req_type:
-            case MsgType.MAZE:
-                self.stored_maze = req_data
-                return MsgType.MAZE, self.stored_maze, True
+            # case MsgType.MAZE:
+            #     self.stored_maze = req_data
+            #     return MsgType.MAZE, self.stored_maze, True
             case MsgType.SET_READY:
                 if isinstance(req_data, bool):
                     return MsgType.SET_READY, req_data, True
@@ -153,9 +187,15 @@ class GameRoom:
 
             # send dirty positions
             if len(self.dirty_pos_dict):
+                if self.game_active:
+                    print("Send pos in active game")
                 dirty_pos_msg = build_network_msg(None, MsgType.UPDATE_POS, self.dirty_pos_dict)
                 self.send_broadcast(dirty_pos_msg, None)
                 self.dirty_pos_dict.clear()
+
+            if self.game_active:
+                # TODO: Check if players have reached the finish
+                pass
 
             time.sleep(max(1. / GAME_LOOP_RATE - (time.perf_counter() - start), 0))
 

@@ -10,9 +10,11 @@ import { Maze } from "../types/Maze";
 import { CellType } from "../types/Grid";
 import { Vector2 } from "../interfaces/Vector2";
 import { PlayerInfo } from "@src/interfaces/PlayerInfo";
+import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
 
 const bgColor = "rgb(245, 245, 245)";
 export const PLAYER_RADIUS = 0.25; // in grid cells
+export const GAME_FPS = 60;
 
 export interface GameCanvasHandle {
   dimensions: { width: number; height: number };
@@ -146,42 +148,45 @@ const GameCanvas = forwardRef<
       ctx.stroke();
     };
 
-    const drawMaze = (ctx: CanvasRenderingContext2D): void => {
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = wallWidth;
-      ctx.beginPath();
+    const drawMaze = useCallback(
+      (ctx: CanvasRenderingContext2D): void => {
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = wallWidth;
+        ctx.beginPath();
 
-      for (let i = 0; i < maze.height; i += 2) {
-        for (let j = 0; j < maze.width; j += 2) {
-          // vertical wall (up-down)
-          const rightBar: Vector2 = { x: j + 1, y: i };
-          if (maze.getCell(rightBar) === CellType.Wall) {
-            const rightCanvasPos = gridToCanvas({ x: j + 2, y: i });
-            ctx.moveTo(rightCanvasPos.x, rightCanvasPos.y - wallWidth / 3);
-            ctx.lineTo(
-              rightCanvasPos.x,
-              rightCanvasPos.y + cellScale * 2 + wallWidth / 3,
-            );
-          }
+        for (let i = 0; i < maze.height; i += 2) {
+          for (let j = 0; j < maze.width; j += 2) {
+            // vertical wall (up-down)
+            const rightBar: Vector2 = { x: j + 1, y: i };
+            if (maze.getCell(rightBar) === CellType.Wall) {
+              const rightCanvasPos = gridToCanvas({ x: j + 2, y: i });
+              ctx.moveTo(rightCanvasPos.x, rightCanvasPos.y - wallWidth / 3);
+              ctx.lineTo(
+                rightCanvasPos.x,
+                rightCanvasPos.y + cellScale * 2 + wallWidth / 3,
+              );
+            }
 
-          // horizontal wall (left-right)
-          const downBar: Vector2 = { x: j, y: i + 1 };
-          if (
-            maze.inBounds(downBar) &&
-            maze.getCell(downBar) === CellType.Wall
-          ) {
-            const downCanvasPos = gridToCanvas({ x: j, y: i + 2 });
-            ctx.moveTo(downCanvasPos.x - wallWidth / 3, downCanvasPos.y);
-            ctx.lineTo(
-              downCanvasPos.x + cellScale * 2 + wallWidth / 3,
-              downCanvasPos.y,
-            );
+            // horizontal wall (left-right)
+            const downBar: Vector2 = { x: j, y: i + 1 };
+            if (
+              maze.inBounds(downBar) &&
+              maze.getCell(downBar) === CellType.Wall
+            ) {
+              const downCanvasPos = gridToCanvas({ x: j, y: i + 2 });
+              ctx.moveTo(downCanvasPos.x - wallWidth / 3, downCanvasPos.y);
+              ctx.lineTo(
+                downCanvasPos.x + cellScale * 2 + wallWidth / 3,
+                downCanvasPos.y,
+              );
+            }
           }
         }
-      }
 
-      ctx.stroke();
-    };
+        ctx.stroke();
+      },
+      [maze],
+    );
 
     const highlightCell = (
       ctx: CanvasRenderingContext2D,
@@ -247,7 +252,7 @@ const GameCanvas = forwardRef<
       drawMaze(ctx);
     };
 
-    useEffect(() => {
+    useAnimationUpdate(GAME_FPS, () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -255,7 +260,7 @@ const GameCanvas = forwardRef<
       if (!ctx) return;
 
       drawGame(ctx);
-    }, [maze, cellScale, playerPos]);
+    });
 
     return (
       <canvas

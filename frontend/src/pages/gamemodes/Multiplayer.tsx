@@ -20,7 +20,7 @@ import {
   parsePlayerInfo,
   PlayerInfo,
 } from "@src/interfaces/PlayerInfo";
-import { Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
+import { equalVec, Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
 import { Maze } from "@src/types/Maze";
 import { MazeSize } from "@src/types/maze-size";
 import { PassedState, SetStateFunc } from "@src/types/passed-state";
@@ -508,6 +508,7 @@ function GamePanel({
     position: ZERO_VEC,
     isReady: false,
   } as PlayerInfo);
+  const [canMove, setCanMove] = useState<boolean>(true);
   // #region Player Attributes
   const isReady = useMemo(() => localPlayer.isReady, [localPlayer.isReady]);
   const setIsReady: SetStateFunc<boolean> = (
@@ -521,11 +522,17 @@ function GamePanel({
   const setPlayerPos = (action: React.SetStateAction<Vector2>) => {
     const newVal =
       typeof action == "function" ? action(localPlayer.position) : action;
+    if (equalVec(newVal, playerPos)) return;
+
     setLocalPlayer((lp) => ({ ...lp, position: newVal }));
   };
   // #endregion
   const [maze, setMaze] = useState<Maze | undefined>(undefined);
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
+  const cellScale = useMemo(
+    () => (gameInstanceRef.current ? gameInstanceRef.current.cellScale : 0),
+    [gameInstanceRef.current],
+  );
   const canvasDimensions = useMemo<{
     width: number;
     height: number;
@@ -542,12 +549,44 @@ function GamePanel({
     canvasDimensions,
     setMaze,
     sendMessage,
+    onStartGame,
   );
   const allPlayersReady = useMemo(
     () => isReady && !otherPlayers.find((p) => !p.isReady),
     [isReady, otherPlayers],
   );
   onMessageCb.cb = onMessage;
+
+  function sendStartGame() {
+    sendMessage(GameMsgType.START_GAME);
+  }
+
+  function onStartGame(startTime: number) {
+    console.log(`Game starting in ${startTime - Date.now()}ms`);
+    setCanMove(false);
+    waitForStartTime();
+
+    function waitForStartTime() {
+      const DELTA_MS = 50;
+      const timeUntilStart = startTime - Date.now();
+      console.log(`Starting in ${timeUntilStart / 1000}s...`);
+
+      if (timeUntilStart > DELTA_MS) setTimeout(waitForStartTime, DELTA_MS);
+      else {
+        console.log("Start!");
+        setCanMove(true);
+      }
+    }
+  }
+
+  useEffect(() => {
+    setPlayerPos({
+      x: cellScale / 2,
+      y: cellScale / 2,
+    }); // teleport to start of maze
+  }, [maze, cellScale]);
+
+  function startGameCountdown(startTime: number) {}
 
   return !maze ? (
     <>Waiting for maze...</>
@@ -557,15 +596,24 @@ function GamePanel({
       <div className="flex flex-col items-center">
         <div className="flex flex-col justify-center w-fit">
           <div className="mx-auto">
-            <StartGameButton canStart={allPlayersReady} />
+            <StartGameButton
+              canStart={allPlayersReady}
+              startGame={sendStartGame}
+            />
           </div>
           <GameInstance
             mazeSize={MazeSize.Medium}
             maze={maze}
             otherPlayers={otherPlayers}
-            onPlayerMove={(pos: Vector2) => {
-              setPlayerPos(pos);
-            }}
+            playerPosState={[
+              playerPos,
+              (action: React.SetStateAction<Vector2>) => {
+                if (canMove) setPlayerPos(action);
+              },
+            ]}
+            // onPlayerMove={(pos: Vector2) => {
+            //   setPlayerPos(pos);
+            // }}
           />
           <div className="flex flex-row justify-between">
             <PlayersList players={[localPlayer, ...otherPlayers]} />
@@ -625,12 +673,19 @@ function PlayersList({ players }: { players: PlayerInfo[] }) {
   );
 }
 
-function StartGameButton({ canStart }: { canStart: boolean }) {
+function StartGameButton({
+  canStart,
+  startGame,
+}: {
+  canStart: boolean;
+  startGame: () => void;
+}) {
   return (
     <>
       <PrimaryButton
         className="text-2xl bg-blue-500 my-1 hover:bg-blue-600/90 active:bg-blue-500/90"
         disabled={!canStart}
+        onClick={startGame}
       >
         Start Game
       </PrimaryButton>

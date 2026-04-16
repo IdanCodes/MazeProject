@@ -58,6 +58,7 @@ class MsgType(Enum):
     CREATE_ROOM = "create_room" # params: { name: string, capacity: int, password: string }
     JOIN_ROOM = "join_room" # params: { room_id: number, password: str| None }
     LEAVE_ROOM = "leave_room" # params: { room_id: number }
+    START_GAME = "start_game" # client->server - no params; server->client - { maze, start_time }
 
     RESPONSE = "response" # data = { code: ResponseType, response_to: MsgType, data: dict | None }
 
@@ -87,7 +88,7 @@ def parse_request(request_str: str) -> tuple[MsgType | None, str | None]:
 
 
 # source = None -> source="SERVER"
-def build_network_msg(source: ClientInfo | None, msg_type: MsgType, bc_data: str | None = None) -> str:
+def build_network_msg(source: ClientInfo | None, msg_type: MsgType, bc_data: any | None = None) -> str:
     bc_dict = {
         "msgType": msg_type.value,
         "source": SERVER_NAME

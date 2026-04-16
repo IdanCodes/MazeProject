@@ -24,10 +24,6 @@ class Server:
             print(f"Server listening on {protocol.IP_ADDR}:{protocol.PORT}")
 
             self.accept_connections()
-        # self.accept_thread = threading.Thread(target=)
-        # self.accept_thread.start()
-        # server_task = asyncio.create_task(self.accept_connections())
-        # await asyncio.gather(server_task)
 
     def close(self):
         self.server_sock.close()
@@ -37,8 +33,6 @@ class Server:
             client_sock, remote_addr = self.server_sock.accept()
             print("accepted connection from", remote_addr)
             threading.Thread(target=self.init_connection, args=[client_sock, remote_addr]).start()
-        # async with websockets.serve(self.init_connection, protocol.IP_ADDR, protocol.PORT):
-        #     await asyncio.Future()
 
     # initialize the connection with a client - "handshake" before connection
     def init_connection(self, client_sock: socket.socket, remote_addr):
@@ -65,26 +59,6 @@ class Server:
                     new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
                 else:
                     break
-
-
-                # rec_text = await websocket.recv()
-                # req_type, req_data = protocol.parse_request(rec_text)
-                # client_name: str = req_data
-                # new_client = ClientInfo(websocket, client_name)
-
-                # if not req_type or not isinstance(req_data, str) or req_type != MsgType.SET_NAME:
-                #     print("Closing websocket - invalid request for init")
-                #     websocket.close()
-                #     return
-
-                # # check if the name is already registered
-                # name_err = get_username_error(client_name)
-                # if name_err != None:
-                #     await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is invalid: {name_err}"))
-                # elif self.find_client_by_name(new_client.name) != None:
-                #     await new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
-                # else:
-                #     break
         except:
             return
 
@@ -94,9 +68,6 @@ class Server:
         new_client.start_recv()
         self.on_client_connect(new_client)
 
-        # Keep this handler alive until the client actually disconnects.
-        # websockets.serve will close the connection when this coroutine returns.
-        # await websocket.wait_closed()
 
     # Get ClientInfo by the client's id
     # Returns None if the client isn't connected
@@ -196,6 +167,8 @@ class Server:
             return False, "Invalid password"
         if room.is_full:
             return False, "Room is full - can not join"
+        if room.game_active:
+            return False, "Game is active - can't join"
         room.add_client(client)
         return True, None
     

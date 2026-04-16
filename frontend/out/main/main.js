@@ -2,8 +2,8 @@ import { app, BrowserWindow } from "electron";
 import require$$0$3 from "events";
 import require$$1$2 from "https";
 import require$$2$1 from "http";
-import * as require$$3 from "net";
-import require$$3__default from "net";
+import * as net from "net";
+import net__default from "net";
 import require$$4 from "tls";
 import require$$1$1 from "crypto";
 import require$$0$2 from "stream";
@@ -11,6 +11,7 @@ import require$$7 from "url";
 import require$$0 from "zlib";
 import require$$0$1 from "buffer";
 import * as path from "path";
+import { v4 } from "uuid";
 import __cjs_mod__ from "node:module";
 const __filename = import.meta.filename;
 const __dirname = import.meta.dirname;
@@ -62,10 +63,10 @@ function requireConstants() {
     EMPTY_BUFFER: Buffer.alloc(0),
     GUID: "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
     hasBlob,
-    kForOnEventAttribute: Symbol("kIsForOnEventAttribute"),
-    kListener: Symbol("kListener"),
-    kStatusCode: Symbol("status-code"),
-    kWebSocket: Symbol("websocket"),
+    kForOnEventAttribute: /* @__PURE__ */ Symbol("kIsForOnEventAttribute"),
+    kListener: /* @__PURE__ */ Symbol("kListener"),
+    kStatusCode: /* @__PURE__ */ Symbol("status-code"),
+    kWebSocket: /* @__PURE__ */ Symbol("websocket"),
     NOOP: () => {
     }
   };
@@ -157,8 +158,8 @@ var hasRequiredLimiter;
 function requireLimiter() {
   if (hasRequiredLimiter) return limiter;
   hasRequiredLimiter = 1;
-  const kDone = Symbol("kDone");
-  const kRun = Symbol("kRun");
+  const kDone = /* @__PURE__ */ Symbol("kDone");
+  const kRun = /* @__PURE__ */ Symbol("kRun");
   class Limiter {
     /**
      * Creates a new `Limiter`.
@@ -213,11 +214,11 @@ function requirePermessageDeflate() {
   const { kStatusCode } = requireConstants();
   const FastBuffer = Buffer[Symbol.species];
   const TRAILER = Buffer.from([0, 0, 255, 255]);
-  const kPerMessageDeflate = Symbol("permessage-deflate");
-  const kTotalLength = Symbol("total-length");
-  const kCallback = Symbol("callback");
-  const kBuffers = Symbol("buffers");
-  const kError = Symbol("error");
+  const kPerMessageDeflate = /* @__PURE__ */ Symbol("permessage-deflate");
+  const kTotalLength = /* @__PURE__ */ Symbol("total-length");
+  const kCallback = /* @__PURE__ */ Symbol("callback");
+  const kBuffers = /* @__PURE__ */ Symbol("buffers");
+  const kError = /* @__PURE__ */ Symbol("error");
   let zlibLimiter;
   class PerMessageDeflate {
     /**
@@ -1396,7 +1397,7 @@ function requireSender() {
   const { EMPTY_BUFFER, kWebSocket, NOOP } = requireConstants();
   const { isBlob, isValidStatusCode } = requireValidation();
   const { mask: applyMask, toBuffer } = requireBufferUtil();
-  const kByteLength = Symbol("kByteLength");
+  const kByteLength = /* @__PURE__ */ Symbol("kByteLength");
   const maskBuffer = Buffer.alloc(4);
   const RANDOM_POOL_SIZE = 8 * 1024;
   let randomPool;
@@ -1879,14 +1880,14 @@ function requireEventTarget() {
   if (hasRequiredEventTarget) return eventTarget;
   hasRequiredEventTarget = 1;
   const { kForOnEventAttribute, kListener } = requireConstants();
-  const kCode = Symbol("kCode");
-  const kData = Symbol("kData");
-  const kError = Symbol("kError");
-  const kMessage = Symbol("kMessage");
-  const kReason = Symbol("kReason");
-  const kTarget = Symbol("kTarget");
-  const kType = Symbol("kType");
-  const kWasClean = Symbol("kWasClean");
+  const kCode = /* @__PURE__ */ Symbol("kCode");
+  const kData = /* @__PURE__ */ Symbol("kData");
+  const kError = /* @__PURE__ */ Symbol("kError");
+  const kMessage = /* @__PURE__ */ Symbol("kMessage");
+  const kReason = /* @__PURE__ */ Symbol("kReason");
+  const kTarget = /* @__PURE__ */ Symbol("kTarget");
+  const kType = /* @__PURE__ */ Symbol("kType");
+  const kWasClean = /* @__PURE__ */ Symbol("kWasClean");
   class Event {
     /**
      * Create a new `Event`.
@@ -2263,11 +2264,11 @@ function requireWebsocket() {
   const EventEmitter = require$$0$3;
   const https = require$$1$2;
   const http = require$$2$1;
-  const net = require$$3__default;
+  const net2 = net__default;
   const tls = require$$4;
   const { randomBytes, createHash } = require$$1$1;
   const { Duplex, Readable } = require$$0$2;
-  const { URL } = require$$7;
+  const { URL: URL2 } = require$$7;
   const PerMessageDeflate = requirePermessageDeflate();
   const Receiver = requireReceiver();
   const Sender = requireSender();
@@ -2288,7 +2289,7 @@ function requireWebsocket() {
   } = requireEventTarget();
   const { format, parse } = requireExtension();
   const { toBuffer } = requireBufferUtil();
-  const kAborted = Symbol("kAborted");
+  const kAborted = /* @__PURE__ */ Symbol("kAborted");
   const protocolVersions = [8, 13];
   const readyStates = ["CONNECTING", "OPEN", "CLOSING", "CLOSED"];
   const subprotocolRegex = /^[!#$%&'*+\-.0-9A-Z^_`|a-z~]+$/;
@@ -2760,11 +2761,11 @@ function requireWebsocket() {
       );
     }
     let parsedUrl;
-    if (address instanceof URL) {
+    if (address instanceof URL2) {
       parsedUrl = address;
     } else {
       try {
-        parsedUrl = new URL(address);
+        parsedUrl = new URL2(address);
       } catch {
         throw new SyntaxError(`Invalid URL: ${address}`);
       }
@@ -2901,7 +2902,7 @@ function requireWebsocket() {
         req.abort();
         let addr;
         try {
-          addr = new URL(location, address);
+          addr = new URL2(location, address);
         } catch (e) {
           const err = new SyntaxError(`Invalid URL: ${location}`);
           emitErrorAndClose(websocket2, err);
@@ -2997,12 +2998,12 @@ function requireWebsocket() {
   }
   function netConnect(options) {
     options.path = options.socketPath;
-    return net.connect(options);
+    return net2.connect(options);
   }
   function tlsConnect(options) {
     options.path = void 0;
     if (!options.servername && options.servername !== "") {
-      options.servername = net.isIP(options.host) ? "" : options.host;
+      options.servername = net2.isIP(options.host) ? "" : options.host;
     }
     return tls.connect(options);
   }
@@ -3687,18 +3688,44 @@ function requireWebsocketServer() {
 var websocketServerExports = requireWebsocketServer();
 const WebSocketServer = /* @__PURE__ */ getDefaultExportFromCjs(websocketServerExports);
 let mainWindow = null;
-const WS_PORT = 8080;
 const TCP_HOST = "127.0.0.1";
 const TCP_PORT = 3003;
 const MESSAGE_DELIMITER = "\n";
-function startProxy() {
-  const wss = new WebSocketServer({ port: WS_PORT });
+const secretToken = v4();
+async function getFreePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.on("error", (err) => {
+      reject(new Error(`Could not find a free port: ${err.message}`));
+    });
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (address && typeof address !== "string") {
+        const port = address.port;
+        server.close(() => resolve(port));
+      } else {
+        server.close(
+          () => reject(new Error("Invalid address returned from server."))
+        );
+      }
+    });
+  });
+}
+function startProxy(port) {
+  const wss = new WebSocketServer({ port });
   wss.on("connection", (ws, req) => {
-    const tcpClient = new require$$3.Socket();
+    const url = new URL(req.url || "", `http://localhost:${port}`);
+    if (url.searchParams.get("token") !== secretToken) {
+      console.error("Unauthorized connection attempt!");
+      ws.terminate();
+      return;
+    }
+    const tcpClient = new net.Socket();
     tcpClient.connect(TCP_PORT, TCP_HOST, () => {
       console.log("TCP connection established");
     });
     ws.on("message", (data) => {
+      data += MESSAGE_DELIMITER;
       const buffer2 = Buffer.isBuffer(data) ? data : Buffer.from(data);
       tcpClient.write(buffer2, (err) => {
         if (err) console.error("TCP Write Error:", err);
@@ -3727,10 +3754,10 @@ function startProxy() {
     });
   });
 }
-function createWindow() {
+function createWindow(port) {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1e3,
+    height: 700,
     webPreferences: {
       // Security best practices
       contextIsolation: true,
@@ -3741,10 +3768,12 @@ function createWindow() {
     const indexPath = path.join(__dirname, "..", "dist", "index.html");
     mainWindow.loadFile(indexPath);
   } else {
-    mainWindow.loadURL("http://localhost:5173");
+    const devUrl = `http://localhost:5173?wsPort=${port}&wsToken=${secretToken}`;
+    mainWindow.loadURL(devUrl);
   }
 }
-app.whenReady().then(() => {
-  startProxy();
-  createWindow();
+app.whenReady().then(async () => {
+  const port = await getFreePort();
+  startProxy(port);
+  createWindow(port);
 });
