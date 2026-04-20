@@ -58,7 +58,10 @@ class MsgType(Enum):
     CREATE_ROOM = "create_room" # params: { name: string, capacity: int, password: string }
     JOIN_ROOM = "join_room" # params: { room_id: number, password: str| None }
     LEAVE_ROOM = "leave_room" # params: { room_id: number }
+
     START_GAME = "start_game" # client->server - no params; server->client - { maze, start_time }
+    PLAYER_FINISHED = "player_finished" # server->client(broadcast) - { name: string, timeMs: number, place: number }
+    END_GAME = "end_game" # server->client - { name: string, timeMs: number }[]
 
     RESPONSE = "response" # data = { code: ResponseType, response_to: MsgType, data: dict | None }
 

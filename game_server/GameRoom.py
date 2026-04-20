@@ -10,7 +10,9 @@ from MazeGen.MazeGenerator import generateDFSRectMaze
 from Player import Player, RoomClientRole
 from Structures import GameOptions
 from Structures.Vector2 import Vector2
+from helpers import get_time_ms
 from protocol import MsgType, ResponseCode, build_network_msg, build_response, is_valid_position, parse_request
+from math import floor
 
 if TYPE_CHECKING:
     from server import Server
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
 ROOM_MAX_PLAYERS = 10
 ROOM_MIN_PLAYERS = 2
 GAME_LOOP_RATE = 20
-DEFAULT_MAZE_DIMENSIONS = SimpleNamespace(width=25, height=25)
+DEFAULT_MAZE_DIMENSIONS = SimpleNamespace(width=10, height=10)
 class GameRoom:
     def __init__(self, parent_server: Server, room_name: str, capacity: int, password: str | None):
         self.parent_server = parent_server
@@ -31,6 +33,7 @@ class GameRoom:
         self.start_time = -1
         self.game_active = False
         self.game_options = GameOptions.GameOptions()#TODO: implement
+        self.game_results = [] # {name: string, timeMs: number}[]
         
         self.generate_new_maze()
         self.running = True
@@ -135,15 +138,15 @@ class GameRoom:
     # can_start_game: Check if the requirements for starting a game are fulfilled
     def can_start_game(self):
         # Return whether all players are ready
-        return len(self.players) > 1 and all(p.isReady for p in self.players)
+        return (not self.game_active) and len(self.players) > 1 and all(p.isReady for p in self.players)
     
     # start_game: Start the game
     def start_game(self):
         # Generate maze
         self.generate_new_maze()
 
-        # start_time = now + 5 seconds (in ms from epoch)
-        self.start_time = (time.time_ns() // 1_000_000) + (5 * 1_000)
+        # start_time = now + 3 seconds (in ms from epoch)
+        self.start_time = get_time_ms() + (3 * 1_000)
         self.game_active = True
         bc_msg = {
             "maze": self.stored_maze.get_matrix(),
@@ -181,21 +184,58 @@ class GameRoom:
             if (not exclude) or (client.name != exclude.name):
                 client.send(message)
 
+    def get_players_in_finish_square(self) -> list[Player]:
+        FINISH_CELL = Vector2(self.stored_maze.width - 1, self.stored_maze.height - 1)
+        return [p for p in self.players if self.pos_is_on_cell(p.position, FINISH_CELL)] #TODO: implement
+    
+    # pos: normalized position
+    # cellPos: grid position
+    def pos_is_on_cell(self, pos: Vector2, cellPos: Vector2) -> bool:
+        cellScale = 1. / (self.stored_maze.width + 1)
+        grid_pos = Vector2(floor((pos.x + cellScale) * self.stored_maze.width), floor((pos.y + cellScale) * self.stored_maze.height + cellScale))
+        return grid_pos.x == cellPos.x and grid_pos.y == cellPos.y
+
+    def player_finished(self, p: Player):
+        print(f"Player {p.name} finished!")
+        new_result = {
+            "name": p.name,
+            "timeMs": get_time_ms() - self.start_time
+        }
+        self.game_results.append(new_result)
+        new_result["place"] = len(self.game_results)
+        self.send_broadcast(build_network_msg(None, MsgType.PLAYER_FINISHED, new_result))
+
+    # Checks if the requirements for stopping the game are fulfilled
+    # - All players finished the maze (in self.game_results)
+    # - ... add more options in the future (time limit etc..)
+    def should_stop_game(self) -> bool:
+        return (len(self.players) > 1) and (len(self.game_results) == len(self.players))
+
+    def end_game(self):
+        self.running = False
+        self.send_broadcast(build_network_msg(None, MsgType.END_GAME, self.game_results))
+        # TODO: Disconnect all players and close room?
+
     def game_loop(self):
         while self.running:
             start = time.perf_counter()
 
             # send dirty positions
             if len(self.dirty_pos_dict):
-                if self.game_active:
-                    print("Send pos in active game")
                 dirty_pos_msg = build_network_msg(None, MsgType.UPDATE_POS, self.dirty_pos_dict)
                 self.send_broadcast(dirty_pos_msg, None)
                 self.dirty_pos_dict.clear()
 
             if self.game_active:
-                # TODO: Check if players have reached the finish
-                pass
+                # TODO: Optimize?
+                finishers = self.get_players_in_finish_square()
+                new_finishers = [x for x in finishers if all(x.name != y["name"] for y in self.game_results)]
+                if len(new_finishers):
+                    for f in new_finishers:
+                        self.player_finished(f)
+
+                if self.should_stop_game():
+                    self.end_game()
 
             time.sleep(max(1. / GAME_LOOP_RATE - (time.perf_counter() - start), 0))
 

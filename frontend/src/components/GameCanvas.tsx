@@ -51,8 +51,14 @@ const GameCanvas = forwardRef<
 
     const wallWidth = useMemo(() => 0.27 * cellScale, [cellScale]);
 
-    const canvasWidth: number = cellScale * (maze.width + 1);
-    const canvasHeight: number = cellScale * (maze.height + 1);
+    const canvasWidth: number = useMemo(
+      () => cellScale * (maze.width + 1),
+      [cellScale, maze.width],
+    );
+    const canvasHeight: number = useMemo(
+      () => cellScale * (maze.height + 1),
+      [cellScale, maze.height],
+    );
     const dimensions = useMemo(
       () => ({
         width: canvasWidth,

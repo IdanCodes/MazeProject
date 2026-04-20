@@ -41,6 +41,8 @@ export function useNetworkHandler(
   setMaze: (maze: Maze) => void,
   sendMessage: (msgType: GameMsgType, data?: any | undefined) => void,
   onStartGame: (startTime: number) => void,
+  onFinishMaze: (place: number, timeMs: number) => void, // local player reaches end of maze
+  onEndGame: (gameResults: { name: string; timeMs: number }[]) => void,
   posUpdateRate: number = 25,
 ): {
   otherPlayers: PlayerInfo[];
@@ -72,6 +74,10 @@ export function useNetworkHandler(
         return handleReadyUpdate(msg);
       case GameMsgType.START_GAME:
         return handleStartGame(msg);
+      case GameMsgType.PLAYER_FINISHED:
+        return handlePlayerFinished(msg);
+      case GameMsgType.END_GAME:
+        return handleEndGame(msg);
       default:
         break;
     }
@@ -162,6 +168,60 @@ export function useNetworkHandler(
 
     // Trigger game start
     onStartGame(data.startTime);
+  }
+
+  function handlePlayerFinished(msg: NetworkMessage) {
+    const data = msg.data;
+    if (
+      !(data && typeof data === "object") ||
+      !(data.name && typeof data.name === "string") ||
+      !(data.timeMs && typeof data.timeMs === "number") ||
+      !(data.place && typeof data.place === "number")
+    ) {
+      console.error(
+        "useNetworkHandler: Invalid format for playerFinished message",
+      );
+      return;
+    }
+    const {
+      name,
+      timeMs,
+      place,
+    }: { name: string; timeMs: number; place: number } = msg.data;
+
+    console.log(
+      `Player "${name}" finished in place ${place} in ${timeMs / 10 / 100.0}s`,
+    );
+    // TODO: handle other players finishing
+    if (name != localPlayer.name) return;
+
+    onFinishMaze(place, timeMs);
+  }
+
+  function handleEndGame(msg: NetworkMessage) {
+    const data: { name: string; timeMs: number }[] = msg.data;
+    if (!(data && Array.isArray(data))) {
+      console.error(
+        "useNetworkHandler: Invalid format for endGame message",
+        msg,
+      );
+      return;
+    }
+    for (const x of data) {
+      if (
+        !(x && typeof x === "object") ||
+        !(x.name && typeof x.name === "string") ||
+        !(x.timeMs && typeof x.timeMs === "number")
+      ) {
+        console.error(
+          "useNetworkHandler: Invalid format for endGame message",
+          msg,
+        );
+        return;
+      }
+
+      onEndGame(data);
+    }
   }
   // #endregion
 

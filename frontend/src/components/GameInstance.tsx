@@ -1,10 +1,9 @@
-import React, {
+import {
   forwardRef,
   useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
@@ -56,9 +55,9 @@ const GameInstance = forwardRef<
     const [playerPos, setPlayerPos] = usePassedState<Vector2>(playerPosState);
 
     // cells per second
-    const playerSpeed = 3;
-    const accelerationRate = 0.22;
-    const decelerationRate = 0.15;
+    const playerSpeed = 2.8;
+    const accelerationRate = 0.2;
+    const decelerationRate = 0.2;
 
     const speedAmplifier = useMemo(() => {
       return (playerSpeed * cellScale * 4) / GAME_FPS;
@@ -88,7 +87,7 @@ const GameInstance = forwardRef<
         const checkCollision = (pos: Vector2) =>
           gameCanvasRef.current?.checkCircleCollision(
             pos,
-            PLAYER_RADIUS / (PHYSICS_UPDATE_FPS * 0.5),
+            PLAYER_RADIUS / (PHYSICS_UPDATE_FPS * 0.4),
           );
 
         const newPos: Vector2 = {

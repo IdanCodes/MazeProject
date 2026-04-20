@@ -15,7 +15,9 @@ export enum GameMsgType {
   JOIN_ROOM = "join_room",
   LEAVE_ROOM = "leave_room",
 
-  START_GAME = "start_game",  
+  START_GAME = "start_game",
+  PLAYER_FINISHED = "player_finished",
+  END_GAME = "end_game",
 
   RESPONSE = "response",
 }

@@ -509,6 +509,7 @@ function GamePanel({
     isReady: false,
   } as PlayerInfo);
   const [canMove, setCanMove] = useState<boolean>(true);
+  const [isGameActive, setIsGameActive] = useState<boolean>(false);
   // #region Player Attributes
   const isReady = useMemo(() => localPlayer.isReady, [localPlayer.isReady]);
   const setIsReady: SetStateFunc<boolean> = (
@@ -537,6 +538,9 @@ function GamePanel({
     width: number;
     height: number;
   }>(() => {
+    console.log(
+      `gameInstanceRef.current: ${gameInstanceRef.current}\ngameInstanceRef.current?.gameCanvasRef: ${gameInstanceRef.current?.gameCanvasRef}`,
+    );
     return gameInstanceRef.current && gameInstanceRef.current.gameCanvasRef
       ? {
           ...gameInstanceRef.current.gameCanvasRef.dimensions,
@@ -550,6 +554,8 @@ function GamePanel({
     setMaze,
     sendMessage,
     onStartGame,
+    onFinishMaze,
+    onEndGame,
   );
   const allPlayersReady = useMemo(
     () => isReady && !otherPlayers.find((p) => !p.isReady),
@@ -579,6 +585,21 @@ function GamePanel({
     }
   }
 
+  function onFinishMaze(place: number, timeMs: number) {
+    setCanMove(false);
+    // TODO: handle local player finishing
+  }
+
+  function onEndGame(gameResults: { name: string; timeMs: number }[]) {
+    // print results
+    for (let i = 0; i < gameResults.length; i++) {
+      console.log(
+        `${i + 1}. ${gameResults[i].name} (${gameResults[i].timeMs / 10 / 100.0}s)`,
+      );
+    }
+    alert("Game has ended! Results are printed in the console");
+  }
+
   useEffect(() => {
     setPlayerPos({
       x: cellScale / 2,
@@ -595,13 +616,16 @@ function GamePanel({
       <DisconnectButton handleDisconnect={leaveRoom} />
       <div className="flex flex-col items-center">
         <div className="flex flex-col justify-center w-fit">
-          <div className="mx-auto">
-            <StartGameButton
-              canStart={allPlayersReady}
-              startGame={sendStartGame}
-            />
-          </div>
+          {!isGameActive && (
+            <div className="mx-auto">
+              <StartGameButton
+                canStart={allPlayersReady}
+                startGame={sendStartGame}
+              />
+            </div>
+          )}
           <GameInstance
+            ref={gameInstanceRef}
             mazeSize={MazeSize.Medium}
             maze={maze}
             otherPlayers={otherPlayers}
@@ -611,9 +635,6 @@ function GamePanel({
                 if (canMove) setPlayerPos(action);
               },
             ]}
-            // onPlayerMove={(pos: Vector2) => {
-            //   setPlayerPos(pos);
-            // }}
           />
           <div className="flex flex-row justify-between">
             <PlayersList players={[localPlayer, ...otherPlayers]} />

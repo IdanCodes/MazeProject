@@ -19,6 +19,7 @@ class Server:
     
     def start_server(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.server_sock:
+            self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server_sock.bind((protocol.IP_ADDR, protocol.PORT))
             self.server_sock.listen(10)
             print(f"Server listening on {protocol.IP_ADDR}:{protocol.PORT}")
