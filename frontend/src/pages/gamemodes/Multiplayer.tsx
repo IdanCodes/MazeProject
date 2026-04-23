@@ -538,9 +538,6 @@ function GamePanel({
     width: number;
     height: number;
   }>(() => {
-    console.log(
-      `gameInstanceRef.current: ${gameInstanceRef.current}\ngameInstanceRef.current?.gameCanvasRef: ${gameInstanceRef.current?.gameCanvasRef}`,
-    );
     return gameInstanceRef.current && gameInstanceRef.current.gameCanvasRef
       ? {
           ...gameInstanceRef.current.gameCanvasRef.dimensions,

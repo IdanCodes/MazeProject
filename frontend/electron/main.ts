@@ -8,7 +8,7 @@ import { IncomingMessage } from "http";
 let mainWindow: BrowserWindow | null = null;
 
 // Configs
-const WS_PORT = 8080;
+const DEV_BASE_URL = "http://localhost:5173";
 const TCP_HOST = "127.0.0.1";
 const TCP_PORT = 3003;
 const MESSAGE_DELIMITER = "\n";
@@ -114,7 +114,7 @@ function createWindow(port: number) {
     mainWindow.loadFile(indexPath);
   } else {
     // DEVELOPMENT: Load from Vite dev server
-    const devUrl = `http://localhost:5173?wsPort=${port}&wsToken=${secretToken}`;
+    const devUrl = `${DEV_BASE_URL}?wsPort=${port}&wsToken=${secretToken}`;
     mainWindow.loadURL(devUrl);
   }
 }

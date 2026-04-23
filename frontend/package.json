@@ -7,6 +7,8 @@
   "scripts": {
     "lint": "eslint .",
     "dev": "electron-vite dev",
+    "server": "vite",
+    "client": "electron ./electron/main.ts",
     "build": "electron-vite build",
     "preview": "electron-vite preview"
   },

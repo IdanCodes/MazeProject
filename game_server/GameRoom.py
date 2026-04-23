@@ -236,6 +236,7 @@ class GameRoom:
 
                 if self.should_stop_game():
                     self.end_game()
+                    break
 
             time.sleep(max(1. / GAME_LOOP_RATE - (time.perf_counter() - start), 0))
 
