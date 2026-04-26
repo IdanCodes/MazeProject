@@ -89,6 +89,16 @@ const GameCanvas = forwardRef<
       };
     }
 
+    const normalizePos = (pos: Vector2): Vector2 => ({
+      x: pos.x / canvasWidth,
+      y: pos.y / canvasHeight,
+    });
+
+    const unnormalizePos = (pos: Vector2): Vector2 => ({
+      x: pos.x * canvasWidth,
+      y: pos.y * canvasHeight,
+    });
+
     // check if a circle at pos with radius collides with another CellType in the maze or the boundary.
     // defaults to checking for walls.
     function checkCircleCollision(
@@ -251,7 +261,7 @@ const GameCanvas = forwardRef<
       highlightCell(ctx, playerCell, "rgba(242,251,2,0.6)");
 
       for (const playerInfo of otherPlayers)
-        drawPlayer(ctx, playerInfo.position, "green");
+        drawPlayer(ctx, unnormalizePos(playerInfo.position), "green");
 
       drawPlayer(ctx, playerPos, playerColor);
 

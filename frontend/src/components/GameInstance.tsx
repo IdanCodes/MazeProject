@@ -54,6 +54,13 @@ const GameInstance = forwardRef<
     );
     const [playerPos, setPlayerPos] = usePassedState<Vector2>(playerPosState);
 
+    useEffect(() => {
+      setPlayerPos({
+        x: cellScale / 2,
+        y: cellScale / 2,
+      });
+    }, [cellScale]);
+
     // cells per second
     const playerSpeed = 2.8;
     const accelerationRate = 0.15;

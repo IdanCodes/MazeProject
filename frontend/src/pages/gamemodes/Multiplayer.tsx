@@ -540,7 +540,7 @@ function GamePanel({
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
   const cellScale = useMemo(
     () => (gameInstanceRef.current ? gameInstanceRef.current.cellScale : 0),
-    [gameInstanceRef.current],
+    [gameInstanceRef.current, gameInstanceRef.current?.cellScale],
   );
   const canvasDimensions = useMemo<{
     width: number;
@@ -578,6 +578,10 @@ function GamePanel({
     console.log(`Game starting in ${startTime - Date.now()}ms`);
     setIsGameActive(true);
     setCanMove(false);
+    setPlayerPos({
+      x: cellScale / 2,
+      y: cellScale / 2,
+    }); // teleport to start of maze
   }
 
   function onFinishCountdown() {
@@ -598,13 +602,6 @@ function GamePanel({
       );
     }
   }
-
-  useEffect(() => {
-    setPlayerPos({
-      x: cellScale / 2,
-      y: cellScale / 2,
-    }); // teleport to start of maze
-  }, [maze, cellScale]);
 
   function startGameCountdown(startTime: number) {}
 

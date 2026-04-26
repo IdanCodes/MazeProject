@@ -127,13 +127,16 @@ export function useNetworkHandler(
     Object.entries(data).forEach(([name, rawPos]) => {
       if (name === localPlayer.name) return;
 
-      const normalized = parseVector2(rawPos);
-      if (!normalized) return;
+      // const normalized = parseVector2(rawPos);
+      // if (!normalized) return;
 
-      const newPos: Vector2 = {
-        x: normalized.x * canvasSize.width,
-        y: normalized.y * canvasSize.height,
-      };
+      // const newPos: Vector2 = {
+      //   x: normalized.x * canvasSize.width,
+      //   y: normalized.y * canvasSize.height,
+      // };
+
+      const newPos = parseVector2(rawPos);
+      if (!newPos) return;
 
       const index = playerIndexByName(name);
       if (index >= 0 && equalVec(otherPlayers[index].position, newPos)) return;
