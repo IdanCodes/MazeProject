@@ -5,7 +5,6 @@
 # - rooms/games on the network
 import asyncio
 from uuid import UUID
-import websockets
 import socket
 import threading
 from ClientInfo import ClientInfo, get_username_error
@@ -39,18 +38,14 @@ class Server:
     def init_connection(self, client_sock: socket.socket, remote_addr):
         try:
             while True:
-                print("Waiting for message from", remote_addr)
                 rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE)
-                print("received message:", rec_text)
                 rec_text = rec_text.decode()
-                print("decoded message:", rec_text)
                 req_type, req_data = protocol.parse_request(rec_text)
                 client_name: str = req_data
                 if not req_type or not isinstance(req_data, str) or req_type != MsgType.SET_NAME:
                     print("Closing connection - invalid request for init")
                     return
                 
-                print("New client init protocol: ", client_name)
                 new_client = ClientInfo(client_sock, remote_addr, client_name)
                 
                 name_err = get_username_error(client_name)
@@ -71,7 +66,7 @@ class Server:
 
 
     # Get ClientInfo by the client's id
-    # Returns None if the client isn't connected
+    # Returns None if there's no client with the given name
     def find_client_by_name(self, client_name: str) -> ClientInfo | None:
         for c in self.clients:
             if c.name == client_name:
@@ -115,6 +110,8 @@ class Server:
                 new_room = self.get_room_by_name(room_name)
                 if not new_room:
                     return ResponseCode.ERROR, build_error_obj("An unexpected error occurred while creating the room")
+                
+                # Join automatically after creating a room
                 return ResponseCode.SUCCESS, { "room_id": str(new_room.id) }
             case MsgType.JOIN_ROOM:
                 room_id = room_password = ""

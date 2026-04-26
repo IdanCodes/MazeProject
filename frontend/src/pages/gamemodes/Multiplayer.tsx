@@ -28,6 +28,7 @@ import { getUsernameError, maxNameLen } from "@src/utils/game-protocol";
 import clsx from "clsx";
 import { JSX, useEffect, useMemo, useRef, useState } from "react";
 import { WS_PORT_PARAM, WS_TOKEN_PARAM } from "../Home";
+import { PlayerRole } from "@src/constants/PlayerRole";
 
 export default function Multiplayer(): JSX.Element {
   const gameOnMessageCb = useRef<{ cb: (msg: NetworkMessage) => void }>({
@@ -528,6 +529,12 @@ function GamePanel({
 
     setLocalPlayer((lp) => ({ ...lp, position: newVal }));
   };
+  const playerRole = useMemo(() => localPlayer.role, [localPlayer.role]);
+  const setPlayerRole = (action: React.SetStateAction<PlayerRole>) => {
+    const newVal =
+      typeof action == "function" ? action(localPlayer.role) : action;
+    setLocalPlayer((lp) => ({ ...lp, role: newVal }));
+  };
   // #endregion
   const [maze, setMaze] = useState<Maze | undefined>(undefined);
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
@@ -550,6 +557,7 @@ function GamePanel({
     localPlayer,
     canvasDimensions,
     setMaze,
+    setPlayerRole,
     sendMessage,
     onStartGame,
     onFinishMaze,
@@ -676,8 +684,16 @@ function PlayersList({ players }: { players: PlayerInfo[] }) {
   return (
     <div className="text-xl flex flex-col truncate text-left">
       {players.map((p) => (
-        <span key={p.name} className="">
+        <span
+          key={p.name}
+          className={clsx(
+            "text-2xl",
+            p.role == PlayerRole.ADMIN && "text-blue-800",
+            p.role == PlayerRole.PLAYER && "",
+          )}
+        >
           {p.name}
+          {p.role == PlayerRole.ADMIN ? " (admin)" : ""}
           {" - "}
           {p.isReady ? (
             <span className="text-green-500">Ready</span>

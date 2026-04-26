@@ -4,7 +4,14 @@ import {
   Vector2,
   ZERO_VEC,
 } from "@src/interfaces/Vector2";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   GameMsgType,
   ResponseCode as ResponseCode,
@@ -18,6 +25,7 @@ import {
   parsePlayerInfo,
   PlayerInfo,
 } from "@src/interfaces/PlayerInfo";
+import { PlayerRole } from "@src/constants/PlayerRole";
 
 // const SERVER_PORT = 8080;
 // const SERVER_IP = "127.0.0.1";
@@ -39,6 +47,7 @@ export function useNetworkHandler(
   localPlayer: PlayerInfo,
   canvasSize: { width: number; height: number },
   setMaze: (maze: Maze) => void,
+  setPlayerRole: (action: SetStateAction<PlayerRole>) => void,
   sendMessage: (msgType: GameMsgType, data?: any | undefined) => void,
   onStartGame: (startTime: number) => void,
   onFinishMaze: (place: number, timeMs: number) => void, // local player reaches end of maze
@@ -78,6 +87,8 @@ export function useNetworkHandler(
         return handlePlayerFinished(msg);
       case GameMsgType.END_GAME:
         return handleEndGame(msg);
+      case GameMsgType.ROOM_ADMIN:
+        return handleSetRoomAdmin(msg);
       default:
         break;
     }
@@ -96,7 +107,13 @@ export function useNetworkHandler(
       for (const [src, pos] of posList) {
         const index = newOp.findIndex((p) => p.name === src);
         if (index >= 0) newOp[index].position = pos;
-        else newOp.push({ name: src, position: pos, isReady: false });
+        // else // TODO: Should this exist? Adding a player without getting a message they're connected...
+        //   newOp.push({
+        //     name: src,
+        //     position: pos,
+        //     isReady: false,
+        //     role: PlayerRole.PLAYER,
+        //   });
       }
       return newOp;
     });
@@ -222,6 +239,43 @@ export function useNetworkHandler(
 
       onEndGame(data);
     }
+  }
+
+  function handleSetRoomAdmin(msg: NetworkMessage) {
+    const newAdminName = msg.data;
+    if (!newAdminName || typeof newAdminName != "string") {
+      console.error(
+        "useNetworkHandler: Invalid argument for room admin! data:",
+        newAdminName,
+      );
+      return;
+    }
+
+    if (newAdminName == localPlayer.name) {
+      setOtherPlayers((op) => {
+        const newOp = [...op];
+        for (let i = 0; i < newOp.length; i++)
+          newOp[i].role = PlayerRole.PLAYER;
+        return newOp;
+      });
+      setPlayerRole(PlayerRole.ADMIN);
+      return;
+    }
+
+    const newAdminIdx = playerIndexByName(newAdminName);
+    if (newAdminIdx < 0)
+      return console.error(
+        "useNetworkHandler: New admin doesn't exist in room. data:",
+        newAdminName,
+      );
+
+    setOtherPlayers((op) => {
+      const newOp = [...op];
+      for (let i = 0; i < newOp.length; i++) newOp[i].role = PlayerRole.PLAYER;
+      newOp[newAdminIdx].role = PlayerRole.ADMIN;
+      return newOp;
+    });
+    setPlayerRole(PlayerRole.PLAYER);
   }
   // #endregion
 

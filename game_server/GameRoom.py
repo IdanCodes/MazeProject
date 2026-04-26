@@ -57,9 +57,9 @@ class GameRoom:
             "hasPassword": self.password != None and len(self.password) > 0
         }
 
-    def add_client(self, client: ClientInfo, role: RoomClientRole = RoomClientRole.PLAYER):
+    def add_client(self, client: ClientInfo):
         if self.is_full or self.game_active: return
-        new_player = Player(client, role)
+        new_player = Player(client, RoomClientRole.PLAYER)
         new_player.send(build_network_msg(None, MsgType.JOIN_ROOM, self.get_room_info()))
         new_player.on_receive(self.id, self.on_receive_message)
         new_player.on_disconnect(self.id, self.on_client_disconnect)
@@ -78,12 +78,13 @@ class GameRoom:
         self.stored_maze: Maze = generateDFSRectMaze(DEFAULT_MAZE_DIMENSIONS.width, DEFAULT_MAZE_DIMENSIONS.height)
 
     def on_player_connect(self, player: Player):
-        self.send_broadcast(build_network_msg(player, MsgType.PLAYER_CONNECTED), player)
         player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
+        self.send_broadcast(build_network_msg(player, MsgType.PLAYER_CONNECTED, player.get_player_info()), player)
         for c in self.players:
             player.send(build_network_msg(None, MsgType.PLAYER_CONNECTED, c.get_player_info()))
         self.players.append(player)
         print(f"{player.to_string()} connected to room {self.name}")
+        if len(self.players) == 1: self.set_admin(player)
 
     def on_client_disconnect(self, player: Player):
         if not player in self.players: return
@@ -95,11 +96,19 @@ class GameRoom:
         if len(self.players) == 0:
             self.parent_server.remove_room_by_id(self.id)
             return
-        
         self.send_broadcast(build_network_msg(player, MsgType.PLAYER_DISCONNECTED))
         try:
             player.send(build_network_msg(None, MsgType.LEAVE_ROOM, None))
         except: pass
+        if player.role == RoomClientRole.ADMIN:
+            if len(self.players) > 0: self.set_admin(self.players[0])
+
+    # update the admin of the room
+    def set_admin(self, player: Player):
+        for p in self.players:
+            p.role = RoomClientRole.PLAYER
+        player.role = RoomClientRole.ADMIN
+        self.send_broadcast(build_network_msg(None, MsgType.ROOM_ADMIN, player.name))
     
     def on_receive_message(self, sender: Player, msg_str: str):
         if not sender in self.players: return
