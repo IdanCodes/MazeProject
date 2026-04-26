@@ -509,6 +509,7 @@ function GamePanel({
     isReady: false,
   } as PlayerInfo);
   const [canMove, setCanMove] = useState<boolean>(true);
+  const [gameStartTime, setGameStartTime] = useState<number>(-1);
   const [isGameActive, setIsGameActive] = useState<boolean>(false);
   // #region Player Attributes
   const isReady = useMemo(() => localPlayer.isReady, [localPlayer.isReady]);
@@ -565,21 +566,15 @@ function GamePanel({
   }
 
   function onStartGame(startTime: number) {
+    setGameStartTime(startTime);
     console.log(`Game starting in ${startTime - Date.now()}ms`);
+    setIsGameActive(true);
     setCanMove(false);
-    waitForStartTime();
+  }
 
-    function waitForStartTime() {
-      const DELTA_MS = 50;
-      const timeUntilStart = startTime - Date.now();
-      console.log(`Starting in ${timeUntilStart / 1000}s...`);
-
-      if (timeUntilStart > DELTA_MS) setTimeout(waitForStartTime, DELTA_MS);
-      else {
-        console.log("Start!");
-        setCanMove(true);
-      }
-    }
+  function onFinishCountdown() {
+    setCanMove(true);
+    console.log("Start!");
   }
 
   function onFinishMaze(place: number, timeMs: number) {
@@ -594,7 +589,6 @@ function GamePanel({
         `${i + 1}. ${gameResults[i].name} (${gameResults[i].timeMs / 10 / 100.0}s)`,
       );
     }
-    alert("Game has ended! Results are printed in the console");
   }
 
   useEffect(() => {
@@ -613,14 +607,19 @@ function GamePanel({
       <DisconnectButton handleDisconnect={leaveRoom} />
       <div className="flex flex-col items-center">
         <div className="flex flex-col justify-center w-fit">
-          {!isGameActive && (
-            <div className="mx-auto">
+          <div className="mx-auto">
+            {!isGameActive ? (
               <StartGameButton
                 canStart={allPlayersReady}
                 startGame={sendStartGame}
               />
-            </div>
-          )}
+            ) : (
+              <GameStartCountdown
+                startTime={gameStartTime}
+                onStart={onFinishCountdown}
+              />
+            )}
+          </div>
           <GameInstance
             ref={gameInstanceRef}
             mazeSize={MazeSize.Medium}
@@ -707,6 +706,34 @@ function StartGameButton({
       >
         Start Game
       </PrimaryButton>
+    </>
+  );
+}
+
+function GameStartCountdown({
+  startTime,
+  onStart,
+  DELTA_MS = 50,
+}: {
+  startTime: number;
+  onStart: () => void;
+  DELTA_MS?: number;
+}) {
+  const [timeLeft, setTimeLeft] = useState(() => startTime - Date.now());
+  const hasStarted = useMemo<boolean>(() => timeLeft <= DELTA_MS, [timeLeft]);
+
+  useEffect(() => {
+    setTimeout(() => {
+      if (!hasStarted) setTimeLeft(startTime - Date.now());
+      else onStart();
+    }, DELTA_MS);
+  }, [startTime, timeLeft]);
+
+  return (
+    <>
+      <p className="text-3xl">
+        {hasStarted ? "Start!" : (timeLeft / 1000.0).toFixed(2)}
+      </p>
     </>
   );
 }

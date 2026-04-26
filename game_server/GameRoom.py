@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 ROOM_MAX_PLAYERS = 10
 ROOM_MIN_PLAYERS = 2
-GAME_LOOP_RATE = 20
+GAME_LOOP_RATE = 30
 DEFAULT_MAZE_DIMENSIONS = SimpleNamespace(width=10, height=10)
 class GameRoom:
     def __init__(self, parent_server: Server, room_name: str, capacity: int, password: str | None):
@@ -213,6 +213,7 @@ class GameRoom:
 
     def end_game(self):
         self.running = False
+        self.game_active = False
         self.send_broadcast(build_network_msg(None, MsgType.END_GAME, self.game_results))
         # TODO: Disconnect all players and close room?
 
