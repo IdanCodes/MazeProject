@@ -136,6 +136,8 @@ class GameRoom:
                 self.on_client_disconnect(sender)
                 return ResponseCode.SUCCESS, None
             case MsgType.START_GAME:
+                if sender.role != RoomClientRole.ADMIN:
+                    return ResponseCode.ERROR, "Only an admin can start the game"
                 if self.can_start_game():
                     self.start_game()
                     return ResponseCode.SUCCESS, None

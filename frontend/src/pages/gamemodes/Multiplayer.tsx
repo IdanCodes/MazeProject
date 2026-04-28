@@ -567,6 +567,10 @@ function GamePanel({
     () => isReady && !otherPlayers.find((p) => !p.isReady),
     [isReady, otherPlayers],
   );
+  const isAdmin = useMemo(
+    () => localPlayer.role === PlayerRole.ADMIN,
+    [localPlayer],
+  );
   onMessageCb.cb = onMessage;
 
   function sendStartGame() {
@@ -614,10 +618,12 @@ function GamePanel({
         <div className="flex flex-col justify-center w-fit">
           <div className="mx-auto">
             {!isGameActive ? (
-              <StartGameButton
-                canStart={allPlayersReady}
-                startGame={sendStartGame}
-              />
+              isAdmin && (
+                <StartGameButton
+                  canStart={allPlayersReady && otherPlayers.length > 0}
+                  startGame={sendStartGame}
+                />
+              )
             ) : (
               <GameStartCountdown
                 startTime={gameStartTime}
