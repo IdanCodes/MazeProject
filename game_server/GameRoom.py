@@ -1,7 +1,6 @@
 from __future__ import annotations
 import threading
 import time
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 import uuid
 from ClientInfo import ClientInfo
@@ -20,7 +19,6 @@ if TYPE_CHECKING:
 ROOM_MAX_PLAYERS = 10
 ROOM_MIN_PLAYERS = 2
 GAME_LOOP_RATE = 30
-DEFAULT_MAZE_DIMENSIONS = SimpleNamespace(width=10, height=10)
 class GameRoom:
     def __init__(self, parent_server: Server, room_name: str, capacity: int, password: str | None):
         self.parent_server = parent_server
@@ -32,7 +30,7 @@ class GameRoom:
         self.dirty_pos_dict = {}
         self.start_time = -1
         self.game_active = False
-        self.game_options = GameOptions.GameOptions()#TODO: implement
+        self.game_options = GameOptions.GameOptions() #TODO: implement
         self.game_results = [] # {name: string, timeMs: number}[]
         
         self.generate_new_maze()
@@ -73,12 +71,15 @@ class GameRoom:
         return None
     
     # Generate a new maze for the room with respect to the game options
+    # (Does not send the new maze to the players)
     def generate_new_maze(self):
         self.created_at = time.time()
-        self.stored_maze: Maze = generateDFSRectMaze(DEFAULT_MAZE_DIMENSIONS.width, DEFAULT_MAZE_DIMENSIONS.height)
+        dims = self.game_options.maze_dimensions
+        self.stored_maze: Maze = generateDFSRectMaze(dims["width"], dims["height"])
 
     def on_player_connect(self, player: Player):
         player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
+        player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_options()))
         self.send_broadcast(build_network_msg(player, MsgType.PLAYER_CONNECTED, player.get_player_info()), player)
         for c in self.players:
             player.send(build_network_msg(None, MsgType.PLAYER_CONNECTED, c.get_player_info()))
@@ -142,8 +143,14 @@ class GameRoom:
                     self.start_game()
                     return ResponseCode.SUCCESS, None
                 else:
-                    return ResponseCode.ERROR, None
-                    
+                    return ResponseCode.ERROR, "Can't start game"
+            case MsgType.GAME_OPTIONS:
+                if sender.role != RoomClientRole.ADMIN:
+                    return ResponseCode.ERROR, "Only an admin can set game options"
+                new_options = req_data
+                if not self.update_game_options(new_options):
+                    return ResponseCode.ERROR, "Could not set game options - invalid game options"
+                return ResponseCode.SUCCESS, None
         return None, None
 
     # can_start_game: Check if the requirements for starting a game are fulfilled
@@ -173,13 +180,17 @@ class GameRoom:
         if isinstance(isReady, bool):
             sender.isReady = isReady
 
+    # update the local game options and broadcast them to the clients
+    def update_game_options(self, new_options: dict) -> bool:
+        if not self.game_options.load_game_options(new_options):
+            return False
+        self.send_broadcast(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_options()))
+        return True
+
     # generate a broadcast from an incoming message
     # returns: (bc_type, bc_data, exclude_sender) | None
     def generate_broadcast(self, req_type: MsgType, req_data: str | None) -> tuple[MsgType, str | None, bool] | None:
         match req_type:
-            # case MsgType.MAZE:
-            #     self.stored_maze = req_data
-            #     return MsgType.MAZE, self.stored_maze, True
             case MsgType.SET_READY:
                 if isinstance(req_data, bool):
                     return MsgType.SET_READY, req_data, True
@@ -202,7 +213,7 @@ class GameRoom:
     # pos: normalized position
     # cellPos: grid position
     def pos_is_on_cell(self, pos: Vector2, cellPos: Vector2) -> bool:
-        cellScale = 1. / (self.stored_maze.width + 1)
+        cellScale = 1. / (self.stored_maze.width)
         grid_pos = Vector2(floor((pos.x + cellScale) * self.stored_maze.width), floor((pos.y + cellScale) * self.stored_maze.height + cellScale))
         return grid_pos.x == cellPos.x and grid_pos.y == cellPos.y
 

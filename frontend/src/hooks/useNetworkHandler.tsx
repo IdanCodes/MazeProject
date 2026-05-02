@@ -26,6 +26,7 @@ import {
   PlayerInfo,
 } from "@src/interfaces/PlayerInfo";
 import { PlayerRole } from "@src/constants/PlayerRole";
+import { GameOptions, parseGameOptions } from "@src/interfaces/GameOptions";
 
 // const SERVER_PORT = 8080;
 // const SERVER_IP = "127.0.0.1";
@@ -48,6 +49,7 @@ export function useNetworkHandler(
   canvasSize: { width: number; height: number },
   setMaze: (maze: Maze) => void,
   setPlayerRole: (action: SetStateAction<PlayerRole>) => void,
+  setGameOptions: (newOptions: GameOptions) => void,
   sendMessage: (msgType: GameMsgType, data?: any | undefined) => void,
   onStartGame: (startTime: number) => void,
   onFinishMaze: (place: number, timeMs: number) => void, // local player reaches end of maze
@@ -89,6 +91,8 @@ export function useNetworkHandler(
         return handleEndGame(msg);
       case GameMsgType.ROOM_ADMIN:
         return handleSetRoomAdmin(msg);
+      case GameMsgType.GAME_OPTIONS:
+        return handleGameOptions(msg);
       default:
         break;
     }
@@ -107,6 +111,10 @@ export function useNetworkHandler(
       for (const [src, pos] of posList) {
         const index = newOp.findIndex((p) => p.name === src);
         if (index >= 0) newOp[index].position = pos;
+        else
+          console.error(
+            `Received position update for player that doesn't exist (${src}). Ignoring`,
+          );
         // else // TODO: Should this exist? Adding a player without getting a message they're connected...
         //   newOp.push({
         //     name: src,
@@ -126,14 +134,6 @@ export function useNetworkHandler(
     const posList: [string, Vector2][] = [];
     Object.entries(data).forEach(([name, rawPos]) => {
       if (name === localPlayer.name) return;
-
-      // const normalized = parseVector2(rawPos);
-      // if (!normalized) return;
-
-      // const newPos: Vector2 = {
-      //   x: normalized.x * canvasSize.width,
-      //   y: normalized.y * canvasSize.height,
-      // };
 
       const newPos = parseVector2(rawPos);
       if (!newPos) return;
@@ -280,6 +280,17 @@ export function useNetworkHandler(
     });
     setPlayerRole(PlayerRole.PLAYER);
   }
+
+  function handleGameOptions(msg: NetworkMessage) {
+    const newOptions = parseGameOptions(msg.data);
+    if (!newOptions)
+      return console.error(
+        "useNetworkHandler: Received invalid game options",
+        msg,
+      );
+    setGameOptions(newOptions);
+  }
+
   // #endregion
 
   function sendPos() {

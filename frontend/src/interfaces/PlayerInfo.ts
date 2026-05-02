@@ -10,11 +10,15 @@ export interface PlayerInfo {
 
 export function isPlayerInfo(value: any): value is PlayerInfo {
   return (
-    value &&
+    value !== undefined &&
     typeof value === "object" &&
+    value.name !== undefined &&
     typeof value.name === "string" &&
+    value.position !== undefined &&
     isVector2(value.position) &&
+    value.isReady !== undefined &&
     typeof value.isReady === "boolean" &&
+    value.role !== undefined &&
     isPlayerRole(value.role)
   );
 }

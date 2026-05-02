@@ -29,6 +29,7 @@ import clsx from "clsx";
 import { JSX, useEffect, useMemo, useRef, useState } from "react";
 import { WS_PORT_PARAM, WS_TOKEN_PARAM } from "../Home";
 import { PlayerRole } from "@src/constants/PlayerRole";
+import { GameOptions } from "@src/interfaces/GameOptions";
 
 export default function Multiplayer(): JSX.Element {
   const gameOnMessageCb = useRef<{ cb: (msg: NetworkMessage) => void }>({
@@ -512,6 +513,9 @@ function GamePanel({
   const [canMove, setCanMove] = useState<boolean>(true);
   const [gameStartTime, setGameStartTime] = useState<number>(-1);
   const [isGameActive, setIsGameActive] = useState<boolean>(false);
+  const [gameOptions, setGameOptions] = useState<GameOptions | undefined>(
+    undefined,
+  );
   // #region Player Attributes
   const isReady = useMemo(() => localPlayer.isReady, [localPlayer.isReady]);
   const setIsReady: SetStateFunc<boolean> = (
@@ -558,6 +562,7 @@ function GamePanel({
     canvasDimensions,
     setMaze,
     setPlayerRole,
+    (newOptions: GameOptions) => setGameOptions(newOptions),
     sendMessage,
     onStartGame,
     onFinishMaze,
@@ -618,12 +623,15 @@ function GamePanel({
         <div className="flex flex-col justify-center w-fit">
           <div className="mx-auto">
             {!isGameActive ? (
-              isAdmin && (
-                <StartGameButton
-                  canStart={allPlayersReady && otherPlayers.length > 0}
-                  startGame={sendStartGame}
-                />
-              )
+              <>
+                {isAdmin && (
+                  <StartGameButton
+                    canStart={allPlayersReady && otherPlayers.length > 0}
+                    startGame={sendStartGame}
+                  />
+                )}
+                {gameOptions && <GameOptionsDisplay options={gameOptions} />}
+              </>
             ) : (
               <GameStartCountdown
                 startTime={gameStartTime}
@@ -753,6 +761,22 @@ function GameStartCountdown({
       <p className="text-3xl">
         {hasStarted ? "Start!" : (timeLeft / 1000.0).toFixed(2)}
       </p>
+    </>
+  );
+}
+
+function GameOptionsDisplay({ options }: { options: GameOptions }) {
+  return (
+    <>
+      <div className="flex flex-col w-full mx-auto border-black border-2">
+        <p className="text-2xl text-center bold">Game Options:</p>
+        {"Maze Dimensions"}
+        <p className="text-xl text-gray-500">
+          Maze Dimensions: {options.mazeDimensions.height}
+          {" X "}
+          {options.mazeDimensions.width}
+        </p>
+      </div>
     </>
   );
 }

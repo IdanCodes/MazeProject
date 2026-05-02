@@ -3688,6 +3688,7 @@ function requireWebsocketServer() {
 var websocketServerExports = requireWebsocketServer();
 const WebSocketServer = /* @__PURE__ */ getDefaultExportFromCjs(websocketServerExports);
 let mainWindow = null;
+const DEV_BASE_URL = "http://localhost:5173";
 const TCP_HOST = "127.0.0.1";
 const TCP_PORT = 3003;
 const MESSAGE_DELIMITER = "\n";
@@ -3768,7 +3769,7 @@ function createWindow(port) {
     const indexPath = path.join(__dirname, "..", "dist", "index.html");
     mainWindow.loadFile(indexPath);
   } else {
-    const devUrl = `http://localhost:5173?wsPort=${port}&wsToken=${secretToken}`;
+    const devUrl = `${DEV_BASE_URL}?wsPort=${port}&wsToken=${secretToken}`;
     mainWindow.loadURL(devUrl);
   }
 }

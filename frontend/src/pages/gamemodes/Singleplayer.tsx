@@ -7,9 +7,9 @@ import { RoutePath } from "@src/constants/route-path";
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { useNavigate } from "react-router-dom";
 import { generateMaze, Maze } from "@src/types/Maze";
-import GameOptionsSelector, {
-  GameOptions,
-} from "@src/components/GameOptionsSelector";
+// import GameOptionsSelector, {
+//   GameOptions,
+// } from "@src/components/GameOptionsSelector";
 
 export default function Singleplayer(): JSX.Element {
   const [gameOptions, setGameOptions] = useState<GameOptions>({
