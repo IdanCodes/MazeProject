@@ -21,3 +21,18 @@ export function parseGameOptions(value: any): GameOptions | undefined {
       }
     : undefined;
 }
+
+export const MIN_MAZE_DIMENSIONS = {
+  width: 5,
+  height: 5,
+};
+
+export const MAX_MAZE_DIMENSIONS = {
+  width: 25,
+  height: 25,
+};
+
+export const validMazeHeight = (height: number) =>
+  MIN_MAZE_DIMENSIONS.height <= height && height <= MAX_MAZE_DIMENSIONS.height;
+export const validMazeWidth = (width: number) =>
+  MIN_MAZE_DIMENSIONS.width <= width && width <= MAX_MAZE_DIMENSIONS.width;

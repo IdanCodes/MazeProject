@@ -29,7 +29,13 @@ import clsx from "clsx";
 import { JSX, useEffect, useMemo, useRef, useState } from "react";
 import { WS_PORT_PARAM, WS_TOKEN_PARAM } from "../Home";
 import { PlayerRole } from "@src/constants/PlayerRole";
-import { GameOptions } from "@src/interfaces/GameOptions";
+import {
+  GameOptions,
+  MAX_MAZE_DIMENSIONS,
+  MIN_MAZE_DIMENSIONS,
+  validMazeHeight,
+  validMazeWidth,
+} from "@src/interfaces/GameOptions";
 
 export default function Multiplayer(): JSX.Element {
   const gameOnMessageCb = useRef<{ cb: (msg: NetworkMessage) => void }>({
@@ -621,7 +627,7 @@ function GamePanel({
       <DisconnectButton handleDisconnect={leaveRoom} />
       <div className="flex flex-col items-center">
         <div className="flex flex-col justify-center w-fit">
-          <div className="mx-auto">
+          <div className="mx-auto  w-full">
             {!isGameActive ? (
               <>
                 {isAdmin && (
@@ -630,7 +636,14 @@ function GamePanel({
                     startGame={sendStartGame}
                   />
                 )}
-                {gameOptions && <GameOptionsDisplay options={gameOptions} />}
+                {gameOptions && (
+                  <GameOptionsDisplay
+                    canEditOptions={isAdmin}
+                    options={gameOptions}
+                    setOptions={(newOptions) => {}} //TODO: implement
+                    gameOptionsError="" // TODO: implement
+                  />
+                )}
               </>
             ) : (
               <GameStartCountdown
@@ -765,18 +778,159 @@ function GameStartCountdown({
   );
 }
 
-function GameOptionsDisplay({ options }: { options: GameOptions }) {
+function GameOptionsDisplay({
+  options,
+  canEditOptions,
+  setOptions,
+  gameOptionsError,
+}: {
+  options: GameOptions;
+  canEditOptions: boolean;
+  setOptions: (newOpts: GameOptions) => void;
+  gameOptionsError: string | undefined;
+}) {
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [newOptions, setNewOptions] = useState<GameOptions>({ ...options });
+
+  function startEdit() {
+    setNewOptions({ ...options });
+    setIsEditing(true);
+  }
+  function cancelEdit() {
+    if (!isEditing) return;
+    setIsEditing(false);
+  }
+  function saveEdit() {
+    if (!isEditing) return;
+    // TODO: implement
+  }
+
+  const onChangeOpt = (target: HTMLInputElement) => {
+    setNewOptions((oldOpts) => {
+      const newOpts = { ...oldOpts };
+      switch (target.name) {
+        case "dimensions.height": {
+          const newValue = parseInt(target.value);
+          if (isNaN(newValue) || !validMazeHeight(newValue))
+            console.error("Invalid height", target.value);
+          else
+            newOpts.mazeDimensions = {
+              ...newOpts.mazeDimensions,
+              height: newValue,
+            };
+          break;
+        }
+        case "dimensions.width": {
+          const newValue = parseInt(target.value);
+          if (isNaN(newValue) || !validMazeWidth(newValue))
+            console.error("Invalid width", target.value);
+          else
+            newOpts.mazeDimensions = {
+              ...newOpts.mazeDimensions,
+              width: newValue,
+            };
+          break;
+        }
+      }
+
+      return newOpts;
+    });
+  };
+
   return (
     <>
-      <div className="flex flex-col w-full mx-auto border-black border-2">
+      <div className="flex flex-col w-full mx-auto px-10 border-black border-2 my-3">
+        {gameOptionsError && <ErrorLabel text={gameOptionsError} />}
+        <div className="flex"></div>
         <p className="text-2xl text-center bold">Game Options:</p>
-        {"Maze Dimensions"}
-        <p className="text-xl text-gray-500">
-          Maze Dimensions: {options.mazeDimensions.height}
-          {" X "}
-          {options.mazeDimensions.width}
-        </p>
+        {/* Maze Dimensions */}
+        <MazeDimensionsSection />
+        {/* Edit buttons */}
+        <div className="my-1">
+          {canEditOptions &&
+            (isEditing ? (
+              <div className="flex justify-center">
+                <PrimaryButton
+                  className="text-2xl w-1/4 bg-red-500/90 hover:bg-red-500"
+                  onClick={cancelEdit}
+                >
+                  Cancel
+                </PrimaryButton>
+                <PrimaryButton
+                  className="text-2xl w-1/4 bg-green-500/90 hover:bg-green-500 "
+                  onClick={saveEdit}
+                >
+                  Save
+                </PrimaryButton>
+              </div>
+            ) : (
+              <PrimaryButton
+                className="text-2xl w-1/2 bg-gray-500/90 hover:bg-gray-500"
+                onClick={startEdit}
+              >
+                Edit
+              </PrimaryButton>
+            ))}
+        </div>
       </div>
     </>
   );
+
+  function MazeDimensionsSection() {
+    const [tempH, setTempH] = useState<string>(() =>
+      newOptions.mazeDimensions.height.toString(),
+    );
+    const [tempW, setTempW] = useState<string>(() =>
+      newOptions.mazeDimensions.width.toString(),
+    );
+
+    useEffect(() => {
+      setTempH(newOptions.mazeDimensions.height.toString());
+      setTempW(newOptions.mazeDimensions.width.toString());
+    }, [newOptions]);
+
+    return isEditing ? (
+      <div className="text-xl">
+        <span>Maze Dimensions: </span>
+        <div className="flex justify-around w-4/5 my-2">
+          <span className="flex w-full justify-around">
+            {"Height:  "}
+            <input
+              type="number"
+              name="dimensions.height"
+              className="text-center border-2 rounded-xl w-1/4"
+              min={MIN_MAZE_DIMENSIONS.height}
+              max={MAX_MAZE_DIMENSIONS.height}
+              value={tempH}
+              onChange={(t) => setTempH(t.target.value)}
+              onBlur={(t) => onChangeOpt(t.target)}
+            />
+          </span>
+          {" X "}
+          <span className="flex w-full justify-around">
+            {"Width:  "}
+            <input
+              type="number"
+              name="dimensions.width"
+              className="border-2 text-center rounded-xl w-1/4"
+              min={MIN_MAZE_DIMENSIONS.width}
+              max={MAX_MAZE_DIMENSIONS.width}
+              value={tempW}
+              onChange={(t) => setTempW(t.target.value)}
+              onBlur={(t) => onChangeOpt(t.target)}
+            />
+          </span>
+        </div>
+      </div>
+    ) : (
+      <div className="text-xl">
+        <span>
+          Maze Dimensions:{" "}
+          <span className="text-gray-500">{options.mazeDimensions.height}</span>
+          {" X "}
+          <span className="text-gray-500">{options.mazeDimensions.width}</span>
+        </span>
+      </div>
+    );
+  }
 }
