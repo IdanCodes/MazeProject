@@ -31,10 +31,11 @@ import { WS_PORT_PARAM, WS_TOKEN_PARAM } from "../Home";
 import { PlayerRole } from "@src/constants/PlayerRole";
 import {
   GameOptions,
-  MAX_MAZE_DIMENSIONS,
-  MIN_MAZE_DIMENSIONS,
-  validMazeHeight,
-  validMazeWidth,
+  // MAX_MAZE_DIMENSIONS,
+  MazeDifficulty,
+  // MIN_MAZE_DIMENSIONS,
+  // validMazeHeight,
+  // validMazeWidth,
 } from "@src/interfaces/GameOptions";
 
 export default function Multiplayer(): JSX.Element {
@@ -806,30 +807,12 @@ function GameOptionsDisplay({
     // TODO: implement
   }
 
-  const onChangeOpt = (target: HTMLInputElement) => {
+  const onChangeOpt = (name: string, value: any) => {
     setNewOptions((oldOpts) => {
       const newOpts = { ...oldOpts };
-      switch (target.name) {
-        case "dimensions.height": {
-          const newValue = parseInt(target.value);
-          if (isNaN(newValue) || !validMazeHeight(newValue))
-            console.error("Invalid height", target.value);
-          else
-            newOpts.mazeDimensions = {
-              ...newOpts.mazeDimensions,
-              height: newValue,
-            };
-          break;
-        }
-        case "dimensions.width": {
-          const newValue = parseInt(target.value);
-          if (isNaN(newValue) || !validMazeWidth(newValue))
-            console.error("Invalid width", target.value);
-          else
-            newOpts.mazeDimensions = {
-              ...newOpts.mazeDimensions,
-              width: newValue,
-            };
+      switch (name) {
+        case "difficulty": {
+          newOpts.difficulty = value;
           break;
         }
       }
@@ -845,7 +828,7 @@ function GameOptionsDisplay({
         <div className="flex"></div>
         <p className="text-2xl text-center bold">Game Options:</p>
         {/* Maze Dimensions */}
-        <MazeDimensionsSection />
+        <MazeDifficultySection />
         {/* Edit buttons */}
         <div className="my-1">
           {canEditOptions &&
@@ -877,60 +860,30 @@ function GameOptionsDisplay({
     </>
   );
 
-  function MazeDimensionsSection() {
-    const [tempH, setTempH] = useState<string>(() =>
-      newOptions.mazeDimensions.height.toString(),
+  function MazeDifficultySection() {
+    const [tempDiffic, setTempDiffic] = useState<MazeDifficulty>(
+      () => newOptions.difficulty,
     );
-    const [tempW, setTempW] = useState<string>(() =>
-      newOptions.mazeDimensions.width.toString(),
-    );
-
-    useEffect(() => {
-      setTempH(newOptions.mazeDimensions.height.toString());
-      setTempW(newOptions.mazeDimensions.width.toString());
-    }, [newOptions]);
 
     return isEditing ? (
       <div className="text-xl">
-        <span>Maze Dimensions: </span>
+        <span>Maze Difficulty: </span>
         <div className="flex justify-around w-4/5 my-2">
-          <span className="flex w-full justify-around">
-            {"Height:  "}
-            <input
-              type="number"
-              name="dimensions.height"
-              className="text-center border-2 rounded-xl w-1/4"
-              min={MIN_MAZE_DIMENSIONS.height}
-              max={MAX_MAZE_DIMENSIONS.height}
-              value={tempH}
-              onChange={(t) => setTempH(t.target.value)}
-              onBlur={(t) => onChangeOpt(t.target)}
-            />
-          </span>
-          {" X "}
-          <span className="flex w-full justify-around">
-            {"Width:  "}
-            <input
-              type="number"
-              name="dimensions.width"
-              className="border-2 text-center rounded-xl w-1/4"
-              min={MIN_MAZE_DIMENSIONS.width}
-              max={MAX_MAZE_DIMENSIONS.width}
-              value={tempW}
-              onChange={(t) => setTempW(t.target.value)}
-              onBlur={(t) => onChangeOpt(t.target)}
-            />
-          </span>
+          <select
+            value={newOptions.difficulty}
+            onChange={(t) => onChangeOpt("difficulty", t.target.value)}
+          >
+            {Object.values(MazeDifficulty).map((d) => (
+              <option key={d} value={d} className="border-2 rounded-xl">
+                {d}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
     ) : (
       <div className="text-xl">
-        <span>
-          Maze Dimensions:{" "}
-          <span className="text-gray-500">{options.mazeDimensions.height}</span>
-          {" X "}
-          <span className="text-gray-500">{options.mazeDimensions.width}</span>
-        </span>
+        <span>Maze Difficulty: {options.difficulty}</span>
       </div>
     );
   }

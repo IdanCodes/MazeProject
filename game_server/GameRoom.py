@@ -74,7 +74,7 @@ class GameRoom:
     # (Does not send the new maze to the players)
     def generate_new_maze(self):
         self.created_at = time.time()
-        dims = self.game_options.maze_dimensions
+        dims = GameOptions.difficultyToDims(self.game_options.difficulty)
         self.stored_maze: Maze = generateDFSRectMaze(dims["width"], dims["height"])
 
     def on_player_connect(self, player: Player):

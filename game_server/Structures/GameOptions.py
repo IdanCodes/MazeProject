@@ -1,61 +1,54 @@
+from enum import Enum
 from types import SimpleNamespace
 
+class MazeDifficulty(Enum):
+    Easy = "EASY"
+    Medium = "MEDIUM"
+    Hard = "HARD"
 
-DEFAULT_MAZE_DIMENSIONS = {
-    "width": 12,
-    "height": 12
-}
 class GameOptions:
-    maze_dimensions: dict = DEFAULT_MAZE_DIMENSIONS
-    # TODO: add time limit
+    difficulty: MazeDifficulty = MazeDifficulty.Medium
 
     def __init__(self):
         pass
 
-    # get a json representation of the options
     def get_options(self) -> dict:
+        print(self.difficulty.value)
         return {
-            "mazeDimensions": self.maze_dimensions
+            "difficulty": self.difficulty.value
         }
     
-    # Loads game options
-    def load_game_options(self, opts) -> bool:
-        if not(type(opts) is dict): return
-        # Step 1 - get new values
-        dims = self.maze_dimensions
-        try:
-            dims = opts["mazeDimensions"]
-            if not is_valid_maze_dimensions(dims):
-                return False
-        except:
+    def load_game_options(self, opts: any) -> bool:
+        maze_difficulty = opts["difficulty"]
+        if not is_valid_maze_difficulty(maze_difficulty):
             return False
         
-        # Step 2 - set new values:
-        self.set_maze_dimensions(dims)
-        
-        return True
-
-    # new_dims: { "width": number, "height": number }
-    # returns whether setting the dimensions was successful (dimensions were valid)
-    def set_maze_dimensions(self, new_dims: dict) -> bool:
-        if not is_valid_maze_dimensions():
-            return False
-
-        self.maze_dimensions["width"] = new_dims["width"]
-        self.maze_dimensions["height"] = new_dims["height"]
-        return True
+        # set difficulty
+        self.difficulty = MazeDifficulty(maze_difficulty)
 
 
-# dims: {"width": number "height": number}
-def is_valid_maze_dimensions(dims: dict) -> bool:
-    MIN_MAZE_W = 5
-    MIN_MAZE_H = 5
-    MAX_MAZE_W = 25
-    MAX_MAZE_H = 25
-    w = h = None
+def is_valid_maze_difficulty(diff: any) -> bool:
     try:
-        w = dims["width"]
-        h = dims["height"]
+        MazeDifficulty(diff)
+        return True
     except: return False
-    return (type(w) is int) and (type(h) is int) and (MIN_MAZE_W <= w <= MAX_MAZE_W) and (MIN_MAZE_H <= h <= MAX_MAZE_H)
 
+
+def difficultyToDims(diff: MazeDifficulty) -> dict:
+    width = -1
+    height = -1
+    match (diff):
+        case MazeDifficulty.Easy:
+            width = height = 13
+            pass
+        case MazeDifficulty.Medium:
+            width = height = 18
+            pass
+        case MazeDifficulty.Hard:
+            width = height = 24
+            pass
+
+    return {
+        "width": width,
+        "height": height
+    }
