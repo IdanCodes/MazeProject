@@ -485,6 +485,7 @@ function RoomList({
           ) : (
             <p className="text-2xl my-auto">No Password</p>
           )}
+          <p>{room.gameActive ? "Game is active" : "Waiting for players..."}</p>
           <PrimaryButton
             className="text-5xl"
             disabled={roomIsFull(room)}
