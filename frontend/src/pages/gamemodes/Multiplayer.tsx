@@ -42,6 +42,9 @@ export default function Multiplayer(): JSX.Element {
   const gameOnMessageCb = useRef<{ cb: (msg: NetworkMessage) => void }>({
     cb: () => {},
   });
+  const gameOnResponseCb = useRef<{ cb: (res: ServerResponse) => void }>({
+    cb: () => {},
+  });
   const url = useRef<string>("");
   const [playerName, setPlayerName] = useState<string>("");
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
@@ -77,6 +80,7 @@ export default function Multiplayer(): JSX.Element {
   };
 
   const handleResponse = (res: ServerResponse) => {
+    gameOnResponseCb.current.cb(res);
     switch (res.responseTo) {
       case GameMsgType.ROOMS_LIST: {
         if (res.code != ResponseCode.SUCCESS) {
@@ -188,6 +192,7 @@ export default function Multiplayer(): JSX.Element {
           leaveRoom={leaveRoom}
           sendMessage={sendMessage}
           onMessageCb={gameOnMessageCb.current}
+          onResponseCb={gameOnResponseCb.current}
         />
       )}
     </>
@@ -505,11 +510,13 @@ function RoomList({
 function GamePanel({
   playerName,
   onMessageCb,
+  onResponseCb,
   sendMessage,
   leaveRoom,
 }: {
   playerName: string;
   onMessageCb: { cb: (msg: NetworkMessage) => void };
+  onResponseCb: { cb: (msg: ServerResponse) => void };
   sendMessage: (msgType: GameMsgType, data?: any | undefined) => void;
   leaveRoom: () => void;
 }): JSX.Element {
@@ -564,6 +571,7 @@ function GamePanel({
         }
       : { width: 1, height: 1 };
   }, [gameInstanceRef.current]);
+  const [gameOptionsError, setGameOptionsError] = useState<string>("");
 
   const { otherPlayers, onMessage } = useNetworkHandler(
     localPlayer,
@@ -584,7 +592,17 @@ function GamePanel({
     () => localPlayer.role === PlayerRole.ADMIN,
     [localPlayer],
   );
+
+  function onResponse(res: ServerResponse) {
+    switch (res.responseTo) {
+      case GameMsgType.GAME_OPTIONS:
+        setGameOptionsError(res.data);
+        break;
+    }
+  }
+
   onMessageCb.cb = onMessage;
+  onResponseCb.cb = onResponse;
 
   function sendStartGame() {
     sendMessage(GameMsgType.START_GAME);
@@ -642,8 +660,10 @@ function GamePanel({
                   <GameOptionsDisplay
                     canEditOptions={isAdmin}
                     options={gameOptions}
-                    setOptions={(newOptions) => {}} //TODO: implement
-                    gameOptionsError="" // TODO: implement
+                    setOptions={(newOptions) => {
+                      sendMessage(GameMsgType.GAME_OPTIONS, newOptions);
+                    }}
+                    gameOptionsError={gameOptionsError}
                   />
                 )}
               </>
@@ -804,7 +824,8 @@ function GameOptionsDisplay({
   }
   function saveEdit() {
     if (!isEditing) return;
-    // TODO: implement
+    setOptions(newOptions);
+    setIsEditing(false);
   }
 
   const onChangeOpt = (name: string, value: any) => {

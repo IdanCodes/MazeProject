@@ -13,7 +13,6 @@ class GameOptions:
         pass
 
     def get_options(self) -> dict:
-        print(self.difficulty.value)
         return {
             "difficulty": self.difficulty.value
         }
@@ -25,6 +24,7 @@ class GameOptions:
         
         # set difficulty
         self.difficulty = MazeDifficulty(maze_difficulty)
+        return True
 
 
 def is_valid_maze_difficulty(diff: any) -> bool:
