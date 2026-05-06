@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import PageTitle from "../components/PageTitle";
 import PrimaryButton from "../components/buttons/PrimaryButton";
 import { ButtonSize } from "../components/buttons/ButtonSize";
@@ -10,23 +10,31 @@ export const WS_PORT_PARAM = "wsPort";
 export const WS_TOKEN_PARAM = "wsToken";
 function Home() {
   const navigate = useNavigate();
+  // const wsServerUrl = useRef<string>("");
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const port = Number(
-      params.get(WS_PORT_PARAM) ?? localStorage.getItem(WS_PORT_PARAM),
-    );
-    const token =
-      params.get(WS_TOKEN_PARAM) ?? localStorage.getItem(WS_TOKEN_PARAM);
+  // useEffect(() => {
+  //   const params = new URLSearchParams(window.location.search);
+  //   const port = Number(
+  //     params.get(WS_PORT_PARAM) ?? localStorage.getItem(WS_PORT_PARAM),
+  //   );
+  //   const token =
+  //     params.get(WS_TOKEN_PARAM) ?? localStorage.getItem(WS_TOKEN_PARAM);
 
-    if (!port || !token) {
-      console.error("No token or port provided for WebSocket connection");
-      alert("No token or port provided for WebSocket connection");
-    } else {
-      localStorage.setItem(WS_PORT_PARAM, port.toString());
-      localStorage.setItem(WS_TOKEN_PARAM, token);
-    }
-  }, []);
+  //   if (!port || !token) {
+  //     console.error("No token or port provided for WebSocket connection");
+  //     alert("No token or port provided for WebSocket connection");
+  //     return;
+  //   }
+
+  //   localStorage.setItem(WS_PORT_PARAM, port.toString());
+  //   localStorage.setItem(WS_TOKEN_PARAM, token);
+  // }, []);
+
+  // useEffect(() => {
+  //   const port = localStorage.getItem(WS_PORT_PARAM);
+  //   const token = localStorage.getItem(WS_TOKEN_PARAM);
+  //   wsServerUrl.current = `ws://127.0.0.1:${port}?token=${token}`;
+  // }, []);
 
   return (
     <>

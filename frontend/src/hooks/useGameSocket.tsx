@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   GameMsgType,
   ResponseCode as ResponseCode,
@@ -9,9 +9,10 @@ import {
   parseGameServerMessage,
   parseGameServerResponse,
 } from "@src/utils/game-protocol";
-import { NetworkMessage, ServerResponse } from "@src/hooks/useNetworkHandler";
+import { NetworkMessage } from "@src/interfaces/NetworkMessage";
+import { ServerResponse } from "@src/interfaces/ServerResponse";
 
-export function useMazePlayerSocket(
+export function useGameSocket(
   url: string,
   handlers: {
     onMessage?: (msg: NetworkMessage) => void;
@@ -84,7 +85,7 @@ export function useMazePlayerSocket(
         }
 
         if (serverResponse.code != ResponseCode.SUCCESS)
-          return rej(`Server Error: ${serverResponse.data}`);
+          return rej(`Server Error: ${JSON.stringify(serverResponse)}`);
 
         // register event handlers
         setIsConnected(true);
@@ -128,13 +129,16 @@ export function useMazePlayerSocket(
     ws.current.close(1000);
   }
 
-  function sendMessage(msgType: GameMsgType, data?: any | undefined) {
-    if (!isConnected || !ws.current) return;
-    ws.current.send(buildGameRequest(msgType, data));
-  }
+  const sendMessage = useCallback(
+    (msgType: GameMsgType, data?: any | undefined) => {
+      if (!isConnected || !ws.current) return;
+      ws.current.send(buildGameRequest(msgType, data));
+    },
+    [isConnected, ws.current],
+  );
 
   return {
-    isConnected: isConnected,
+    isConnected,
     connect,
     disconnect,
     sendMessage,

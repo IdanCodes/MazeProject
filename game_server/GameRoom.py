@@ -104,12 +104,25 @@ class GameRoom:
         if player.role == RoomClientRole.ADMIN:
             if len(self.players) > 0: self.set_admin(self.players[0])
 
+    def send_game_to_player(self, player: Player):
+        player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
+        player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_options()))
+        for c in self.players:
+            if c.name == player.name: continue
+            player.send(build_network_msg(None, MsgType.PLAYER_CONNECTED, c.get_player_info()))
+        curr_admin = self.get_admin()
+        if curr_admin:
+            player.send(build_network_msg(None, MsgType.ROOM_ADMIN, curr_admin.name))
+
     # update the admin of the room
     def set_admin(self, player: Player):
         for p in self.players:
             p.role = RoomClientRole.PLAYER
         player.role = RoomClientRole.ADMIN
         self.send_broadcast(build_network_msg(None, MsgType.ROOM_ADMIN, player.name))
+
+    def get_admin(self) -> Player:
+        return next((p for p in self.players if p.role == RoomClientRole.ADMIN), None)
     
     def on_receive_message(self, sender: Player, msg_str: str):
         if not sender in self.players: return
@@ -128,6 +141,8 @@ class GameRoom:
             threading.Thread(target=self.send_broadcast, args=[build_network_msg(sender, bc_type, bc_data), exclude]).start()
 
         match req_type:
+            case MsgType.PLAYER_CONNECTED:
+                self.send_game_to_player(sender)
             case MsgType.UPDATE_POS:
                 self.update_pos(sender, req_data)
             case MsgType.SET_READY:

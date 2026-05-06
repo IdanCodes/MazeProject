@@ -19,7 +19,7 @@ import {
 import { CellType, Grid } from "@src/types/Grid";
 import { Maze } from "@src/types/Maze";
 import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
-import { useMazePlayerSocket } from "@src/hooks/useMazePlayerSocket";
+import { useGameSocket } from "@src/hooks/useGameSocket";
 import {
   isPlayerInfo,
   parsePlayerInfo,
@@ -27,38 +27,24 @@ import {
 } from "@src/interfaces/PlayerInfo";
 import { PlayerRole } from "@src/constants/PlayerRole";
 import { GameOptions, parseGameOptions } from "@src/interfaces/GameOptions";
+import { NetworkMessage } from "@src/interfaces/NetworkMessage";
+import { useNetworkContext } from "@src/contexts/NetworkContext";
 
-// const SERVER_PORT = 8080;
-// const SERVER_IP = "127.0.0.1";
-// export const SERVER_WS_URL: string = `ws://${SERVER_IP}:${SERVER_PORT}`;
-
-export interface NetworkMessage {
-  msgType: GameMsgType;
-  source: string;
-  data: any | undefined;
-}
-
-export interface ServerResponse {
-  code: ResponseCode;
-  responseTo: GameMsgType;
-  data: any | undefined;
-}
-
-export function useNetworkHandler(
+export function useGameNetworkHandler(
   localPlayer: PlayerInfo,
   canvasSize: { width: number; height: number },
   setMaze: (maze: Maze) => void,
   setPlayerRole: (action: SetStateAction<PlayerRole>) => void,
   setGameOptions: (newOptions: GameOptions) => void,
-  sendMessage: (msgType: GameMsgType, data?: any | undefined) => void,
   onStartGame: (startTime: number) => void,
   onFinishMaze: (place: number, timeMs: number) => void, // local player reaches end of maze
   onEndGame: (gameResults: { name: string; timeMs: number }[]) => void,
   posUpdateRate: number = 25,
 ): {
   otherPlayers: PlayerInfo[];
-  onMessage: (msg: NetworkMessage) => void;
 } {
+  const subscribedToCallbacks = useRef<boolean>(false);
+  const { onMessage, sendMessage } = useNetworkContext();
   const localPlayerPos = useMemo(
     () => localPlayer.position,
     [localPlayer.position],
@@ -71,39 +57,32 @@ export function useNetworkHandler(
   );
 
   // #region Server Message Handlers
-  function handleServerMessage(msg: NetworkMessage) {
-    switch (msg.msgType) {
-      case GameMsgType.MAZE:
-        return handleMessageMaze(msg);
-      case GameMsgType.UPDATE_POS:
-        return handleMessageUpdatePos(msg);
-      case GameMsgType.PLAYER_CONNECTED:
-        return handlePlayerConnected(msg);
-      case GameMsgType.PLAYER_DISCONNECTED:
-        return handlePlayerDisconnected(msg);
-      case GameMsgType.SET_READY:
-        return handleReadyUpdate(msg);
-      case GameMsgType.START_GAME:
-        return handleStartGame(msg);
-      case GameMsgType.PLAYER_FINISHED:
-        return handlePlayerFinished(msg);
-      case GameMsgType.END_GAME:
-        return handleEndGame(msg);
-      case GameMsgType.ROOM_ADMIN:
-        return handleSetRoomAdmin(msg);
-      case GameMsgType.GAME_OPTIONS:
-        return handleGameOptions(msg);
-      default:
-        break;
-    }
-  }
-
-  function handleMessageMaze(msg: NetworkMessage) {
-    const matrix = msg.data as CellType[][];
-    const grid = new Grid(matrix);
-    const maze = new Maze(grid);
-    setMaze(maze);
-  }
+  // function handleServerMessage(msg: NetworkMessage) {
+  //   switch (msg.msgType) {
+  //     case GameMsgType.MAZE:
+  //       return handleMessageMaze(msg);
+  //     case GameMsgType.UPDATE_POS:
+  //       return handleMessageUpdatePos(msg);
+  //     case GameMsgType.PLAYER_CONNECTED:
+  //       return handlePlayerConnected(msg);
+  //     case GameMsgType.PLAYER_DISCONNECTED:
+  //       return handlePlayerDisconnected(msg);
+  //     case GameMsgType.SET_READY:
+  //       return handleReadyUpdate(msg);
+  //     case GameMsgType.START_GAME:
+  //       return handleStartGame(msg);
+  //     case GameMsgType.PLAYER_FINISHED:
+  //       return handlePlayerFinished(msg);
+  //     case GameMsgType.END_GAME:
+  //       return handleEndGame(msg);
+  //     case GameMsgType.ROOM_ADMIN:
+  //       return handleSetRoomAdmin(msg);
+  //     case GameMsgType.GAME_OPTIONS:
+  //       return handleGameOptions(msg);
+  //     default:
+  //       break;
+  //   }
+  // }
 
   const updatePlayerPos = (posList: [string, Vector2][]) => {
     setOtherPlayers((op) => {
@@ -127,169 +106,348 @@ export function useNetworkHandler(
     });
   };
 
-  function handleMessageUpdatePos(msg: NetworkMessage) {
-    const data = msg.data;
-    if (!data || typeof data !== "object") return;
+  // function handleMessageUpdatePos(msg: NetworkMessage) {
+  //   const data = msg.data;
+  //   if (!data || typeof data !== "object") return;
 
-    const posList: [string, Vector2][] = [];
-    Object.entries(data).forEach(([name, rawPos]) => {
-      if (name === localPlayer.name) return;
+  //   const posList: [string, Vector2][] = [];
+  //   Object.entries(data).forEach(([name, rawPos]) => {
+  //     if (name === localPlayer.name) return;
 
-      const newPos = parseVector2(rawPos);
-      if (!newPos) return;
+  //     const newPos = parseVector2(rawPos);
+  //     if (!newPos) return;
 
-      const index = playerIndexByName(name);
-      if (index >= 0 && equalVec(otherPlayers[index].position, newPos)) return;
-      posList.push([name, newPos]);
+  //     const index = playerIndexByName(name);
+  //     if (index >= 0 && equalVec(otherPlayers[index].position, newPos)) return;
+  //     posList.push([name, newPos]);
+  //   });
+
+  //   if (posList) updatePlayerPos(posList);
+  // }
+
+  // function handlePlayerConnected(msg: NetworkMessage) {
+  //   const newPlayer = parsePlayerInfo(msg.data);
+  //   if (!newPlayer) return;
+  //   const index = otherPlayers.findIndex((p) => p.name === newPlayer.name);
+  //   if (index < 0) setOtherPlayers((op) => [...op, newPlayer]);
+  // }
+
+  // function handlePlayerDisconnected(msg: NetworkMessage) {
+  //   setOtherPlayers((op) => {
+  //     const newOp = [...op];
+  //     const index = newOp.findIndex((p) => p.name === msg.source);
+  //     if (index >= 0) newOp.splice(index, 1);
+  //     return newOp;
+  //   });
+  // }
+
+  // function handleReadyUpdate(msg: NetworkMessage) {
+  //   if (typeof msg.data != "boolean") return;
+  //   setOtherPlayers((op) => {
+  //     const newOp = [...op];
+  //     const index = newOp.findIndex((p) => p.name === msg.source);
+  //     if (index >= 0) newOp[index].isReady = msg.data;
+  //     return newOp;
+  //   });
+  // }
+
+  // function handleStartGame(msg: NetworkMessage) {
+  //   const data = msg.data;
+  //   if (!data || typeof data !== "object" || !data.maze || !data.startTime) {
+  //     console.error("useNetworkHandler: Invalid format for startGame message");
+  //     return;
+  //   }
+  //   console.log("Received start game...");
+  //   // update maze
+  //   const matrix = data.maze as CellType[][];
+  //   const grid = new Grid(matrix);
+  //   const maze = new Maze(grid);
+  //   setMaze(maze);
+  //   console.log("Finished setting maze.");
+
+  //   // Trigger game start
+  //   onStartGame(data.startTime);
+  // }
+
+  // function handlePlayerFinished(msg: NetworkMessage) {
+  //   const data = msg.data;
+  //   if (
+  //     !(data && typeof data === "object") ||
+  //     !(data.name && typeof data.name === "string") ||
+  //     !(data.timeMs && typeof data.timeMs === "number") ||
+  //     !(data.place && typeof data.place === "number")
+  //   ) {
+  //     console.error(
+  //       "useNetworkHandler: Invalid format for playerFinished message",
+  //     );
+  //     return;
+  //   }
+  //   const {
+  //     name,
+  //     timeMs,
+  //     place,
+  //   }: { name: string; timeMs: number; place: number } = msg.data;
+
+  //   console.log(
+  //     `Player "${name}" finished in place ${place} in ${timeMs / 10 / 100.0}s`,
+  //   );
+  //   // TODO: handle other players finishing
+  //   if (name != localPlayer.name) return;
+
+  //   onFinishMaze(place, timeMs);
+  // }
+
+  // function handleEndGame(msg: NetworkMessage) {
+  //   const data: { name: string; timeMs: number }[] = msg.data;
+  //   if (!(data && Array.isArray(data))) {
+  //     console.error(
+  //       "useNetworkHandler: Invalid format for endGame message",
+  //       msg,
+  //     );
+  //     return;
+  //   }
+  //   for (const x of data) {
+  //     if (
+  //       !(x && typeof x === "object") ||
+  //       !(x.name && typeof x.name === "string") ||
+  //       !(x.timeMs && typeof x.timeMs === "number")
+  //     ) {
+  //       console.error(
+  //         "useNetworkHandler: Invalid format for endGame message",
+  //         msg,
+  //       );
+  //       return;
+  //     }
+
+  //     onEndGame(data);
+  //   }
+  // }
+
+  // function handleSetRoomAdmin(msg: NetworkMessage) {
+  //   const newAdminName = msg.data;
+  //   if (!newAdminName || typeof newAdminName != "string") {
+  //     console.error(
+  //       "useNetworkHandler: Invalid argument for room admin! data:",
+  //       newAdminName,
+  //     );
+  //     return;
+  //   }
+
+  //   if (newAdminName == localPlayer.name) {
+  //     setOtherPlayers((op) => {
+  //       const newOp = [...op];
+  //       for (let i = 0; i < newOp.length; i++)
+  //         newOp[i].role = PlayerRole.PLAYER;
+  //       return newOp;
+  //     });
+  //     setPlayerRole(PlayerRole.ADMIN);
+  //     return;
+  //   }
+
+  //   const newAdminIdx = playerIndexByName(newAdminName);
+  //   if (newAdminIdx < 0)
+  //     return console.error(
+  //       "useNetworkHandler: New admin doesn't exist in room. data:",
+  //       newAdminName,
+  //     );
+
+  //   setOtherPlayers((op) => {
+  //     const newOp = [...op];
+  //     for (let i = 0; i < newOp.length; i++) newOp[i].role = PlayerRole.PLAYER;
+  //     newOp[newAdminIdx].role = PlayerRole.ADMIN;
+  //     return newOp;
+  //   });
+  //   setPlayerRole(PlayerRole.PLAYER);
+  // }
+
+  // function handleGameOptions(msg: NetworkMessage) {
+  //   const newOptions = parseGameOptions(msg.data);
+  //   if (!newOptions)
+  //     return console.error(
+  //       "useNetworkHandler: Received invalid game options",
+  //       msg,
+  //     );
+  //   setGameOptions(newOptions);
+  // }
+
+  useEffect(() => {
+    if (subscribedToCallbacks.current) return;
+    subscribedToCallbacks.current = true;
+
+    console.log("Subscribing...");
+    onMessage(GameMsgType.MAZE, (msg) => {
+      console.log("MAZE", msg);
+      const matrix = msg.data as CellType[][];
+      const grid = new Grid(matrix);
+      const maze = new Maze(grid);
+      setMaze(maze);
     });
 
-    if (posList) updatePlayerPos(posList);
-  }
+    onMessage(GameMsgType.UPDATE_POS, (msg) => {
+      const data = msg.data;
+      if (!data || typeof data !== "object") return;
 
-  function handlePlayerConnected(msg: NetworkMessage) {
-    const newPlayer = parsePlayerInfo(msg.data);
-    if (!newPlayer) return;
-    const index = otherPlayers.findIndex((p) => p.name === newPlayer.name);
-    if (index < 0) setOtherPlayers((op) => [...op, newPlayer]);
-  }
+      const posList: [string, Vector2][] = [];
+      Object.entries(data).forEach(([name, rawPos]) => {
+        if (name === localPlayer.name) return;
 
-  function handlePlayerDisconnected(msg: NetworkMessage) {
-    setOtherPlayers((op) => {
-      const newOp = [...op];
-      const index = newOp.findIndex((p) => p.name === msg.source);
-      if (index >= 0) newOp.splice(index, 1);
-      return newOp;
+        const newPos = parseVector2(rawPos);
+        if (!newPos) return;
+
+        const index = playerIndexByName(name);
+        if (index >= 0 && equalVec(otherPlayers[index].position, newPos))
+          return;
+        posList.push([name, newPos]);
+      });
+
+      if (posList) updatePlayerPos(posList);
     });
-  }
 
-  function handleReadyUpdate(msg: NetworkMessage) {
-    if (typeof msg.data != "boolean") return;
-    setOtherPlayers((op) => {
-      const newOp = [...op];
-      const index = newOp.findIndex((p) => p.name === msg.source);
-      if (index >= 0) newOp[index].isReady = msg.data;
-      return newOp;
+    onMessage(GameMsgType.PLAYER_CONNECTED, (msg) => {
+      const newPlayer = parsePlayerInfo(msg.data);
+      if (!newPlayer) return;
+      const index = otherPlayers.findIndex((p) => p.name === newPlayer.name);
+      if (index < 0) setOtherPlayers((op) => [...op, newPlayer]);
     });
-  }
 
-  function handleStartGame(msg: NetworkMessage) {
-    const data = msg.data;
-    if (!data || typeof data !== "object" || !data.maze || !data.startTime) {
-      console.error("useNetworkHandler: Invalid format for startGame message");
-      return;
-    }
-    console.log("Received start game...");
-    // update maze
-    const matrix = data.maze as CellType[][];
-    const grid = new Grid(matrix);
-    const maze = new Maze(grid);
-    setMaze(maze);
-    console.log("Finished setting maze.");
+    onMessage(GameMsgType.PLAYER_DISCONNECTED, (msg) => {
+      setOtherPlayers((op) => {
+        const newOp = [...op];
+        const index = newOp.findIndex((p) => p.name === msg.source);
+        if (index >= 0) newOp.splice(index, 1);
+        return newOp;
+      });
+    });
 
-    // Trigger game start
-    onStartGame(data.startTime);
-  }
+    onMessage(GameMsgType.SET_READY, (msg) => {
+      if (typeof msg.data != "boolean") return;
+      setOtherPlayers((op) => {
+        const newOp = [...op];
+        const index = newOp.findIndex((p) => p.name === msg.source);
+        if (index >= 0) newOp[index].isReady = msg.data;
+        return newOp;
+      });
+    });
 
-  function handlePlayerFinished(msg: NetworkMessage) {
-    const data = msg.data;
-    if (
-      !(data && typeof data === "object") ||
-      !(data.name && typeof data.name === "string") ||
-      !(data.timeMs && typeof data.timeMs === "number") ||
-      !(data.place && typeof data.place === "number")
-    ) {
-      console.error(
-        "useNetworkHandler: Invalid format for playerFinished message",
-      );
-      return;
-    }
-    const {
-      name,
-      timeMs,
-      place,
-    }: { name: string; timeMs: number; place: number } = msg.data;
+    onMessage(GameMsgType.START_GAME, (msg) => {
+      const data = msg.data;
+      if (!data || typeof data !== "object" || !data.maze || !data.startTime) {
+        console.error(
+          "useNetworkHandler: Invalid format for startGame message",
+        );
+        return;
+      }
+      console.log("Received start game...");
+      // update maze
+      const matrix = data.maze as CellType[][];
+      const grid = new Grid(matrix);
+      const maze = new Maze(grid);
+      setMaze(maze);
+      console.log("Finished setting maze.");
 
-    console.log(
-      `Player "${name}" finished in place ${place} in ${timeMs / 10 / 100.0}s`,
-    );
-    // TODO: handle other players finishing
-    if (name != localPlayer.name) return;
+      // Trigger game start
+      onStartGame(data.startTime);
+    });
 
-    onFinishMaze(place, timeMs);
-  }
-
-  function handleEndGame(msg: NetworkMessage) {
-    const data: { name: string; timeMs: number }[] = msg.data;
-    if (!(data && Array.isArray(data))) {
-      console.error(
-        "useNetworkHandler: Invalid format for endGame message",
-        msg,
-      );
-      return;
-    }
-    for (const x of data) {
+    onMessage(GameMsgType.PLAYER_FINISHED, (msg) => {
+      const data = msg.data;
       if (
-        !(x && typeof x === "object") ||
-        !(x.name && typeof x.name === "string") ||
-        !(x.timeMs && typeof x.timeMs === "number")
+        !(data && typeof data === "object") ||
+        !(data.name && typeof data.name === "string") ||
+        !(data.timeMs && typeof data.timeMs === "number") ||
+        !(data.place && typeof data.place === "number")
       ) {
         console.error(
+          "useNetworkHandler: Invalid format for playerFinished message",
+        );
+        return;
+      }
+      const {
+        name,
+        timeMs,
+        place,
+      }: { name: string; timeMs: number; place: number } = msg.data;
+
+      console.log(
+        `Player "${name}" finished in place ${place} in ${timeMs / 10 / 100.0}s`,
+      );
+      // TODO: handle other players finishing
+      if (name != localPlayer.name) return;
+
+      onFinishMaze(place, timeMs);
+    });
+
+    onMessage(GameMsgType.END_GAME, (msg) => {
+      const data: { name: string; timeMs: number }[] = msg.data;
+      if (!(data && Array.isArray(data)))
+        return console.error(
           "useNetworkHandler: Invalid format for endGame message",
           msg,
+        );
+
+      for (const x of data) {
+        if (
+          !(x && typeof x === "object") ||
+          !(x.name && typeof x.name === "string") ||
+          !(x.timeMs && typeof x.timeMs === "number")
+        )
+          return console.error(
+            "useNetworkHandler: Invalid format for endGame message",
+            msg,
+          );
+
+        onEndGame(data);
+      }
+    });
+
+    onMessage(GameMsgType.ROOM_ADMIN, (msg) => {
+      const newAdminName = msg.data;
+      if (!newAdminName || typeof newAdminName != "string") {
+        console.error(
+          "useNetworkHandler: Invalid argument for room admin! data:",
+          newAdminName,
         );
         return;
       }
 
-      onEndGame(data);
-    }
-  }
+      if (newAdminName == localPlayer.name) {
+        setOtherPlayers((op) => {
+          const newOp = [...op];
+          for (let i = 0; i < newOp.length; i++)
+            newOp[i].role = PlayerRole.PLAYER;
+          return newOp;
+        });
+        setPlayerRole(PlayerRole.ADMIN);
+        return;
+      }
 
-  function handleSetRoomAdmin(msg: NetworkMessage) {
-    const newAdminName = msg.data;
-    if (!newAdminName || typeof newAdminName != "string") {
-      console.error(
-        "useNetworkHandler: Invalid argument for room admin! data:",
-        newAdminName,
-      );
-      return;
-    }
+      const newAdminIdx = playerIndexByName(newAdminName);
+      if (newAdminIdx < 0)
+        return console.error(
+          "useNetworkHandler: New admin doesn't exist in room. data:",
+          newAdminName,
+        );
 
-    if (newAdminName == localPlayer.name) {
       setOtherPlayers((op) => {
         const newOp = [...op];
         for (let i = 0; i < newOp.length; i++)
           newOp[i].role = PlayerRole.PLAYER;
+        newOp[newAdminIdx].role = PlayerRole.ADMIN;
         return newOp;
       });
-      setPlayerRole(PlayerRole.ADMIN);
-      return;
-    }
-
-    const newAdminIdx = playerIndexByName(newAdminName);
-    if (newAdminIdx < 0)
-      return console.error(
-        "useNetworkHandler: New admin doesn't exist in room. data:",
-        newAdminName,
-      );
-
-    setOtherPlayers((op) => {
-      const newOp = [...op];
-      for (let i = 0; i < newOp.length; i++) newOp[i].role = PlayerRole.PLAYER;
-      newOp[newAdminIdx].role = PlayerRole.ADMIN;
-      return newOp;
+      setPlayerRole(PlayerRole.PLAYER);
     });
-    setPlayerRole(PlayerRole.PLAYER);
-  }
 
-  function handleGameOptions(msg: NetworkMessage) {
-    const newOptions = parseGameOptions(msg.data);
-    if (!newOptions)
-      return console.error(
-        "useNetworkHandler: Received invalid game options",
-        msg,
-      );
-    setGameOptions(newOptions);
-  }
+    onMessage(GameMsgType.GAME_OPTIONS, (msg) => {
+      const newOptions = parseGameOptions(msg.data);
+      if (!newOptions)
+        return console.error(
+          "useNetworkHandler: Received invalid game options",
+          msg,
+        );
+      setGameOptions(newOptions);
+    });
+  }, []);
 
   // #endregion
 
@@ -315,6 +473,5 @@ export function useNetworkHandler(
 
   return {
     otherPlayers,
-    onMessage: handleServerMessage,
   };
 }

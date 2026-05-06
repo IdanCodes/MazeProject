@@ -7,49 +7,45 @@ import { RoutePath } from "@src/constants/route-path";
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { useNavigate } from "react-router-dom";
 import { generateMaze, Maze } from "@src/types/Maze";
-// import GameOptionsSelector, {
-//   GameOptions,
-// } from "@src/components/GameOptionsSelector";
 
 export default function Singleplayer(): JSX.Element {
-  const [gameOptions, setGameOptions] = useState<GameOptions>({
-    mazeScale: 15,
-    mazeSize: MazeSize.Medium,
-  });
-  const [maze, setMaze] = useState<Maze>(generateMaze(gameOptions.mazeScale));
-  const navigate = useNavigate();
-
-  function handleClickGenerate() {
-    setMaze(generateMaze(gameOptions.mazeScale));
-  }
-
+  // const [maze, setMaze] = useState<Maze>(generateMaze(gameOptions.mazeScale));
+  // const navigate = useNavigate();
+  // function handleClickGenerate() {
+  //   setMaze(generateMaze(gameOptions.mazeScale));
+  // }
+  // return (
+  //   <>
+  //     <PageTitle text="Singleplayer" />
+  //     <br />
+  //     <div className="w-full place-items-center">
+  //       <GameInstance
+  //         gameOptions={gameOptions}
+  //         maze={maze}
+  //         otherPlayers={new Map()}
+  //       />
+  //       <div>
+  //         <GameOptionsSelector
+  //           gameOptionsState={[gameOptions, setGameOptions]}
+  //         />
+  //         <PrimaryButton className="text-3xl" onClick={handleClickGenerate}>
+  //           Generate
+  //         </PrimaryButton>
+  //       </div>
+  //       <div className="mx-auto w-fit">
+  //         <PrimaryButton
+  //           className="text-4xl"
+  //           onClick={() => navigate(RoutePath.Home)}
+  //         >
+  //           Home
+  //         </PrimaryButton>
+  //       </div>
+  //     </div>
+  //   </>
+  // );
   return (
-    <>
-      <PageTitle text="Singleplayer" />
-      <br />
-      <div className="w-full place-items-center">
-        <GameInstance
-          gameOptions={gameOptions}
-          maze={maze}
-          otherPlayers={new Map()}
-        />
-        <div>
-          <GameOptionsSelector
-            gameOptionsState={[gameOptions, setGameOptions]}
-          />
-          <PrimaryButton className="text-3xl" onClick={handleClickGenerate}>
-            Generate
-          </PrimaryButton>
-        </div>
-        <div className="mx-auto w-fit">
-          <PrimaryButton
-            className="text-4xl"
-            onClick={() => navigate(RoutePath.Home)}
-          >
-            Home
-          </PrimaryButton>
-        </div>
-      </div>
-    </>
+    <h1 className="text-center text-3xl">
+      Singleplayer mode is under construction...
+    </h1>
   );
 }

@@ -4,4 +4,8 @@ export const RoutePath = {
     Singleplayer: "/game/singleplayer",
     Multiplayer: "/game/multiplayer",
   },
+  Authentication: {
+    Login: "/auth/login",
+    Signup: "/auth/signup",
+  },
 };
