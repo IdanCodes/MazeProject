@@ -17,6 +17,7 @@ import { SignUpPage } from "./pages/SignUpPage";
 import { RedirectButton } from "./components/buttons/RedirectButton";
 import PageTitle from "./components/PageTitle";
 import { AuthenticatedHome, UnauthenticatedHome } from "./pages/Home";
+import { Stats } from "./pages/Stats";
 
 export const WS_PORT_PARAM = "wsPort";
 export const WS_TOKEN_PARAM = "wsToken";
@@ -221,7 +222,24 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
                   path={RoutePath.GameModes.Multiplayer}
                   element={<Multiplayer playerName={username} />}
                 />
-                <Route path="*" element={<LoadingSpinner />} />
+                <Route
+                  path={RoutePath.Stats}
+                  element={<Stats username={username} />}
+                />
+                <Route
+                  path="*"
+                  element={
+                    <>
+                      <RedirectButton
+                        path={RoutePath.Home}
+                        className="text-3xl"
+                      >
+                        Home
+                      </RedirectButton>
+                      <LoadingSpinner />
+                    </>
+                  }
+                />
               </Routes>
             </div>
           </>

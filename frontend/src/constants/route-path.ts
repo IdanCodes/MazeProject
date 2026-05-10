@@ -8,4 +8,5 @@ export const RoutePath = {
     Login: "/auth/login",
     Signup: "/auth/signup",
   },
+  Stats: "/stats",
 };

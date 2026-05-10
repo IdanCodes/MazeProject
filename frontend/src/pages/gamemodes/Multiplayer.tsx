@@ -3,7 +3,6 @@ import { ErrorLabel } from "@src/components/ErrorLabel";
 import GameInstance, { GameInstanceHandle } from "@src/components/GameInstance";
 import PageTitle from "@src/components/PageTitle";
 import { GameMsgType, ResponseCode } from "@src/constants/game-msg-type";
-import { useGameSocket as useGameSocket } from "@src/hooks/useGameSocket";
 import { useGameNetworkHandler } from "@src/hooks/useNetworkHandler";
 import { usePassedState } from "@src/hooks/usePassedState";
 import {
@@ -16,14 +15,10 @@ import { equalVec, Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
 import { Maze } from "@src/types/Maze";
 import { MazeSize } from "@src/types/maze-size";
 import { PassedState, SetStateFunc } from "@src/types/passed-state";
-import { getUsernameError, maxNameLen } from "@src/utils/game-protocol";
 import clsx from "clsx";
 import { JSX, useEffect, useMemo, useRef, useState } from "react";
-import { WS_PORT_PARAM, WS_TOKEN_PARAM } from "../Home";
 import { PlayerRole } from "@src/constants/PlayerRole";
 import { GameOptions, MazeDifficulty } from "@src/interfaces/GameOptions";
-import { NetworkMessage } from "@src/interfaces/NetworkMessage";
-import { ServerResponse } from "@src/interfaces/ServerResponse";
 import { useNetworkContext } from "@src/contexts/NetworkContext";
 import { RedirectButton } from "@src/components/buttons/RedirectButton";
 import { RoutePath } from "@src/constants/route-path";
@@ -33,14 +28,6 @@ export default function Multiplayer({
 }: {
   playerName: string;
 }): JSX.Element {
-  // const gameOnMessageCb = useRef<{ cb: (msg: NetworkMessage) => void }>({
-  //   cb: () => {},
-  // });
-  // const gameOnResponseCb = useRef<{ cb: (res: ServerResponse) => void }>({
-  //   cb: () => {},
-  // });
-  // const wsServerUrl = useRef<string>("");
-  // const [playerName, setPlayerName] = useState<string>("");
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
   const [createRoomError, setCreateRoomError] = useState<string>("");
   const [roomsError, setRoomsError] = useState<string>("");
@@ -48,33 +35,8 @@ export default function Multiplayer({
     undefined,
   ); // undefined -> in lobby
 
-  // useEffect(() => {
-  //   const port = localStorage.getItem(WS_PORT_PARAM);
-  //   const token = localStorage.getItem(WS_TOKEN_PARAM);
-  //   wsServerUrl.current = `ws://127.0.0.1:${port}?token=${token}`;
-  // }, []);
-
-  // const handleOnClose = (e: WebSocketEventMap["close"]) => {
-  //   console.log("Disconnected from server");
-  // };
-
   const { onMessage, onResponse, disconnect, isConnected, sendMessage } =
     useNetworkContext();
-
-  // const handleMessage = (msg: NetworkMessage) => {
-  //   // gameOnMessageCb.current.cb(msg);
-  //   switch (msg.msgType) {
-  //     case GameMsgType.JOIN_ROOM: {
-  //       const data = msg.data;
-  //       if (!data || !isRoomInfo(data)) {
-  //         console.error("Join room failed! No room info provided.\nMsg:", msg);
-  //         return;
-  //       }
-  //       setCurrentRoom(data);
-  //       return;
-  //     }
-  //   }
-  // };
 
   useEffect(() => {
     const callerId = "Multiplayer.useEffect";
@@ -121,65 +83,11 @@ export default function Multiplayer({
     });
 
     refreshRoomsList();
-
-    // setPlayerName(sessionStorage.getItem("username") ?? "INVALID");
   }, []);
 
   useEffect(() => {
     if (!currentRoom) refreshRoomsList();
   }, [currentRoom]);
-
-  // const handleResponse = (res: ServerResponse) => {
-  //   gameOnResponseCb.current.cb(res);
-  //   switch (res.responseTo) {
-  //     case GameMsgType.ROOMS_LIST: {
-  //       if (res.code != ResponseCode.SUCCESS) {
-  //         console.error("Encountered error when retrieving rooms list");
-  //         setRoomsError(
-  //           "Could not retrieve rooms list" +
-  //             (res.data.error && ` - ${res.data.error}`),
-  //         );
-  //         setRoomsList([]);
-  //         return;
-  //       }
-  //       setRoomsList(res.data);
-  //       return;
-  //     }
-
-  //     case GameMsgType.CREATE_ROOM: {
-  //       if (res.code != ResponseCode.SUCCESS) {
-  //         console.error("Encountered an error when creating a room", res.data);
-  //         setCreateRoomError(res.data.error);
-  //         return;
-  //       }
-  //       console.log("Room created successfuly!");
-  //       return;
-  //     }
-
-  //     case GameMsgType.JOIN_ROOM: {
-  //       if (res.code == ResponseCode.SUCCESS) {
-  //         console.log("Successfuly joined room");
-  //         setRoomsError("");
-  //       } else
-  //         setRoomsError(
-  //           "Could not join room" + (res.data.error && ` - ${res.data.error}`),
-  //         );
-  //       return;
-  //     }
-  //   }
-  // };
-
-  // const { sendMessage, connect, disconnect, isConnected } = useGameSocket(
-  //   wsServerUrl.current,
-  //   {
-  //     onConnect: () => {
-  //       console.log("Connection is open!");
-  //     },
-  //     onMessage: (msg: NetworkMessage) => handleMessage(msg),
-  //     onResponse: (res: ServerResponse) => handleResponse(res),
-  //     onDisconnect: (e: CloseEvent) => handleOnClose(e),
-  //   },
-  // );
 
   const createRoom = (name: string, capacity: number, password: string) => {
     setCreateRoomError("");
@@ -212,20 +120,9 @@ export default function Multiplayer({
   return (
     <>
       <PageTitle text="Multiplayer" />
-      {/* {!isConnected && (
-      <UsernameInputPanel
-        playerNameState={[playerName, setPlayerName]}
-        connect={connect}
-      />
-    )} */}
       {isConnected && !currentRoom && (
         <>
           <p className="text-3xl">Name: {playerName}</p>
-          {/* <DisconnectButton
-            handleDisconnect={() => {
-              disconnect();
-            }}
-          /> */}
           <RedirectButton path={RoutePath.Home}>Back</RedirectButton>
           <RoomsPanel
             handleCreateRoom={createRoom}
@@ -246,51 +143,6 @@ export default function Multiplayer({
       )}
     </>
   );
-
-  function ConnectButton({
-    handleConnect,
-    disabled,
-  }: {
-    handleConnect: React.MouseEventHandler;
-    disabled: boolean;
-  }) {
-    return (
-      <PrimaryButton
-        disabled={disabled}
-        className="bg-green-500 hover:bg-green-600 text-2xl p-3 rounded-2xl"
-        onClick={handleConnect}
-      >
-        Connect
-      </PrimaryButton>
-    );
-  }
-
-  function NameInput({
-    nameState,
-    disabled,
-  }: {
-    nameState: PassedState<string>;
-    disabled: boolean;
-  }) {
-    const [name, setName] = usePassedState(nameState);
-
-    return (
-      <>
-        <input
-          type="text"
-          className="bg-white text-2xl rounded-md p-2"
-          disabled={disabled}
-          placeholder="Name"
-          maxLength={maxNameLen}
-          value={name}
-          onChange={(e) => {
-            e.preventDefault();
-            setName(e.target.value);
-          }}
-        />
-      </>
-    );
-  }
 
   function RoomsPanel({
     refreshList,
@@ -667,7 +519,7 @@ export default function Multiplayer({
       <div>
         <PrimaryButton
           onClick={leaveRoom}
-          className="bg-red-500 hover:bg-red-600 p-3 rounded-2xl text-xl absolute mx-3 my-2"
+          className="bg-red-500 hover:bg-red-600 rounded-2xl text-xl mx-3 absolute"
         >
           Leave Room
         </PrimaryButton>
