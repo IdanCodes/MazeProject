@@ -22,7 +22,9 @@ export function useGameSocket(
   } = {},
 ): {
   isConnected: boolean;
-  connect: (name: string) => Promise<string>;
+  // connect: (name: string) => Promise<string>;
+  signUp: (username: string, password: string) => Promise<string>;
+  login: (username: string, password: string) => Promise<string>;
   disconnect: () => void;
   sendMessage: (msgType: GameMsgType, data?: any | undefined) => void;
 } {
@@ -55,10 +57,13 @@ export function useGameSocket(
   };
 
   // connect to the server with a name
-  function connect(name: string): Promise<string> {
+  function authenticate_user(
+    auth_msg: GameMsgType,
+    username: string,
+    password: string,
+  ): Promise<string> {
     return new Promise((res, rej) => {
       if (isConnected) return rej("Already connected");
-      if (getUsernameError(name) !== null) return rej("Invalid name");
 
       console.log("Connecting...");
 
@@ -73,10 +78,7 @@ export function useGameSocket(
         }
 
         const serverResponse = parseGameServerResponse(serverMsg.data);
-        if (
-          !serverResponse ||
-          serverResponse.responseTo != GameMsgType.SET_NAME
-        ) {
+        if (!serverResponse || serverResponse.responseTo != auth_msg) {
           console.error(
             "Received unexpected response from server:",
             serverResponse,
@@ -85,7 +87,7 @@ export function useGameSocket(
         }
 
         if (serverResponse.code != ResponseCode.SUCCESS)
-          return rej(`Server Error: ${JSON.stringify(serverResponse)}`);
+          return rej(serverResponse.data ?? "Unexpected Server Error");
 
         // register event handlers
         setIsConnected(true);
@@ -101,7 +103,7 @@ export function useGameSocket(
         ws.current.onopen = ws.current.onerror = null;
         ws.current.onmessage = handleConnectResponse;
         ws.current.onclose = handleClose;
-        ws.current.send(buildGameRequest(GameMsgType.SET_NAME, name));
+        ws.current.send(buildGameRequest(auth_msg, { username, password }));
       };
 
       const handleConnectError = (e: WebSocketEventMap["error"]) => {
@@ -124,6 +126,11 @@ export function useGameSocket(
     });
   }
 
+  const signUp = (username: string, password: string): Promise<string> =>
+    authenticate_user(GameMsgType.SIGN_UP, username, password);
+  const login = (username: string, password: string): Promise<string> =>
+    authenticate_user(GameMsgType.LOGIN, username, password);
+
   function disconnect() {
     if (!isConnected || !ws.current) return;
     ws.current.close(1000);
@@ -139,7 +146,9 @@ export function useGameSocket(
 
   return {
     isConnected,
-    connect,
+    // connect: authenticate_user,
+    login,
+    signUp,
     disconnect,
     sendMessage,
   };

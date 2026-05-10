@@ -42,7 +42,9 @@ export function CredentialsForm({
                 className="text-2xl border-2 rounded-xl py-1 px-1"
                 placeholder="Username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  if (!disabled) setUsername(e.target.value);
+                }}
               ></input>
             </div>
             <div className="flex justify-start gap-3">
@@ -53,7 +55,9 @@ export function CredentialsForm({
                   placeholder="Password"
                   value={password}
                   type={hidePassword ? "password" : "text"}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    if (!disabled) setPassword(e.target.value);
+                  }}
                 />
                 <PrimaryButton
                   className="mx-1 w-20 text-xl bg-gray-500 hover:bg-gray-500/90 active:bg-gray-500/80"

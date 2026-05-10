@@ -22,9 +22,6 @@ export function LoginPage({
 
   useEffect(() => {
     setUsername("");
-    return () => {
-      setUsername("");
-    };
   }, []);
 
   function doLogin() {
@@ -35,12 +32,11 @@ export function LoginPage({
     login(password)
       .then((val) => {
         console.log("Login Response:", val);
+        navigate(RoutePath.Home);
       })
       .catch((err) => {
         console.error("Error in login! Error:", err);
         setLoginError(err);
-      })
-      .finally(() => {
         setDisableLogin(false);
       });
   }

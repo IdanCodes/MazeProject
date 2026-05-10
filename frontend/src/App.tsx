@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import "./index.css";
 import Home from "./pages/Home";
 import { RoutePath } from "@src/constants/route-path";
@@ -13,6 +13,8 @@ import { NetworkContext, NetworkContextType } from "./contexts/NetworkContext";
 import { GameMsgType, ResponseCode } from "./constants/game-msg-type";
 import LoadingSpinner from "./components/LoadingSpinner";
 import { getRandomInt } from "./utils/common-helpers";
+import { LoginPage } from "./pages/LoginPage";
+import { SignUpPage } from "./pages/SignUpPage";
 
 export const WS_PORT_PARAM = "wsPort";
 export const WS_TOKEN_PARAM = "wsToken";
@@ -50,9 +52,13 @@ function AppNetworkConfigWrapper() {
   );
 }
 
-function App({ wsServerUrl }: { wsServerUrl: string }) {
+function useNetworkContextHandler(wsServerUrl: string): {
+  networkContext: NetworkContextType;
+  signUp: (username: string, password: string) => Promise<string>;
+  login: (username: string, password: string) => Promise<string>;
+} {
   const startedConnectLoop = useRef<boolean>(false);
-  const { sendMessage, connect, disconnect, isConnected } = useGameSocket(
+  const { sendMessage, login, signUp, disconnect, isConnected } = useGameSocket(
     wsServerUrl,
     {
       onConnect: () => {
@@ -118,50 +124,112 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
 
   function triggerOnDisconnect(e: CloseEvent) {
     // // TODO: Call Subscribers
-    console.log("Disconnected! Reconnecting in 2 seconds. CloseEvent:", e);
-    setTimeout(attemptConnect, 2000);
+    // console.log("Disconnected! Reconnecting in 2 seconds. CloseEvent:", e);
+    // setTimeout(attemptConnect, 2000);
   }
 
-  const attemptConnect = () => {
-    if (isConnected) return;
-    let username = sessionStorage.getItem("username");
-    if (!username) {
-      username = `USER${getRandomInt(1000, 100000)}`;
-      sessionStorage.setItem("username", username);
-    }
-    connect(username);
-  };
+  // const attemptConnect = () => {
+  //   if (isConnected) return;
+  //   let username = sessionStorage.getItem("username");
+  //   if (!username) {
+  //     username = `USER${getRandomInt(1000, 100000)}`;
+  //     sessionStorage.setItem("username", username);
+  //   }
+  //   connect(username);
+  // };
 
-  useEffect(() => {
-    if (startedConnectLoop.current) return;
-    startedConnectLoop.current = true;
-    attemptConnect();
-  }, []);
+  // useEffect(() => {
+  //   if (startedConnectLoop.current) return;
+  //   startedConnectLoop.current = true;
+  //   attemptConnect();
+  // }, []);
 
-  onResponse(GameMsgType.SET_NAME, (res) => {
-    const RECONNECT_TIMEOUT_MS = 2000;
-    if (res.code == ResponseCode.ERROR)
-      setTimeout(attemptConnect, RECONNECT_TIMEOUT_MS);
-  });
+  // onResponse(GameMsgType.SET_NAME, (res) => {
+  //   const RECONNECT_TIMEOUT_MS = 2000;
+  //   if (res.code == ResponseCode.ERROR)
+  //     setTimeout(attemptConnect, RECONNECT_TIMEOUT_MS);
+  // });
+
+  return { networkContext, login, signUp };
+}
+
+function App({ wsServerUrl }: { wsServerUrl: string }) {
+  const navigate = useNavigate();
+  const { networkContext, login, signUp } =
+    useNetworkContextHandler(wsServerUrl);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [username, setUsername] = useState<string>("");
 
   return (
     <NetworkContext.Provider value={networkContext}>
-      {isConnected ? (
-        <>
-          <div className="py-5">
-            <Routes>
-              <Route path={RoutePath.Home} element={<Home />} />
-              <Route
-                path={RoutePath.GameModes.Singleplayer}
-                element={<Singleplayer />}
-              />
-              <Route
-                path={RoutePath.GameModes.Multiplayer}
-                element={<Multiplayer />}
-              />
-            </Routes>
-          </div>
-        </>
+      {networkContext.isConnected || true ? (
+        isAuthenticated ? (
+          <>
+            <div className="py-5">
+              <Routes>
+                <Route
+                  path={RoutePath.Home}
+                  element={<Home username={username} />}
+                />
+                <Route
+                  path={RoutePath.GameModes.Singleplayer}
+                  element={<Singleplayer />}
+                />
+                <Route
+                  path={RoutePath.GameModes.Multiplayer}
+                  element={<Multiplayer playerName={username} />}
+                />
+                <Route path="*" element={<LoadingSpinner />} />
+              </Routes>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="py-5">
+              <Routes>
+                <Route path={RoutePath.Home} element={<Home />} />
+                <Route
+                  path={RoutePath.Authentication.Login}
+                  element={
+                    <LoginPage
+                      usernameState={[username, setUsername]}
+                      login={(p) =>
+                        new Promise<string>(async (res, rej) => {
+                          try {
+                            await login(username, p);
+                            navigate(RoutePath.Home);
+                            setIsAuthenticated(true);
+                          } catch (e: unknown) {
+                            rej(e);
+                          }
+                        })
+                      }
+                    />
+                  }
+                />
+                <Route
+                  path={RoutePath.Authentication.Signup}
+                  element={
+                    <SignUpPage
+                      usernameState={[username, setUsername]}
+                      signUp={(p) =>
+                        new Promise<string>(async (res, rej) => {
+                          try {
+                            await signUp(username, p);
+                            navigate(RoutePath.Home);
+                            setIsAuthenticated(true);
+                          } catch (e: unknown) {
+                            rej(e);
+                          }
+                        })
+                      }
+                    />
+                  }
+                />
+              </Routes>
+            </div>
+          </>
+        )
       ) : (
         <div>
           <p className="text-3xl text-center">Connecting...</p>

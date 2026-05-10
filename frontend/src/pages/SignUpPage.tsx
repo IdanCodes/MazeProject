@@ -22,9 +22,6 @@ export function SignUpPage({
 
   useEffect(() => {
     setUsername("");
-    return () => {
-      setUsername("");
-    };
   }, []);
 
   function doSignUp() {
@@ -35,12 +32,11 @@ export function SignUpPage({
     signUp(password)
       .then((val) => {
         console.log("SignUp Response:", val);
+        navigate(RoutePath.Home);
       })
       .catch((err) => {
         console.error("Error in sign up! Error:", err);
         setSignUpError(err);
-      })
-      .finally(() => {
         setDisableSignUp(false);
       });
   }

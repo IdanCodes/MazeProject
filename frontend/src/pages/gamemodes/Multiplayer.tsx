@@ -26,7 +26,11 @@ import { NetworkMessage } from "@src/interfaces/NetworkMessage";
 import { ServerResponse } from "@src/interfaces/ServerResponse";
 import { useNetworkContext } from "@src/contexts/NetworkContext";
 
-export default function Multiplayer(): JSX.Element {
+export default function Multiplayer({
+  playerName,
+}: {
+  playerName: string;
+}): JSX.Element {
   // const gameOnMessageCb = useRef<{ cb: (msg: NetworkMessage) => void }>({
   //   cb: () => {},
   // });
@@ -34,7 +38,7 @@ export default function Multiplayer(): JSX.Element {
   //   cb: () => {},
   // });
   // const wsServerUrl = useRef<string>("");
-  const [playerName, setPlayerName] = useState<string>("");
+  // const [playerName, setPlayerName] = useState<string>("");
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
   const [createRoomError, setCreateRoomError] = useState<string>("");
   const [roomsError, setRoomsError] = useState<string>("");
@@ -115,7 +119,7 @@ export default function Multiplayer(): JSX.Element {
 
     refreshRoomsList();
 
-    setPlayerName(sessionStorage.getItem("username") ?? "INVALID");
+    // setPlayerName(sessionStorage.getItem("username") ?? "INVALID");
   }, []);
 
   // const handleResponse = (res: ServerResponse) => {

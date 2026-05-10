@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import PageTitle from "../components/PageTitle";
 import PrimaryButton from "../components/buttons/PrimaryButton";
 import { ButtonSize } from "../components/buttons/ButtonSize";
@@ -8,8 +8,7 @@ import { RoutePath } from "@src/constants/route-path";
 
 export const WS_PORT_PARAM = "wsPort";
 export const WS_TOKEN_PARAM = "wsToken";
-function Home() {
-  const navigate = useNavigate();
+function Home({ username = null }: { username?: string | null }) {
   // const wsServerUrl = useRef<string>("");
 
   // useEffect(() => {
@@ -35,11 +34,23 @@ function Home() {
   //   const token = localStorage.getItem(WS_TOKEN_PARAM);
   //   wsServerUrl.current = `ws://127.0.0.1:${port}?token=${token}`;
   // }, []);
+  const isAuthenticated = useMemo(() => username != null, [username]);
+
+  return isAuthenticated ? (
+    <AuthenticatedHome username={username!} />
+  ) : (
+    <UnauthenticatedHome />
+  );
+}
+
+function AuthenticatedHome({ username }: { username: string }) {
+  const navigate = useNavigate();
 
   return (
     <>
       <PageTitle text="Maze Game" />
-      <div className="flex flex-col justify-center w-3/10 py-20 mx-auto gap-3">
+      <p className="text-2xl my-3 text-center">{`Welcome, ${username}`}</p>
+      <div className="flex flex-col justify-center w-3/10 py-10 mx-auto gap-3">
         <PrimaryButton
           className="text-4xl"
           onClick={() => navigate(RoutePath.GameModes.Singleplayer)}
@@ -52,6 +63,34 @@ function Home() {
           onClick={() => navigate(RoutePath.GameModes.Multiplayer)}
         >
           Multiplayer
+        </PrimaryButton>
+      </div>
+    </>
+  );
+}
+
+function UnauthenticatedHome() {
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <PageTitle text="Maze Game" />
+      <p className="text-2xl my-3 text-center">
+        Authenticate To Enter The Game
+      </p>
+      <div className="flex flex-col justify-center w-4/10 py-10 mx-auto gap-3">
+        <PrimaryButton
+          className="text-4xl"
+          onClick={() => navigate(RoutePath.Authentication.Login)}
+        >
+          Login
+        </PrimaryButton>
+        <PrimaryButton
+          className="text-4xl"
+          text="Multiplayer"
+          onClick={() => navigate(RoutePath.Authentication.Signup)}
+        >
+          Sign Up
         </PrimaryButton>
       </div>
     </>
