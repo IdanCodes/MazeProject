@@ -77,7 +77,8 @@ export default function Multiplayer({
   // };
 
   useEffect(() => {
-    onMessage(GameMsgType.JOIN_ROOM, (msg) => {
+    const callerId = "Multiplayer.useEffect";
+    onMessage(callerId, GameMsgType.JOIN_ROOM, (msg) => {
       const data = msg.data;
       if (!data || !isRoomInfo(data))
         return console.error(
@@ -87,7 +88,7 @@ export default function Multiplayer({
       setCurrentRoom(data);
     });
 
-    onResponse(GameMsgType.ROOMS_LIST, (res) => {
+    onResponse(callerId, GameMsgType.ROOMS_LIST, (res) => {
       if (res.code != ResponseCode.SUCCESS) {
         console.error("Encountered error when retrieving rooms list");
         setRoomsError(
@@ -100,7 +101,7 @@ export default function Multiplayer({
       setRoomsList(res.data);
     });
 
-    onResponse(GameMsgType.CREATE_ROOM, (res) => {
+    onResponse(callerId, GameMsgType.CREATE_ROOM, (res) => {
       if (res.code != ResponseCode.SUCCESS) {
         console.error("Encountered an error when creating a room", res.data);
         setCreateRoomError(res.data.error);
@@ -109,7 +110,7 @@ export default function Multiplayer({
       console.log("Room created successfuly!");
     });
 
-    onResponse(GameMsgType.JOIN_ROOM, (res) => {
+    onResponse(callerId, GameMsgType.JOIN_ROOM, (res) => {
       if (res.code == ResponseCode.SUCCESS) {
         console.log("Successfuly joined room");
         setRoomsError("");
@@ -123,6 +124,10 @@ export default function Multiplayer({
 
     // setPlayerName(sessionStorage.getItem("username") ?? "INVALID");
   }, []);
+
+  useEffect(() => {
+    if (!currentRoom) refreshRoomsList();
+  }, [currentRoom]);
 
   // const handleResponse = (res: ServerResponse) => {
   //   gameOnResponseCb.current.cb(res);
@@ -589,6 +594,7 @@ export default function Multiplayer({
 
     const { otherPlayers } = useGameNetworkHandler(
       localPlayer,
+      "GamePanel.useGameNetworkHandler",
       canvasDimensions,
       setMaze,
       setPlayerRole,
@@ -609,7 +615,7 @@ export default function Multiplayer({
     useEffect(() => {
       if (finishedSetup.current) return;
       finishedSetup.current = true;
-      onResponse(GameMsgType.GAME_OPTIONS, (res) =>
+      onResponse("GamePanel.useEffect", GameMsgType.GAME_OPTIONS, (res) =>
         setGameOptionsError(res.data),
       );
 
@@ -659,7 +665,12 @@ export default function Multiplayer({
       <>Waiting for maze...</>
     ) : (
       <div>
-        {/* //TODO: <DisconnectButton handleDisconnect={leaveRoom} /> */}
+        <PrimaryButton
+          onClick={leaveRoom}
+          className="bg-red-500 hover:bg-red-600 p-3 rounded-2xl text-xl absolute mx-3 my-2"
+        >
+          Leave Room
+        </PrimaryButton>
         <div className="flex flex-col items-center">
           <div className="flex flex-col justify-center w-fit">
             <div className="mx-auto  w-full">

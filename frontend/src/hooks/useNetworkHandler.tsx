@@ -32,6 +32,7 @@ import { useNetworkContext } from "@src/contexts/NetworkContext";
 
 export function useGameNetworkHandler(
   localPlayer: PlayerInfo,
+  callerId: string,
   canvasSize: { width: number; height: number },
   setMaze: (maze: Maze) => void,
   setPlayerRole: (action: SetStateAction<PlayerRole>) => void,
@@ -275,7 +276,7 @@ export function useGameNetworkHandler(
     subscribedToCallbacks.current = true;
 
     console.log("Subscribing...");
-    onMessage(GameMsgType.MAZE, (msg) => {
+    onMessage(callerId, GameMsgType.MAZE, (msg) => {
       console.log("MAZE", msg);
       const matrix = msg.data as CellType[][];
       const grid = new Grid(matrix);
@@ -283,7 +284,7 @@ export function useGameNetworkHandler(
       setMaze(maze);
     });
 
-    onMessage(GameMsgType.UPDATE_POS, (msg) => {
+    onMessage(callerId, GameMsgType.UPDATE_POS, (msg) => {
       const data = msg.data;
       if (!data || typeof data !== "object") return;
 
@@ -303,14 +304,14 @@ export function useGameNetworkHandler(
       if (posList) updatePlayerPos(posList);
     });
 
-    onMessage(GameMsgType.PLAYER_CONNECTED, (msg) => {
+    onMessage(callerId, GameMsgType.PLAYER_CONNECTED, (msg) => {
       const newPlayer = parsePlayerInfo(msg.data);
       if (!newPlayer) return;
       const index = otherPlayers.findIndex((p) => p.name === newPlayer.name);
       if (index < 0) setOtherPlayers((op) => [...op, newPlayer]);
     });
 
-    onMessage(GameMsgType.PLAYER_DISCONNECTED, (msg) => {
+    onMessage(callerId, GameMsgType.PLAYER_DISCONNECTED, (msg) => {
       setOtherPlayers((op) => {
         const newOp = [...op];
         const index = newOp.findIndex((p) => p.name === msg.source);
@@ -319,7 +320,7 @@ export function useGameNetworkHandler(
       });
     });
 
-    onMessage(GameMsgType.SET_READY, (msg) => {
+    onMessage(callerId, GameMsgType.SET_READY, (msg) => {
       if (typeof msg.data != "boolean") return;
       setOtherPlayers((op) => {
         const newOp = [...op];
@@ -329,7 +330,7 @@ export function useGameNetworkHandler(
       });
     });
 
-    onMessage(GameMsgType.START_GAME, (msg) => {
+    onMessage(callerId, GameMsgType.START_GAME, (msg) => {
       const data = msg.data;
       if (!data || typeof data !== "object" || !data.maze || !data.startTime) {
         console.error(
@@ -349,7 +350,7 @@ export function useGameNetworkHandler(
       onStartGame(data.startTime);
     });
 
-    onMessage(GameMsgType.PLAYER_FINISHED, (msg) => {
+    onMessage(callerId, GameMsgType.PLAYER_FINISHED, (msg) => {
       const data = msg.data;
       if (
         !(data && typeof data === "object") ||
@@ -377,7 +378,7 @@ export function useGameNetworkHandler(
       onFinishMaze(place, timeMs);
     });
 
-    onMessage(GameMsgType.END_GAME, (msg) => {
+    onMessage(callerId, GameMsgType.END_GAME, (msg) => {
       const data: { name: string; timeMs: number }[] = msg.data;
       if (!(data && Array.isArray(data)))
         return console.error(
@@ -400,7 +401,7 @@ export function useGameNetworkHandler(
       }
     });
 
-    onMessage(GameMsgType.ROOM_ADMIN, (msg) => {
+    onMessage(callerId, GameMsgType.ROOM_ADMIN, (msg) => {
       const newAdminName = msg.data;
       if (!newAdminName || typeof newAdminName != "string") {
         console.error(
@@ -438,7 +439,7 @@ export function useGameNetworkHandler(
       setPlayerRole(PlayerRole.PLAYER);
     });
 
-    onMessage(GameMsgType.GAME_OPTIONS, (msg) => {
+    onMessage(callerId, GameMsgType.GAME_OPTIONS, (msg) => {
       const newOptions = parseGameOptions(msg.data);
       if (!newOptions)
         return console.error(

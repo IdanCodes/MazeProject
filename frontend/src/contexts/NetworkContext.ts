@@ -5,8 +5,16 @@ import { createContext, useContext } from "react";
 
 export interface NetworkContextType {
   // TODO: specify GameMsgType when subscribing
-  onMessage: (msgType: GameMsgType, cb: (msg: NetworkMessage) => void) => void;
-  onResponse: (resType: GameMsgType, cb: (res: ServerResponse) => void) => void;
+  onMessage: (
+    callerId: string,
+    msgType: GameMsgType,
+    cb: (msg: NetworkMessage) => void,
+  ) => void;
+  onResponse: (
+    callerId: string,
+    resType: GameMsgType,
+    cb: (res: ServerResponse) => void,
+  ) => void;
   sendMessage: (msgType: GameMsgType, data?: any | undefined) => void;
   // TODO: remvoe if unnecessary
   //   onDisconnect?: (cb: (e: CloseEvent) => void) => void;

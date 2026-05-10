@@ -72,27 +72,34 @@ function useNetworkContextHandler(wsServerUrl: string): {
     },
   );
   const onMessageCallbacks = useRef<
-    Map<GameMsgType, ((msg: NetworkMessage) => void)[]>
+    Map<GameMsgType, Map<string, (msg: NetworkMessage) => void>>
   >(new Map());
   const onResponseCallbacks = useRef<
-    Map<GameMsgType, ((msg: ServerResponse) => void)[]>
+    Map<GameMsgType, Map<string, (msg: ServerResponse) => void>>
   >(new Map());
   // const onDisconnectCallbacks = useRef<((e: CloseEvent) => void)[]>([]);
 
   const onMessage = (
+    callerId: string,
     msgType: GameMsgType,
     cb: (msg: NetworkMessage) => void,
   ) => {
-    const currCallbacks = onMessageCallbacks.current.get(msgType) ?? [];
-    onMessageCallbacks.current.set(msgType, [...currCallbacks, cb]);
+    const currCallbackPairs =
+      onMessageCallbacks.current.get(msgType) ?? new Map();
+    currCallbackPairs.set(callerId, cb);
+    onMessageCallbacks.current.set(msgType, currCallbackPairs);
+    // onMessageCallbacks.current.set(msgType, [...currCallbacks, [callerId, cb]]);
   };
 
   const onResponse = (
+    callerId: string,
     msgType: GameMsgType,
     cb: (msg: ServerResponse) => void,
   ) => {
-    const currCallbacks = onResponseCallbacks.current.get(msgType) ?? [];
-    onResponseCallbacks.current.set(msgType, [...currCallbacks, cb]);
+    const currCallbackPairs =
+      onResponseCallbacks.current.get(msgType) ?? new Map();
+    currCallbackPairs.set(callerId, cb);
+    onResponseCallbacks.current.set(msgType, currCallbackPairs);
   };
 
   // const onDisconnect = (cb: (e: CloseEvent) => void) => {
@@ -115,13 +122,14 @@ function useNetworkContextHandler(wsServerUrl: string): {
     const callbacks = onMessageCallbacks.current.get(msg.msgType);
     if (!callbacks) return;
 
-    for (const cb of callbacks) cb(msg);
+    for (const cb of callbacks.values()) cb(msg);
   }
 
   function triggerOnResponse(res: ServerResponse) {
     const callbacks = onResponseCallbacks.current.get(res.responseTo);
     if (!callbacks) return;
-    for (const cb of callbacks) cb(res);
+
+    for (const cb of callbacks.values()) cb(res);
   }
 
   function triggerOnDisconnect(e: CloseEvent) {
