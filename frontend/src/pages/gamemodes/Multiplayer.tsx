@@ -214,11 +214,11 @@ export default function Multiplayer({
       {isConnected && !currentRoom && (
         <>
           <p className="text-3xl">Name: {playerName}</p>
-          <DisconnectButton
+          {/* <DisconnectButton
             handleDisconnect={() => {
               disconnect();
             }}
-          />
+          /> */}
           <RoomsPanel
             handleCreateRoom={createRoom}
             handleJoinRoom={joinRoom}
@@ -282,21 +282,6 @@ export default function Multiplayer({
         onClick={handleConnect}
       >
         Connect
-      </PrimaryButton>
-    );
-  }
-
-  function DisconnectButton({
-    handleDisconnect,
-  }: {
-    handleDisconnect: () => void;
-  }) {
-    return (
-      <PrimaryButton
-        className="bg-red-500 hover:bg-red-600 text-2xl p-3 rounded-2xl"
-        onClick={handleDisconnect}
-      >
-        Disconnect
       </PrimaryButton>
     );
   }
@@ -700,7 +685,7 @@ export default function Multiplayer({
       <>Waiting for maze...</>
     ) : (
       <div>
-        <DisconnectButton handleDisconnect={leaveRoom} />
+        {/* <DisconnectButton handleDisconnect={leaveRoom} /> */}
         <div className="flex flex-col items-center">
           <div className="flex flex-col justify-center w-fit">
             <div className="mx-auto  w-full">

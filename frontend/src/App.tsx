@@ -1,6 +1,5 @@
 import { Route, Routes, useNavigate } from "react-router-dom";
 import "./index.css";
-import Home from "./pages/Home";
 import { RoutePath } from "@src/constants/route-path";
 import Singleplayer from "@src/pages/gamemodes/Singleplayer";
 import Multiplayer from "./pages/gamemodes/Multiplayer";
@@ -17,6 +16,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { SignUpPage } from "./pages/SignUpPage";
 import { RedirectButton } from "./components/buttons/RedirectButton";
 import PageTitle from "./components/PageTitle";
+import { AuthenticatedHome, UnauthenticatedHome } from "./pages/Home";
 
 export const WS_PORT_PARAM = "wsPort";
 export const WS_TOKEN_PARAM = "wsToken";
@@ -126,7 +126,7 @@ function useNetworkContextHandler(wsServerUrl: string): {
 
   function triggerOnDisconnect(e: CloseEvent) {
     // // TODO: Call Subscribers
-    // console.log("Disconnected! Reconnecting in 2 seconds. CloseEvent:", e);
+    console.log("Disconnected! CloseEvent:", e);
     // setTimeout(attemptConnect, 2000);
   }
 
@@ -183,6 +183,12 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
       }
     });
 
+  const disconnectAction = () => {
+    networkContext.disconnect();
+    setIsAuthenticated(false);
+    navigate(RoutePath.Home);
+  };
+
   return (
     <NetworkContext.Provider value={networkContext}>
       {networkContext.isConnected || true ? (
@@ -192,7 +198,12 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
               <Routes>
                 <Route
                   path={RoutePath.Home}
-                  element={<Home username={username} />}
+                  element={
+                    <AuthenticatedHome
+                      username={username}
+                      disconnect={disconnectAction}
+                    />
+                  }
                 />
                 <Route
                   path={RoutePath.GameModes.Singleplayer}
@@ -210,7 +221,10 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
           <>
             <div className="py-5">
               <Routes>
-                <Route path={RoutePath.Home} element={<Home />} />
+                <Route
+                  path={RoutePath.Home}
+                  element={<UnauthenticatedHome />}
+                />
                 <Route
                   path={RoutePath.Authentication.Login}
                   element={
