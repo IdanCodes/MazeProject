@@ -1,5 +1,5 @@
+import { CredentialsForm } from "@src/components/authentication/CredentialsForm";
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
-import { ErrorLabel } from "@src/components/ErrorLabel";
 import { RoutePath } from "@src/constants/route-path";
 import { usePassedState } from "@src/hooks/usePassedState";
 import { PassedState } from "@src/types/passed-state";
@@ -54,44 +54,13 @@ export function SignUpPage({
           Back
         </PrimaryButton>
         <h1 className="text-3xl text-center">Sign Up</h1>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            doSignUp();
-          }}
-        >
-          <div className="my-4 mx-auto w-4/5 py-5 flex gap-3 flex-col border-3 rounded-2xl">
-            <div className="flex justify-around">
-              <p className="text-3xl">Username:</p>
-              <input
-                className="text-2xl border-2 rounded-xl py-1 px-1"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              ></input>
-            </div>
-            <div className="flex justify-around">
-              <p className="text-3xl">Password:</p>
-              <input
-                className="text-2xl border-2 rounded-xl py-1 px-1"
-                placeholder="Password"
-                value={password}
-                type="password"
-                onChange={(e) => setPassword(e.target.value)}
-              ></input>
-            </div>
-          </div>
-          <div className="mx-auto w-fit my-2">
-            <ErrorLabel text={signUpError} />
-          </div>
-          <PrimaryButton
-            btnType="submit"
-            className="mx-auto text-2xl"
-            disabled={disableSignUp}
-          >
-            Sign Up
-          </PrimaryButton>
-        </form>
+        <CredentialsForm
+          usernameState={usernameState}
+          passwordState={[password, setPassword]}
+          errorTxt={signUpError}
+          disabled={disableSignUp}
+          onSubmit={doSignUp}
+        />
       </div>
     </>
   );
