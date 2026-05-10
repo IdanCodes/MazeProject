@@ -5,8 +5,8 @@ import GameInstance from "@src/components/GameInstance";
 import { ButtonSize } from "@src/components/buttons/ButtonSize";
 import { RoutePath } from "@src/constants/route-path";
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
-import { useNavigate } from "react-router-dom";
 import { generateMaze, Maze } from "@src/types/Maze";
+import { RedirectButton } from "@src/components/buttons/RedirectButton";
 
 export default function Singleplayer(): JSX.Element {
   // const [maze, setMaze] = useState<Maze>(generateMaze(gameOptions.mazeScale));
@@ -44,8 +44,13 @@ export default function Singleplayer(): JSX.Element {
   //   </>
   // );
   return (
-    <h1 className="text-center text-3xl">
-      Singleplayer mode is under construction...
-    </h1>
+    <>
+      <h1 className="text-center text-3xl">
+        Singleplayer mode is under construction...
+      </h1>
+      <RedirectButton path={RoutePath.Home} className="text-4xl">
+        Back
+      </RedirectButton>
+    </>
   );
 }

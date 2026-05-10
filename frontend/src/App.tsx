@@ -15,6 +15,8 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import { getRandomInt } from "./utils/common-helpers";
 import { LoginPage } from "./pages/LoginPage";
 import { SignUpPage } from "./pages/SignUpPage";
+import { RedirectButton } from "./components/buttons/RedirectButton";
+import PageTitle from "./components/PageTitle";
 
 export const WS_PORT_PARAM = "wsPort";
 export const WS_TOKEN_PARAM = "wsToken";
@@ -160,6 +162,27 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [username, setUsername] = useState<string>("");
 
+  const formLogin = (p: string) =>
+    new Promise<string>(async (res, rej) => {
+      try {
+        await login(username, p);
+        navigate(RoutePath.Home);
+        setIsAuthenticated(true);
+      } catch (e: unknown) {
+        rej(e);
+      }
+    });
+  const formSignUp = (p: string) =>
+    new Promise<string>(async (res, rej) => {
+      try {
+        await signUp(username, p);
+        navigate(RoutePath.Home);
+        setIsAuthenticated(true);
+      } catch (e: unknown) {
+        rej(e);
+      }
+    });
+
   return (
     <NetworkContext.Provider value={networkContext}>
       {networkContext.isConnected || true ? (
@@ -193,17 +216,7 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
                   element={
                     <LoginPage
                       usernameState={[username, setUsername]}
-                      login={(p) =>
-                        new Promise<string>(async (res, rej) => {
-                          try {
-                            await login(username, p);
-                            navigate(RoutePath.Home);
-                            setIsAuthenticated(true);
-                          } catch (e: unknown) {
-                            rej(e);
-                          }
-                        })
-                      }
+                      login={formLogin}
                     />
                   }
                 />
@@ -212,18 +225,22 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
                   element={
                     <SignUpPage
                       usernameState={[username, setUsername]}
-                      signUp={(p) =>
-                        new Promise<string>(async (res, rej) => {
-                          try {
-                            await signUp(username, p);
-                            navigate(RoutePath.Home);
-                            setIsAuthenticated(true);
-                          } catch (e: unknown) {
-                            rej(e);
-                          }
-                        })
-                      }
+                      signUp={formSignUp}
                     />
+                  }
+                />
+                <Route
+                  path="*"
+                  element={
+                    <>
+                      <PageTitle text="Page Not Found" />
+                      <RedirectButton
+                        path={RoutePath.Home}
+                        className="text-3xl"
+                      >
+                        Home
+                      </RedirectButton>
+                    </>
                   }
                 />
               </Routes>

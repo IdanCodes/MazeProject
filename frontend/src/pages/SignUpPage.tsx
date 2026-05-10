@@ -1,5 +1,6 @@
 import { CredentialsForm } from "@src/components/authentication/CredentialsForm";
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
+import { RedirectButton } from "@src/components/buttons/RedirectButton";
 import PageTitle from "@src/components/PageTitle";
 import { RoutePath } from "@src/constants/route-path";
 import { usePassedState } from "@src/hooks/usePassedState";
@@ -29,27 +30,18 @@ export function SignUpPage({
     setDisableSignUp(true);
 
     setSignUpError("");
-    signUp(password)
-      .then((val) => {
-        console.log("SignUp Response:", val);
-        navigate(RoutePath.Home);
-      })
-      .catch((err) => {
-        console.error("Error in sign up! Error:", err);
-        setSignUpError(err);
-        setDisableSignUp(false);
-      });
+    signUp(password).catch((err) => {
+      setSignUpError(err);
+      setDisableSignUp(false);
+    });
   }
 
   return (
     <>
       <div className="w-full">
-        <PrimaryButton
-          className="text-xl"
-          onClick={() => navigate(RoutePath.Home)}
-        >
+        <RedirectButton path={RoutePath.Home} className="text-2xl">
           Back
-        </PrimaryButton>
+        </RedirectButton>
         <PageTitle text="Sign Up" />
         <CredentialsForm
           usernameState={usernameState}
