@@ -45,8 +45,12 @@ class Player:
         return self.client_info.websocket
 
     @property
+    def account_data(self):
+        return self.client_info.account_data
+
+    @property
     def name(self):
-        return self.client_info.name
+        return self.account_data.username
 
     def to_string(self) -> str:
         return self.client_info.to_string()
