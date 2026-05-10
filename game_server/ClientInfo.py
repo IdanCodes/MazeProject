@@ -5,6 +5,7 @@ import threading
 from typing import TYPE_CHECKING, Callable
 from uuid import UUID
 import websockets
+from AccountManager import AccountData
 from EventBus import EventBus
 import protocol
 
@@ -14,10 +15,10 @@ if TYPE_CHECKING:
 RECV_EVENT_NAME = "data_received"
 DISCONNECT_EVENT_NAME = "disconnected"
 class ClientInfo:
-    def __init__(self, sock: socket.socket, remote_addr: socket._RetAddress, name: str):
+    def __init__(self, sock: socket.socket, remote_addr: socket._RetAddress, account_data: AccountData):
         self.sock = sock
         self.remote_addr = remote_addr
-        self.name = name
+        self.account_data = account_data
         self.event_bus = EventBus()
         self.recv_thread = None
         self.curr_room = None # None -> lobby
@@ -28,8 +29,7 @@ class ClientInfo:
         self.recv_thread.start()
 
     def send(self, message: str):
-        encoded = (message + '\n').encode(encoding=protocol.NETWORK_ENCODING)
-        return self.sock.send(encoded)
+        return protocol.send_str(self.sock, message)
 
     def on_receive(self, cb_id: UUID | None, recv_cb: Callable[[object, str], None]):
         return self.event_bus.subscribe(RECV_EVENT_NAME, cb_id, recv_cb)
@@ -70,7 +70,7 @@ class ClientInfo:
         self.event_bus.emit(DISCONNECT_EVENT_NAME, self)
 
     def to_string(self) -> str:
-        return f"[{self.name} ({self.remote_addr})]"
+        return f"[{self.account_data.username} ({self.remote_addr})]"
     
     def in_room(self, room: GameRoom | None) -> bool:
         if self.in_lobby: return room == None
@@ -89,20 +89,5 @@ class ClientInfo:
     # { name }
     def get_client_info(self) -> dict:
         return {
-            "name": self.name,
+            "name": self.account_data.username,
         }
-
-MIN_NAME_LEN = 3
-MAX_NAME_LEN = 16
-def get_username_error(name: str) -> str | None:
-    if len(name) == 0: return ""
-    elif len(name) < MIN_NAME_LEN:
-        return f"Name must be at least ${MIN_NAME_LEN} characters long";
-    elif len(name) > MAX_NAME_LEN:
-        return f"Name must be at most ${MAX_NAME_LEN} characters long";
-    elif not name.isalnum():
-        return f"Name must to be alpha-numeric"
-    elif name[0].isdigit():
-        return f"Name can't start with a number"
-    
-    return None

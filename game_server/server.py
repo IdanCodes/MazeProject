@@ -3,16 +3,27 @@
 # manages:
 # - "authentication" and handshakes with clients
 # - rooms/games on the network
-import asyncio
 from uuid import UUID
 import socket
 import threading
-from ClientInfo import ClientInfo, get_username_error
+from AccountData import AccountData, get_credentials_error, get_username_error
+from AccountManager import AccountsManager
+from ClientInfo import ClientInfo
 from GameRoom import GameRoom, valid_room_capacity, valid_room_name, valid_room_password
 import protocol
 from protocol import SOCK_RECV_CHUNK_SIZE, MsgType, ResponseCode, build_error_msg, build_error_obj, build_network_msg, build_response, build_success_msg, parse_request
+
+# Default exception hook for threads
+def default_excepthook(args):
+    import traceback
+    print(f"Thread failed: {args.exc_type} - {args.exc_value}")
+    traceback.print_exc()
+
+threading.excepthook = default_excepthook
+
 class Server:
-    def __init__(self):
+    def __init__(self, accounts_manager: AccountsManager):
+        self.accounts_manager = accounts_manager
         self.clients: list[ClientInfo] = []
         self.rooms: list[GameRoom] = []
     
@@ -32,37 +43,107 @@ class Server:
         while True:
             client_sock, remote_addr = self.server_sock.accept()
             print("accepted connection from", remote_addr)
-            threading.Thread(target=self.init_connection, args=[client_sock, remote_addr]).start()
+            try:
+                threading.Thread(target=self.init_connection, args=[client_sock, remote_addr], ).start()
+            except Exception as e:
+                print("Thread encountered an exception:", e)
 
     # initialize the connection with a client - "handshake" before connection
     def init_connection(self, client_sock: socket.socket, remote_addr):
+        new_client = None
         try:
-            while True:
+            while new_client == None:
+                # TODO: Maybe receive with respect to the delimiter like in ClientInfo
                 rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE)
-                rec_text = rec_text.decode()
+                rec_text = rec_text.decode(encoding=protocol.NETWORK_ENCODING)
                 req_type, req_data = protocol.parse_request(rec_text)
-                client_name: str = req_data
-                if not req_type or not isinstance(req_data, str) or req_type != MsgType.SET_NAME:
-                    print("Closing connection - invalid request for init")
-                    return
+                # send_error = lambda error_msg : protocol.send_str(client_sock, build_response(ResponseCode.ERROR, req_type, error_msg))
+                acc_data, error_text = self.handle_auth_request(req_type, req_data)
+                if not acc_data:
+                    protocol.send_str(client_sock, build_response(ResponseCode.ERROR, req_type, error_text))                    
+                    continue
+
+                new_client = ClientInfo(client_sock, remote_addr, acc_data)
+                new_client.send(build_response(ResponseCode.SUCCESS, req_type, "Connected Successfully"))
                 
-                new_client = ClientInfo(client_sock, remote_addr, client_name)
-                
-                name_err = get_username_error(client_name)
-                if name_err != None:
-                    new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is invalid: {name_err}"))
-                elif self.find_client_by_name(new_client.name) != None:
-                    new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
-                else:
-                    break
-        except:
+                # name_err = get_username_error(client_name)
+                # if name_err != None:
+                #     new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is invalid: {name_err}"))
+                # elif self.find_client_by_name(new_client.name) != None:
+                #     new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
+                # else:
+                #     break
+        except Exception as e:
+            import traceback
+            print(f"Handshake failed for {remote_addr}:", e)
+            traceback.print_exc()
+            client_sock.close()
             return
 
-        new_client.send(build_success_msg(MsgType.SET_NAME))
+        # new_client.send(build_success_msg(MsgType.SET_NAME))
         new_client.on_receive(None, self.on_receive_message)
         new_client.on_disconnect(None, self.on_client_disconnect)
         new_client.start_recv()
         self.on_client_connect(new_client)
+
+    # Handle a request to authenticate the user - signup or login
+    # req_type: The MsgType of the request
+    # req_data: The data field of the request
+    # returns: If an error occurred during authentication, returns (None, the error string). Otherwise, (AccountData, _)
+    def handle_auth_request(self, req_type: MsgType, req_data: any) -> tuple[AccountData | None, str | None]:
+        if not req_type or (req_type != MsgType.LOGIN and req_type != MsgType.SIGN_UP):
+            # print("Closing connection - invalid request for init")
+            # send_error("Invalid request for connection init. Required LOGIN or SIGN_UP")
+            return None, f"Invalid request for connection init '{req_type}'. Required LOGIN or SIGN_UP"
+        
+        username, password = None, None
+        try:
+            if not isinstance(req_data, dict): raise Exception()
+            username = req_data["username"]
+            password = req_data["password"]
+        except:
+            # client_sock.send(protocol.encode_msg(build_response(ResponseCode.ERROR, req_type, "Missing credentials. Both username and password must be provided")))
+            return None, "Missing credentials. Both username and password must be provided"
+        
+        if not isinstance(username, str) or not isinstance(password, str):
+            return None, "Both username and password must be valid strings"
+
+        # Validate Credentials
+        error_text = get_credentials_error(username, password)
+        if error_text: return None, error_text
+
+        acc_data, error_text = None, "Error: Something Went Wrong"
+        if req_type == MsgType.LOGIN:
+            acc_data, error_text = self.try_login(username, password)
+        elif req_type == MsgType.SIGN_UP:
+            acc_data, error_text = self.try_signup(username, password)
+        if not acc_data:
+            # client_sock.send(protocol.encode_msg(build_response(ResponseCode.ERROR, req_type, error_text)))ext)
+            return None, error_text
+        # try:
+            
+        # except Exception as e:
+        #     print("AN EXCEPTION!!!", e)
+        #     return None, "UNEXPTECTED"
+        
+        return acc_data, "Connected Successfully"
+
+    # try logging in
+    def try_login(self, username: str, password: str) -> tuple[AccountData | None, str | None]:
+        acc_data = self.accounts_manager.authenticate_user(username, password)
+        if not acc_data:
+            if self.accounts_manager.does_user_exist(username): return None, "Invalid Password"
+            else: return None, "User doesn't exist"
+        return acc_data, None
+
+    # try signing up
+    def try_signup(self, username: str, password: str) -> tuple[AccountData | None, str | None]:
+        if self.accounts_manager.does_user_exist(username):
+            return None, "Username is taken"
+        acc_data = self.accounts_manager.sign_up(username, password)
+        if not acc_data:
+            return None, "Sign Up Failed"
+        return acc_data, None
 
 
     # Get ClientInfo by the client's id
@@ -179,12 +260,13 @@ class Server:
         print(f"Removed room {room.name}")
         return True
 
-
 if __name__ == "__main__":
-    server = Server()
+    accounts_manager = AccountsManager()
+    server = Server(accounts_manager)
 
     try:
         server.start_server()
     except KeyboardInterrupt:
         server.close()
+        accounts_manager.close()
         print("\nServer stopped manually")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from enum import Enum
 import json
+import socket
 from typing import TYPE_CHECKING
 from helpers import is_number
 from Structures.Vector2 import Vector2
@@ -43,7 +44,9 @@ def get_addr_str(remote_addr: tuple[str, int]) -> str:
     return remote_addr[0] + ":" + str(remote_addr[1])
 
 class MsgType(Enum):
-    CONNECT_REQUEST = "connect_request"
+    LOGIN = "login" # username: string, password: string
+    SIGN_UP = "sign_up" # username: string, password: string
+
     MAZE = "maze"
     UPDATE_POS = "update_pos"
     SET_NAME = "set_name"
@@ -75,7 +78,7 @@ class ResponseCode(Enum):
 # Returns - req_type, req_data
 # or - None, None
 # when the request is invalid
-def parse_request(request_str: str) -> tuple[MsgType | None, str | None]:
+def parse_request(request_str: str) -> tuple[MsgType | None, any | None]:
     if len(request_str) == 0: return None, None
 
     try:
@@ -91,6 +94,13 @@ def parse_request(request_str: str) -> tuple[MsgType | None, str | None]:
         print(f"parsing request {request_str} exception: {e}")
         return None, None
 
+# Encode a msg for the network protocol
+def encode_msg(msg: str) -> bytes:
+    return (msg + '\n').encode(encoding=NETWORK_ENCODING)
+
+# Send a string, encoded according to the protocol
+def send_str(sock: socket.socket, msg: str):
+    return sock.send(encode_msg(msg))
 
 # source = None -> source="SERVER"
 def build_network_msg(source: ClientInfo | None, msg_type: MsgType, bc_data: any | None = None) -> str:

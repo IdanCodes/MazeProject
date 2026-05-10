@@ -60,13 +60,30 @@
 # password = my_obj["password"]
 # print(f"name: {name},\ncapacity: {capacity},\npassword: {password}")
 
-def test_func(x: bool) -> tuple[int, str | None]:
-    if x:
-        return 7, "hello"
-    else:
-        return 45, None
+# def test_func(x: bool) -> tuple[int, str | None]:
+#     if x:
+#         return 7, "hello"
+#     else:
+#         return 45, None
 
-a, b = test_func(True)
-print(f"a: {a}, b: {b}")
-a, b = test_func(False)
-print(f"a: {a}, b: {b}")
+# a, b = test_func(True)
+# print(f"a: {a}, b: {b}")
+# a, b = test_func(False)
+# print(f"a: {a}, b: {b}")
+
+# username, password = {"username": "admin", "password": "1234"}
+# print(f"Username: {username}, Password: {password}")
+
+import threading
+
+def handle_thread_exception(args):
+    print(f"Caught an error in {args.thread.name}: {args.exc_value}")
+
+# Set the global hook
+threading.excepthook = handle_thread_exception
+
+def broken_task():
+    username, password = None  # This will raise the TypeError
+
+t = threading.Thread(target=broken_task, name="MyWorkerThread")
+t.start()
