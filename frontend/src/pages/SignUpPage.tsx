@@ -1,5 +1,6 @@
 import { CredentialsForm } from "@src/components/authentication/CredentialsForm";
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
+import PageTitle from "@src/components/PageTitle";
 import { RoutePath } from "@src/constants/route-path";
 import { usePassedState } from "@src/hooks/usePassedState";
 import { PassedState } from "@src/types/passed-state";
@@ -53,11 +54,12 @@ export function SignUpPage({
         >
           Back
         </PrimaryButton>
-        <h1 className="text-3xl text-center">Sign Up</h1>
+        <PageTitle text="Sign Up" />
         <CredentialsForm
           usernameState={usernameState}
           passwordState={[password, setPassword]}
           errorTxt={signUpError}
+          btnTxt="Sign Up"
           disabled={disableSignUp}
           onSubmit={doSignUp}
         />
