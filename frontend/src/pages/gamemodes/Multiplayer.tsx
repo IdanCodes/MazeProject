@@ -25,6 +25,8 @@ import { GameOptions, MazeDifficulty } from "@src/interfaces/GameOptions";
 import { NetworkMessage } from "@src/interfaces/NetworkMessage";
 import { ServerResponse } from "@src/interfaces/ServerResponse";
 import { useNetworkContext } from "@src/contexts/NetworkContext";
+import { RedirectButton } from "@src/components/buttons/RedirectButton";
+import { RoutePath } from "@src/constants/route-path";
 
 export default function Multiplayer({
   playerName,
@@ -219,6 +221,7 @@ export default function Multiplayer({
               disconnect();
             }}
           /> */}
+          <RedirectButton path={RoutePath.Home}>Back</RedirectButton>
           <RoomsPanel
             handleCreateRoom={createRoom}
             handleJoinRoom={joinRoom}
@@ -238,35 +241,6 @@ export default function Multiplayer({
       )}
     </>
   );
-
-  function UsernameInputPanel({
-    playerNameState,
-    connect,
-  }: {
-    playerNameState: PassedState<string>;
-    connect: (name: string) => Promise<string>;
-  }) {
-    const [playerName, setPlayerName] = usePassedState(playerNameState);
-    const [usernameError, setUsernameError] = useState<string>("");
-
-    useEffect(() => {
-      setUsernameError(getUsernameError(playerName) ?? "");
-    }, [playerName]);
-
-    return (
-      <>
-        <NameInput nameState={playerNameState} disabled={false} />
-        <ErrorLabel text={usernameError} />
-        <ConnectButton
-          handleConnect={() => {
-            setPlayerName(playerName.trim());
-            connect(playerName.trim()).catch(setUsernameError);
-          }}
-          disabled={getUsernameError(playerName) !== null}
-        />
-      </>
-    );
-  }
 
   function ConnectButton({
     handleConnect,
@@ -685,7 +659,7 @@ export default function Multiplayer({
       <>Waiting for maze...</>
     ) : (
       <div>
-        {/* <DisconnectButton handleDisconnect={leaveRoom} /> */}
+        {/* //TODO: <DisconnectButton handleDisconnect={leaveRoom} /> */}
         <div className="flex flex-col items-center">
           <div className="flex flex-col justify-center w-fit">
             <div className="mx-auto  w-full">
