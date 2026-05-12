@@ -1,5 +1,6 @@
 import {
   equalVec,
+  isVector2,
   parseVector2,
   Vector2,
   ZERO_VEC,
@@ -35,6 +36,7 @@ export function useGameNetworkHandler(
   callerId: string,
   canvasSize: { width: number; height: number },
   setMaze: (maze: Maze) => void,
+  setFinishCell: (cell: Vector2) => void,
   setPlayerRole: (action: SetStateAction<PlayerRole>) => void,
   setGameOptions: (newOptions: GameOptions) => void,
   onStartGame: (startTime: number) => void,
@@ -334,7 +336,13 @@ export function useGameNetworkHandler(
 
     onMessage(callerId, GameMsgType.START_GAME, (msg) => {
       const data = msg.data;
-      if (!data || typeof data !== "object" || !data.maze || !data.startTime) {
+      if (
+        !data ||
+        typeof data !== "object" ||
+        !data.maze ||
+        !(data.finishCell && isVector2(data.finishCell)) ||
+        !data.startTime
+      ) {
         console.error(
           "useNetworkHandler: Invalid format for startGame message",
         );
@@ -347,6 +355,10 @@ export function useGameNetworkHandler(
       const maze = new Maze(grid);
       setMaze(maze);
       console.log("Finished setting maze.");
+
+      // update finish cell
+      const finishCell = parseVector2(data.finishCell);
+      setFinishCell(finishCell);
 
       // Trigger game start
       onStartGame(data.startTime);

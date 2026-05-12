@@ -64,7 +64,7 @@ class MsgType(Enum):
     ROOM_ADMIN = "room_admin" # server->client - params: string
     GAME_OPTIONS = "game_options" # params: GameOptions
 
-    START_GAME = "start_game" # client->server - no params; server->client - { maze, start_time }
+    START_GAME = "start_game" # client->server - no params; server->client - { maze, finishCell, startTime }
     PLAYER_FINISHED = "player_finished" # server->client(broadcast) - { name: string, timeMs: number, place: number }
     END_GAME = "end_game" # server->client - { name: string, timeMs: number }[]
 

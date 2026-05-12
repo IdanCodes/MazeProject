@@ -428,6 +428,7 @@ export default function Multiplayer({
     // #endregion
     const [maze, setMaze] = useState<Maze | undefined>(undefined);
     const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
+    const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
     const cellScale = useMemo(
       () => (gameInstanceRef.current ? gameInstanceRef.current.cellScale : 0),
       [gameInstanceRef.current, gameInstanceRef.current?.cellScale],
@@ -449,6 +450,7 @@ export default function Multiplayer({
       "GamePanel.useGameNetworkHandler",
       canvasDimensions,
       setMaze,
+      setFinishCell,
       setPlayerRole,
       (newOptions: GameOptions) => setGameOptions(newOptions),
       onStartGame,
@@ -556,6 +558,7 @@ export default function Multiplayer({
               ref={gameInstanceRef}
               mazeSize={MazeSize.Medium}
               maze={maze}
+              finishCell={finishCell}
               otherPlayers={otherPlayers}
               playerPosState={[
                 playerPos,

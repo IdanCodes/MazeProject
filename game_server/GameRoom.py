@@ -104,6 +104,7 @@ class GameRoom:
         if player.role == RoomClientRole.ADMIN:
             if len(self.players) > 0: self.set_admin(self.players[0])
 
+    # Send all the game information to a player - for when the player connects to the room, requests the information etc.
     def send_game_to_player(self, player: Player):
         player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
         player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_options()))
@@ -175,14 +176,16 @@ class GameRoom:
     
     # start_game: Start the game
     def start_game(self):
-        # Generate maze
+        # Generate maze & set finish cell
         self.generate_new_maze()
+        self.finish_cell = Vector2(self.stored_maze.width - 1, self.stored_maze.height - 1)
 
         # start_time = now + 3 seconds (in ms from epoch)
         self.start_time = get_time_ms() + (3 * 1_000)
         self.game_active = True
         bc_msg = {
             "maze": self.stored_maze.get_matrix(),
+            "finishCell": self.finish_cell,
             "startTime": self.start_time,
         }
         self.send_broadcast(build_network_msg(None, MsgType.START_GAME, bc_msg))
@@ -221,9 +224,8 @@ class GameRoom:
             if (not exclude) or (client.username != exclude.username):
                 client.send(message)
 
-    def get_players_in_finish_square(self) -> list[Player]:
-        FINISH_CELL = Vector2(self.stored_maze.width - 1, self.stored_maze.height - 1)
-        return [p for p in self.players if self.pos_is_on_cell(p.position, FINISH_CELL)] #TODO: implement
+    def get_players_in_finish_cell(self) -> list[Player]:
+        return [p for p in self.players if self.pos_is_on_cell(p.position, self.finish_cell)]
     
     # pos: normalized position
     # cellPos: grid position
@@ -266,7 +268,7 @@ class GameRoom:
 
             if self.game_active:
                 # TODO: Optimize?
-                finishers = self.get_players_in_finish_square()
+                finishers = self.get_players_in_finish_cell()
                 new_finishers = [x for x in finishers if all(x.username != y["username"] for y in self.game_results)]
                 if len(new_finishers):
                     for f in new_finishers:

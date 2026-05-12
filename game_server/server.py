@@ -57,7 +57,6 @@ class Server:
                 rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE)
                 rec_text = rec_text.decode(encoding=protocol.NETWORK_ENCODING)
                 req_type, req_data = protocol.parse_request(rec_text)
-                # send_error = lambda error_msg : protocol.send_str(client_sock, build_response(ResponseCode.ERROR, req_type, error_msg))
                 acc_data, error_text = self.handle_auth_request(req_type, req_data)
                 if not acc_data:
                     protocol.send_str(client_sock, build_response(ResponseCode.ERROR, req_type, error_text))                    
@@ -65,14 +64,6 @@ class Server:
 
                 new_client = ClientInfo(client_sock, remote_addr, acc_data)
                 new_client.send(build_response(ResponseCode.SUCCESS, req_type, "Connected Successfully"))
-                
-                # name_err = get_username_error(client_name)
-                # if name_err != None:
-                #     new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is invalid: {name_err}"))
-                # elif self.find_client_by_name(new_client.name) != None:
-                #     new_client.send(build_error_msg(MsgType.SET_NAME, f"The name {new_client.name} is taken"))
-                # else:
-                #     break
         except Exception as e:
             import traceback
             print(f"Handshake failed for {remote_addr}:", e)
@@ -80,7 +71,6 @@ class Server:
             client_sock.close()
             return
 
-        # new_client.send(build_success_msg(MsgType.SET_NAME))
         new_client.on_receive(None, self.on_receive_message)
         new_client.on_disconnect(None, self.on_client_disconnect)
         new_client.start_recv()
@@ -92,8 +82,6 @@ class Server:
     # returns: If an error occurred during authentication, returns (None, the error string). Otherwise, (AccountData, _)
     def handle_auth_request(self, req_type: MsgType, req_data: any) -> tuple[AccountData | None, str | None]:
         if not req_type or (req_type != MsgType.LOGIN and req_type != MsgType.SIGN_UP):
-            # print("Closing connection - invalid request for init")
-            # send_error("Invalid request for connection init. Required LOGIN or SIGN_UP")
             return None, f"Invalid request for connection init '{req_type}'. Required LOGIN or SIGN_UP"
         
         username, password = None, None
@@ -102,7 +90,6 @@ class Server:
             username = req_data["username"]
             password = req_data["password"]
         except:
-            # client_sock.send(protocol.encode_msg(build_response(ResponseCode.ERROR, req_type, "Missing credentials. Both username and password must be provided")))
             return None, "Missing credentials. Both username and password must be provided"
         
         if not isinstance(username, str) or not isinstance(password, str):
@@ -118,14 +105,7 @@ class Server:
         elif req_type == MsgType.SIGN_UP:
             acc_data, error_text = self.try_signup(username, password)
         if not acc_data:
-            # client_sock.send(protocol.encode_msg(build_response(ResponseCode.ERROR, req_type, error_text)))ext)
             return None, error_text
-        # try:
-            
-        # except Exception as e:
-        #     print("AN EXCEPTION!!!", e)
-        #     return None, "UNEXPTECTED"
-        
         return acc_data, "Connected Successfully"
 
     # try logging in

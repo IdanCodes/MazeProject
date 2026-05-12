@@ -35,13 +35,21 @@ const GameInstance = forwardRef<
   {
     mazeSize: MazeSize;
     maze: Maze;
+    finishCell: Vector2;
     otherPlayers: PlayerInfo[];
     playerPosState: PassedState<Vector2>;
     onPlayerMove?: (pos: Vector2) => void;
   }
 >(
   (
-    { mazeSize, maze, otherPlayers, playerPosState, onPlayerMove = undefined },
+    {
+      mazeSize,
+      maze,
+      finishCell,
+      otherPlayers,
+      playerPosState,
+      onPlayerMove = undefined,
+    },
     ref,
   ) => {
     const gameCanvasRef = useRef<GameCanvasHandle | null>(null);
@@ -209,6 +217,7 @@ const GameInstance = forwardRef<
       <GameCanvas
         ref={gameCanvasRef}
         maze={maze}
+        finishCell={finishCell}
         cellScale={cellScale}
         playerPos={playerPos}
         otherPlayers={otherPlayers}

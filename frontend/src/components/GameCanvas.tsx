@@ -31,6 +31,7 @@ const GameCanvas = forwardRef<
   GameCanvasHandle,
   {
     maze: Maze;
+    finishCell: Vector2;
     cellScale: number;
     playerPos: Vector2;
     otherPlayers: PlayerInfo[];
@@ -40,6 +41,7 @@ const GameCanvas = forwardRef<
   (
     {
       maze,
+      finishCell,
       cellScale,
       otherPlayers,
       playerPos,
@@ -167,7 +169,7 @@ const GameCanvas = forwardRef<
     const drawMaze = useCallback(
       (ctx: CanvasRenderingContext2D): void => {
         ctx.strokeStyle = "black";
-        ctx.lineWidth = wallWidth;
+        ctx.lineWidth = wallWidth * 0.75;
         ctx.beginPath();
 
         for (let i = 0; i < maze.height; i += 2) {
@@ -204,13 +206,36 @@ const GameCanvas = forwardRef<
       [maze],
     );
 
+    // gridCell is the cell's visual grid position
     const highlightCell = (
       ctx: CanvasRenderingContext2D,
-      cellPos: Vector2,
+      gridCell: Vector2,
       highlightColor: string = "rgba(242,251,2,0.6)",
     ) => {
+      const canvasPos = gridToCanvas(gridCell);
       ctx.fillStyle = highlightColor;
-      ctx.fillRect(cellPos.x, cellPos.y, cellScale * 2, cellScale * 2);
+      ctx.fillRect(canvasPos.x, canvasPos.y, cellScale * 2, cellScale * 2);
+    };
+
+    const drawFinishCell = (ctx: CanvasRenderingContext2D) => {
+      if (finishCell.x < 0 || finishCell.y < 0) return;
+      const canvasPos = gridToCanvas(finishCell);
+      const patternSize = 6; // patternSize x patternSize squares inside the cell
+      const subCellSize = (cellScale * 2) / patternSize;
+
+      for (let row = 0; row < patternSize; row++) {
+        for (let col = 0; col < patternSize; col++) {
+          // Check if the sum of row + col is even or odd
+          ctx.fillStyle = (row + col) % 2 === 0 ? "white" : "black";
+
+          ctx.fillRect(
+            canvasPos.x + col * subCellSize,
+            canvasPos.y + row * subCellSize,
+            subCellSize,
+            subCellSize,
+          );
+        }
+      }
     };
 
     // apply the offset from the canvas position to the position on the grid for drawing a circle
@@ -251,15 +276,19 @@ const GameCanvas = forwardRef<
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-      drawGrid(ctx);
-      drawMaze(ctx);
+      // -- grid
+      // drawMaze(ctx);
 
       // -- highlight player cell
-      const playerCell = gridToCanvas(
-        canvasToVisualGrid(applyCanvasCircleOffset(playerPos)),
-      );
+      const playerCell = canvasToVisualGrid(applyCanvasCircleOffset(playerPos));
       highlightCell(ctx, playerCell, "rgba(242,251,2,0.6)");
 
+      // -- finish cell
+      drawFinishCell(ctx);
+
+      drawGrid(ctx);
+
+      // -- draw players
       for (const playerInfo of otherPlayers)
         drawPlayer(ctx, unnormalizePos(playerInfo.position), "green");
 
