@@ -1,7 +1,7 @@
 import atexit
 import sqlite3
 
-from AccountData import *
+from Database.AccountData import *
 
 ACCOUNTS_FILE = "accounts.db"
 class AccountsManager:
@@ -16,7 +16,7 @@ class AccountsManager:
                             account_id INTEGER PRIMARY KEY AUTOINCREMENT,
                             username TEXT UNIQUE NOT NULL,
                             password TEXT NOT NULL,
-                            games_played INTEGER DEFAULT 0);''')
+                            games_played TEXT DEFAULT '[]');''')
 
     def close(self):
         self.conn.close()
@@ -32,7 +32,7 @@ class AccountsManager:
         cursor = self.conn.execute("SELECT username, password, games_played FROM accounts WHERE username = ?", (name,))
         row = cursor.fetchone()
         if row:
-            return AccountData(row[0], row[1], row[2])
+            return AccountData(self.conn, row[0], row[1], json.loads(row[2]))
         return None
 
     # returns whether the sign up was successful
@@ -42,7 +42,7 @@ class AccountsManager:
         # TODO: hash password
         hashed_password = password
         
-        new_account = AccountData(username, password)
+        new_account = AccountData(self.conn, username, password)
         try:
             with self.conn:
                 self.conn.execute('''INSERT INTO accounts (username, password) VALUES (?, ?)''', (username, hashed_password))

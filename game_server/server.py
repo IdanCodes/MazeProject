@@ -6,8 +6,8 @@
 from uuid import UUID
 import socket
 import threading
-from AccountData import AccountData, get_credentials_error, get_username_error
-from AccountManager import AccountsManager
+from Database.AccountData import AccountData, get_credentials_error, get_username_error
+from Database.AccountManager import AccountsManager
 from ClientInfo import ClientInfo
 from GameRoom import GameRoom, valid_room_capacity, valid_room_name, valid_room_password
 import protocol

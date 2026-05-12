@@ -5,7 +5,7 @@ import threading
 from typing import TYPE_CHECKING, Callable
 from uuid import UUID
 import websockets
-from AccountManager import AccountData
+from Database.AccountData import AccountData
 from EventBus import EventBus
 import protocol
 

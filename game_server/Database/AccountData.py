@@ -1,24 +1,30 @@
+import json
 import sqlite3
-
 
 class AccountData:
     username: str
     password: str
-    games_played: int
+    games_played: list[str]
     # created_at
 
-    def __init__(self, username, password, games_played = 0):
+    def __init__(self, conn: sqlite3.Connection, username, password, games_played = None):
+        self.conn = conn
         self.username = username
         self.password = password
-        self.games_played = games_played
+        self.games_played = games_played if games_played != None else []
+        print(f"{username}: {games_played}")
 
-    def save(self, conn: sqlite3.Connection):
-        with conn:
-            conn.execute("""UPDATE accounts SET
+    def save(self):
+        games_json = json.dumps(self.games_played)
+        with self.conn:
+            self.conn.execute("""UPDATE accounts SET
                          games_played = ?
                          WHERE username = ?
                          """,
-            (self.games_played, self.username))
+            (games_json, self.username))
+
+    def register_finish_game(self, game_id_str: str):
+        self.games_played.append(game_id_str)
 
 
 MIN_USERNAME_LEN = 3
