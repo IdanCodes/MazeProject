@@ -1,4 +1,6 @@
-from Database.AccountManager import AccountsManager
+from Database.AccountsManager import AccountsManager
+from Database.GameDataDB import GameDataDB
 
-
-accounts_manager = AccountsManager()
+DATABASE_FILE = "database.db"
+accounts_manager = AccountsManager(DATABASE_FILE)
+games_manager = GameDataDB(DATABASE_FILE)

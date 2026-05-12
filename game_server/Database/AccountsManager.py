@@ -3,12 +3,11 @@ import sqlite3
 
 from Database.AccountData import *
 
-ACCOUNTS_FILE = "accounts.db"
 class AccountsManager:
     accounts: list[AccountData]
 
-    def __init__(self):
-        self.conn = sqlite3.connect(ACCOUNTS_FILE, check_same_thread=False)
+    def __init__(self, db_file: str):
+        self.conn = sqlite3.connect(db_file, check_same_thread=False)
         atexit.register(self.close)
 
         with self.conn:
@@ -38,9 +37,7 @@ class AccountsManager:
     def get_account_data_by_username(self, username: str) -> AccountData | None:
         cursor = self.conn.execute("SELECT account_id, username, password, games_played FROM accounts WHERE username = ?", (username,))
         row = cursor.fetchone()
-        if row:
-            return AccountData.from_row(self.conn, row)
-        return None
+        return AccountData.from_row(self.conn, row) if row else None
 
     # returns whether the sign up was successful
     def sign_up(self, username: str, password: str) -> AccountData | None:

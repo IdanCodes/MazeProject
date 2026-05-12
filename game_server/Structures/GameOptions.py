@@ -12,7 +12,7 @@ class GameOptions:
     def __init__(self):
         pass
 
-    def get_options(self) -> dict:
+    def get_json(self) -> dict:
         return {
             "difficulty": self.difficulty.value
         }

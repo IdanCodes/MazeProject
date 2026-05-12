@@ -13,6 +13,7 @@ from Structures.Vector2 import Vector2
 from helpers import get_time_ms
 from protocol import MsgType, ResponseCode, build_network_msg, build_response, is_valid_position, parse_request
 from math import floor
+from Database.DBManagers import games_manager
 
 if TYPE_CHECKING:
     from server import Server
@@ -47,7 +48,7 @@ class GameRoom:
         return self.game_data.start_time
 
     @property
-    def game_options(self) -> int:
+    def game_options(self) -> GameOptions.GameOptions:
         return self.game_data.game_options
     
     @property
@@ -91,7 +92,7 @@ class GameRoom:
 
     def on_player_connect(self, player: Player):
         player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
-        player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_options()))
+        player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_json()))
         self.send_broadcast(build_network_msg(player, MsgType.PLAYER_CONNECTED, player.get_player_info()), player)
         for c in self.players:
             player.send(build_network_msg(None, MsgType.PLAYER_CONNECTED, c.get_player_info()))
@@ -119,7 +120,7 @@ class GameRoom:
     # Send all the game information to a player - for when the player connects to the room, requests the information etc.
     def send_game_to_player(self, player: Player):
         player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
-        player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_options()))
+        player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_json()))
         for c in self.players:
             if c.username == player.username: continue
             player.send(build_network_msg(None, MsgType.PLAYER_CONNECTED, c.get_player_info()))
@@ -214,7 +215,7 @@ class GameRoom:
     def update_game_options(self, new_options: dict) -> bool:
         if not self.game_options.load_game_options(new_options):
             return False
-        self.send_broadcast(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_options()))
+        self.send_broadcast(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_json()))
         return True
 
     # generate a broadcast from an incoming message
@@ -222,6 +223,7 @@ class GameRoom:
     def generate_broadcast(self, req_type: MsgType, req_data: str | None) -> tuple[MsgType, str | None, bool] | None:
         match req_type:
             case MsgType.SET_READY:
+                if self.game_active: return None
                 if isinstance(req_data, bool):
                     return MsgType.SET_READY, req_data, True
             case MsgType.LEAVE_ROOM:
@@ -259,9 +261,9 @@ class GameRoom:
         new_result = {
             "username": p.username,
             "timeMs": finish_time,
-            "place": len(self.game_results)
         }
         self.cached_results.append(new_result)
+        new_result["place"] = len(self.game_results)
         self.send_broadcast(build_network_msg(None, MsgType.PLAYER_FINISHED, new_result))
         p.account_data.register_finish_game(str(self.id))
 
@@ -275,10 +277,10 @@ class GameRoom:
         self.running = False
         self.game_active = False
         self.send_broadcast(build_network_msg(None, MsgType.END_GAME, self.cached_results))
+        games_manager.save_game(self.game_data)
         # TODO: Disconnect all players and close room?
 
     def game_loop(self):
-        self.last_0_pos = Vector2(0, 0)
         while self.running:
             start = time.perf_counter()
 

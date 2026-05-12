@@ -393,7 +393,7 @@ export function useGameNetworkHandler(
     });
 
     onMessage(callerId, GameMsgType.END_GAME, (msg) => {
-      const data: { name: string; timeMs: number }[] = msg.data;
+      const data: { username: string; timeMs: number }[] = msg.data;
       if (!(data && Array.isArray(data)))
         return console.error(
           "useNetworkHandler: Invalid format for endGame message",
@@ -403,7 +403,7 @@ export function useGameNetworkHandler(
       for (const x of data) {
         if (
           !(x && typeof x === "object") ||
-          !(x.name && typeof x.name === "string") ||
+          !(x.username && typeof x.username === "string") ||
           !(x.timeMs && typeof x.timeMs === "number")
         )
           return console.error(
