@@ -1,5 +1,4 @@
 from enum import Enum
-from types import SimpleNamespace
 
 class MazeDifficulty(Enum):
     Easy = "EASY"

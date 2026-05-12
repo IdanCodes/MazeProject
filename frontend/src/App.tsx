@@ -2,7 +2,7 @@ import { Route, Routes, useNavigate } from "react-router-dom";
 import "./index.css";
 import { RoutePath } from "@src/constants/route-path";
 import Singleplayer from "@src/pages/gamemodes/Singleplayer";
-import Multiplayer from "./pages/gamemodes/Multiplayer";
+import Multiplayer from "./pages/gamemodes/Multiplayer/Multiplayer";
 import { useGameSocket } from "./hooks/useGameSocket";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NetworkMessage } from "./interfaces/NetworkMessage";

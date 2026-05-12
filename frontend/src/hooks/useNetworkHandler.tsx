@@ -41,7 +41,7 @@ export function useGameNetworkHandler(
   setGameOptions: (newOptions: GameOptions) => void,
   onStartGame: (startTime: number) => void,
   onFinishMaze: (place: number, timeMs: number) => void, // local player reaches end of maze
-  onEndGame: (gameResults: { name: string; timeMs: number }[]) => void,
+  onEndGame: (gameResults: { username: string; timeMs: number }[]) => void,
   posUpdateRate: number = 25,
 ): {
   otherPlayers: PlayerInfo[];
@@ -348,17 +348,22 @@ export function useGameNetworkHandler(
         );
         return;
       }
-      console.log("Received start game...");
       // update maze
       const matrix = data.maze as CellType[][];
       const grid = new Grid(matrix);
       const maze = new Maze(grid);
       setMaze(maze);
-      console.log("Finished setting maze.");
 
       // update finish cell
       const finishCell = parseVector2(data.finishCell)!;
       setFinishCell(finishCell);
+
+      // set other players to be not ready
+      setOtherPlayers((op) => {
+        const newOp = [...op];
+        for (let i = 0; i < op.length; i++) newOp[i].isReady = false;
+        return newOp;
+      });
 
       // Trigger game start
       onStartGame(data.startTime);

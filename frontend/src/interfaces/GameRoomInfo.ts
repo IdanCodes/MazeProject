@@ -19,6 +19,6 @@ export function isRoomInfo(obj: any): obj is GameRoomInfo {
   );
 }
 
-export function gameIsFull(room: GameRoomInfo): boolean {
+export function roomIsFull(room: GameRoomInfo): boolean {
   return room.playerCount >= room.capacity;
 }
