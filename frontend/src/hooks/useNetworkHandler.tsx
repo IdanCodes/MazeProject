@@ -40,7 +40,7 @@ export function useGameNetworkHandler(
   setPlayerRole: (action: SetStateAction<PlayerRole>) => void,
   setGameOptions: (newOptions: GameOptions) => void,
   onStartGame: (startTime: number) => void,
-  onFinishMaze: (place: number, timeMs: number) => void, // local player reaches end of maze
+  onFinishMaze: (username: string, place: number, timeMs: number) => void,
   onEndGame: (gameResults: { username: string; timeMs: number }[]) => void,
   posUpdateRate: number = 25,
 ): {
@@ -391,10 +391,8 @@ export function useGameNetworkHandler(
       console.log(
         `Player "${username}" finished in place ${place} in ${timeMs / 10 / 100.0}s`,
       );
-      // TODO: handle other players finishing
-      if (username != localPlayer.username) return;
 
-      onFinishMaze(place, timeMs);
+      onFinishMaze(username, place, timeMs);
     });
 
     onMessage(callerId, GameMsgType.END_GAME, (msg) => {

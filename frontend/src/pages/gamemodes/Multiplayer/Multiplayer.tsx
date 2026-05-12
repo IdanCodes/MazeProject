@@ -1,27 +1,8 @@
-import PrimaryButton from "@src/components/buttons/PrimaryButton";
-import { ErrorLabel } from "@src/components/ErrorLabel";
-import GameInstance, { GameInstanceHandle } from "@src/components/GameInstance";
 import PageTitle from "@src/components/PageTitle";
-import { GameMsgType, ResponseCode } from "@src/constants/game-msg-type";
-import { useGameNetworkHandler } from "@src/hooks/useNetworkHandler";
-import { usePassedState } from "@src/hooks/usePassedState";
-import {
-  roomIsFull,
-  GameRoomInfo,
-  isRoomInfo,
-} from "@src/interfaces/GameRoomInfo";
-import { PlayerInfo } from "@src/interfaces/PlayerInfo";
-import { equalVec, Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
-import { Maze } from "@src/types/Maze";
-import { MazeSize } from "@src/types/maze-size";
-import { PassedState, SetStateFunc } from "@src/types/passed-state";
-import clsx from "clsx";
-import { JSX, useEffect, useMemo, useRef, useState } from "react";
-import { PlayerRole } from "@src/constants/PlayerRole";
-import { GameOptions, MazeDifficulty } from "@src/interfaces/GameOptions";
+import { GameMsgType } from "@src/constants/game-msg-type";
+import { GameRoomInfo, isRoomInfo } from "@src/interfaces/GameRoomInfo";
+import { JSX, useEffect, useState } from "react";
 import { useNetworkContext } from "@src/contexts/NetworkContext";
-import { RedirectButton } from "@src/components/buttons/RedirectButton";
-import { RoutePath } from "@src/constants/route-path";
 import GameView from "./GameView";
 import RoomsView from "./RoomsView";
 
@@ -34,8 +15,7 @@ export default function Multiplayer({
     undefined,
   ); // undefined -> in lobby
 
-  const { onMessage, onResponse, disconnect, isConnected, sendMessage } =
-    useNetworkContext();
+  const { onMessage, sendMessage } = useNetworkContext();
 
   useEffect(() => {
     const callerId = "Multiplayer.useEffect";
@@ -58,13 +38,12 @@ export default function Multiplayer({
   return (
     <>
       <PageTitle text="Multiplayer" />
-      {isConnected && !currentRoom && (
+      {!currentRoom ? (
         <>
           <p className="text-3xl">Name: {playerName}</p>
           <RoomsView callerId={"Multiplayer.RoomsView"} />
         </>
-      )}
-      {isConnected && currentRoom && (
+      ) : (
         <GameView
           callerId={"Multiplayer.GameView"}
           playerName={playerName}

@@ -64,9 +64,8 @@ function GameView({
   const [maze, setMaze] = useState<Maze | undefined>(undefined);
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
   const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
-  const cellScale = useMemo(
-    () => (gameInstanceRef.current ? gameInstanceRef.current.cellScale : 0),
-    [gameInstanceRef.current, gameInstanceRef.current?.cellScale],
+  const [finishTimes, setFinishTimes] = useState<Map<string, number>>(
+    new Map(),
   );
   const canvasDimensions = useMemo<{
     width: number;
@@ -82,14 +81,14 @@ function GameView({
 
   const { otherPlayers } = useGameNetworkHandler(
     localPlayer,
-    "GamePanel.useGameNetworkHandler",
+    callerId + ".useGameNetworkHandler",
     canvasDimensions,
     setMaze,
     setFinishCell,
     setPlayerRole,
     (newOptions: GameOptions) => setGameOptions(newOptions),
     onStartGame,
-    onFinishMaze,
+    onPlayerFinishMaze,
     onEndGame,
   );
   const allPlayersReady = useMemo(
@@ -136,9 +135,16 @@ function GameView({
     console.log("Start!");
   }
 
-  function onFinishMaze(place: number, timeMs: number) {
-    setCanMove(false);
-    // TODO: handle local player finishing
+  function onPlayerFinishMaze(username: string, place: number, timeMs: number) {
+    setFinishTimes((ft) => {
+      const newFt = new Map(ft);
+      newFt.set(username, timeMs);
+      return newFt;
+    });
+    if (username == localPlayer.username) {
+      setCanMove(false);
+      // TODO: handle local player finishing
+    }
   }
 
   function onEndGame(gameResults: { username: string; timeMs: number }[]) {
@@ -202,9 +208,24 @@ function GameView({
               },
             ]}
           />
+          {isGameActive && (
+            <GameStopwatch
+              startTime={gameStartTime}
+              finishTime={finishTimes.get(localPlayer.username)}
+            />
+          )}
           <div className="flex flex-row justify-between">
-            <PlayersList players={[localPlayer, ...otherPlayers]} />
-            <ReadyButton readyState={[isReady, setIsReady]} disabled={false} />
+            <PlayersList
+              players={[localPlayer, ...otherPlayers]}
+              gameActive={isGameActive}
+              finishTimes={finishTimes}
+            />
+            {!isGameActive && (
+              <ReadyButton
+                readyState={[isReady, setIsReady]}
+                disabled={false}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -365,6 +386,41 @@ function GameView({
     }
   }
 
+  function GameStopwatch({
+    startTime,
+    finishTime,
+    DELTA_MS = 50,
+  }: {
+    startTime: number;
+    finishTime: number | undefined;
+    DELTA_MS?: number;
+  }) {
+    const [timeSinceStart, setTimeSinceStart] = useState<number>(
+      () => Date.now() - startTime,
+    );
+    const formatTime = (time: number): string => (time / 1000.0).toFixed(2);
+
+    useEffect(() => {
+      if (finishTime != null) return;
+      setTimeout(() => {
+        setTimeSinceStart(Date.now() - startTime);
+      }, DELTA_MS);
+    }, [startTime, timeSinceStart]);
+    useEffect(() => {
+      if (finishTime != null) setTimeSinceStart(finishTime);
+    }, [finishTime]);
+
+    return (
+      <>
+        <div className="w-full my-1">
+          <p className="text-4xl text-center font-semibold">
+            {formatTime(timeSinceStart)}
+          </p>
+        </div>
+      </>
+    );
+  }
+
   function ReadyButton({
     readyState,
     disabled,
@@ -395,7 +451,15 @@ function GameView({
     );
   }
 
-  function PlayersList({ players }: { players: PlayerInfo[] }) {
+  function PlayersList({
+    players,
+    gameActive,
+    finishTimes,
+  }: {
+    players: PlayerInfo[];
+    gameActive: boolean;
+    finishTimes: Map<string, number>; // map player name -> finish time ms
+  }) {
     return (
       <div className="text-xl flex flex-col truncate text-left">
         {players.map((p) => (
@@ -409,11 +473,23 @@ function GameView({
           >
             {p.username}
             {p.role == PlayerRole.ADMIN ? " (admin)" : ""}
-            {" - "}
-            {p.isReady ? (
-              <span className="text-green-500">Ready</span>
+            {!gameActive ? (
+              <>
+                {" - "}
+                {p.isReady ? (
+                  <span className="text-green-500">Ready</span>
+                ) : (
+                  <span className="text-red-500">Not Ready</span>
+                )}
+              </>
             ) : (
-              <span className="text-red-500">Not Ready</span>
+              <>
+                {finishTimes.get(p.username) && (
+                  <span>
+                    {` - ${(finishTimes.get(p.username)! / 1000.0).toFixed(2)}s`}
+                  </span>
+                )}
+              </>
             )}
           </span>
         ))}
