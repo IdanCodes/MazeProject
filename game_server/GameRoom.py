@@ -251,7 +251,6 @@ class GameRoom:
         new_result["place"] = player_place
         self.send_broadcast(build_network_msg(None, MsgType.PLAYER_FINISHED, new_result))
         p.account_data.register_finish_game(str(self.id))
-        p.account_data.save()
 
     # Checks if the requirements for stopping the game are fulfilled
     # - All players finished the maze (in self.game_results)

@@ -28,11 +28,18 @@ class AccountsManager:
     def save_account(self, acc_data: AccountData):
         return acc_data.save(self.conn)
 
-    def get_account_data_by_username(self, name: str) -> AccountData | None:
-        cursor = self.conn.execute("SELECT username, password, games_played FROM accounts WHERE username = ?", (name,))
+    def get_account_data_by_id(self, account_id: int):
+        cursor = self.conn.execute("SELECT account_id, username, password, games_played FROM accounts WHERE account_id = ?", (account_id,))
         row = cursor.fetchone()
         if row:
-            return AccountData(self.conn, row[0], row[1], json.loads(row[2]))
+            return AccountData.from_row(self.conn, row)
+        return None
+
+    def get_account_data_by_username(self, username: str) -> AccountData | None:
+        cursor = self.conn.execute("SELECT account_id, username, password, games_played FROM accounts WHERE username = ?", (username,))
+        row = cursor.fetchone()
+        if row:
+            return AccountData.from_row(self.conn, row)
         return None
 
     # returns whether the sign up was successful

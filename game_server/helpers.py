@@ -16,5 +16,5 @@ def get_random_int(min: int, max: int) -> int:
   return int(np.floor(random.random() * (max - min) + min))
 
 # get time in ms since epoch
-def get_time_ms():
+def get_time_ms() -> int:
     return (time.time_ns() // 1_000_000)
