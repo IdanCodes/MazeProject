@@ -357,7 +357,7 @@ export function useGameNetworkHandler(
       console.log("Finished setting maze.");
 
       // update finish cell
-      const finishCell = parseVector2(data.finishCell);
+      const finishCell = parseVector2(data.finishCell)!;
       setFinishCell(finishCell);
 
       // Trigger game start

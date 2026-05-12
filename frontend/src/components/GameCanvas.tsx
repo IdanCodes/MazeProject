@@ -51,7 +51,7 @@ const GameCanvas = forwardRef<
   ) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    const wallWidth = useMemo(() => 0.27 * cellScale, [cellScale]);
+    const wallWidth = useMemo(() => 0.2 * cellScale, [cellScale]);
 
     const canvasWidth: number = useMemo(
       () => cellScale * (maze.width + 1),
@@ -150,7 +150,9 @@ const GameCanvas = forwardRef<
 
     const drawGrid = (ctx: CanvasRenderingContext2D): void => {
       ctx.strokeStyle = "lightgray";
-      ctx.lineWidth = wallWidth / 2;
+      ctx.lineWidth = wallWidth / 2.3;
+      ctx.lineJoin = ctx.lineCap = "round";
+
       ctx.beginPath();
 
       for (let lineY = 0; lineY <= canvasHeight; lineY += 2 * cellScale) {
@@ -169,20 +171,39 @@ const GameCanvas = forwardRef<
     const drawMaze = useCallback(
       (ctx: CanvasRenderingContext2D): void => {
         ctx.strokeStyle = "black";
-        ctx.lineWidth = wallWidth * 0.75;
+        ctx.lineWidth = wallWidth;
+
+        // Set join and cap to round
+        ctx.lineJoin = ctx.lineCap = "round";
+
+        const addMazeLine = (from: Vector2, to: Vector2) => {
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+        };
+
         ctx.beginPath();
 
+        // trace the maze path
         for (let i = 0; i < maze.height; i += 2) {
           for (let j = 0; j < maze.width; j += 2) {
             // vertical wall (up-down)
             const rightBar: Vector2 = { x: j + 1, y: i };
-            if (maze.getCell(rightBar) === CellType.Wall) {
+            if (
+              maze.inBounds(rightBar) &&
+              maze.getCell(rightBar) === CellType.Wall
+            ) {
               const rightCanvasPos = gridToCanvas({ x: j + 2, y: i });
-              ctx.moveTo(rightCanvasPos.x, rightCanvasPos.y - wallWidth / 3);
-              ctx.lineTo(
-                rightCanvasPos.x,
-                rightCanvasPos.y + cellScale * 2 + wallWidth / 3,
-              );
+              // ctx.moveTo(rightCanvasPos.x, rightCanvasPos.y - wallWidth / 3);
+              // ctx.lineTo(
+              //   rightCanvasPos.x,
+              //   rightCanvasPos.y + cellScale * 2 + wallWidth / 3,
+              // );
+              const rightBarTop = rightCanvasPos;
+              const rightBarBottom = {
+                x: rightCanvasPos.x,
+                y: rightCanvasPos.y + cellScale * 2,
+              };
+              addMazeLine(rightBarTop, rightBarBottom);
             }
 
             // horizontal wall (left-right)
@@ -192,11 +213,17 @@ const GameCanvas = forwardRef<
               maze.getCell(downBar) === CellType.Wall
             ) {
               const downCanvasPos = gridToCanvas({ x: j, y: i + 2 });
-              ctx.moveTo(downCanvasPos.x - wallWidth / 3, downCanvasPos.y);
-              ctx.lineTo(
-                downCanvasPos.x + cellScale * 2 + wallWidth / 3,
-                downCanvasPos.y,
-              );
+              // ctx.moveTo(downCanvasPos.x - wallWidth / 3, downCanvasPos.y);
+              // ctx.lineTo(
+              //   downCanvasPos.x + cellScale * 2 + wallWidth / 3,
+              //   downCanvasPos.y,
+              // );
+              const bottomBarLeft = downCanvasPos;
+              const bottomBarRight = {
+                x: downCanvasPos.x + cellScale * 2,
+                y: downCanvasPos.y,
+              };
+              addMazeLine(bottomBarLeft, bottomBarRight);
             }
           }
         }
