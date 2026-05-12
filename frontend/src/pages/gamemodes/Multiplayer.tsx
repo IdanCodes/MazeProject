@@ -389,7 +389,7 @@ export default function Multiplayer({
   }): JSX.Element {
     const finishedSetup = useRef<boolean>(false);
     const [localPlayer, setLocalPlayer] = useState<PlayerInfo>({
-      name: playerName,
+      username: playerName,
       position: ZERO_VEC,
       isReady: false,
     } as PlayerInfo);
@@ -612,14 +612,14 @@ export default function Multiplayer({
       <div className="text-xl flex flex-col truncate text-left">
         {players.map((p) => (
           <span
-            key={p.name}
+            key={p.username}
             className={clsx(
               "text-2xl",
               p.role == PlayerRole.ADMIN && "text-blue-800",
               p.role == PlayerRole.PLAYER && "",
             )}
           >
-            {p.name}
+            {p.username}
             {p.role == PlayerRole.ADMIN ? " (admin)" : ""}
             {" - "}
             {p.isReady ? (

@@ -110,7 +110,7 @@ def build_network_msg(source: ClientInfo | None, msg_type: MsgType, bc_data: any
     }
 
     if source:
-        bc_dict["source"] = source.name
+        bc_dict["source"] = source.username
     if bc_data != None:
         bc_dict["data"] = bc_data
     

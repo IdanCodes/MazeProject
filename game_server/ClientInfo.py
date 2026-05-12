@@ -81,6 +81,10 @@ class ClientInfo:
     def in_lobby(self) -> bool:
         return self.curr_room == None
     
+    @property
+    def username(self) -> bool:
+        return self.account_data.username
+
     # set which room the client is currently in
     # None -> lobby
     def set_room(self, room: GameRoom | None):

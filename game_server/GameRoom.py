@@ -66,7 +66,7 @@ class GameRoom:
 
     def find_player_by_name(self, client_name: str) -> Player | None:
         for player in self.players:
-            if player.name == client_name:
+            if player.username == client_name:
                 return player
         return None
     
@@ -108,18 +108,18 @@ class GameRoom:
         player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
         player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_options()))
         for c in self.players:
-            if c.name == player.name: continue
+            if c.username == player.username: continue
             player.send(build_network_msg(None, MsgType.PLAYER_CONNECTED, c.get_player_info()))
         curr_admin = self.get_admin()
         if curr_admin:
-            player.send(build_network_msg(None, MsgType.ROOM_ADMIN, curr_admin.name))
+            player.send(build_network_msg(None, MsgType.ROOM_ADMIN, curr_admin.username))
 
     # update the admin of the room
     def set_admin(self, player: Player):
         for p in self.players:
             p.role = RoomClientRole.PLAYER
         player.role = RoomClientRole.ADMIN
-        self.send_broadcast(build_network_msg(None, MsgType.ROOM_ADMIN, player.name))
+        self.send_broadcast(build_network_msg(None, MsgType.ROOM_ADMIN, player.username))
 
     def get_admin(self) -> Player:
         return next((p for p in self.players if p.role == RoomClientRole.ADMIN), None)
@@ -189,7 +189,7 @@ class GameRoom:
         
     def update_pos(self, sender: Player, pos: dict):
         if is_valid_position(pos):
-            self.dirty_pos_dict[sender.name] = sender.position = Vector2(pos["x"], pos["y"])
+            self.dirty_pos_dict[sender.username] = sender.position = Vector2(pos["x"], pos["y"])
 
     def set_ready(self, sender: ClientInfo, isReady: bool):
         if isinstance(isReady, bool):
@@ -218,7 +218,7 @@ class GameRoom:
         if len(self.players) == 0: return
         # TODO: potentially to optimize broadcast, send it asynchronously
         for client in self.players:
-            if (not exclude) or (client.name != exclude.name):
+            if (not exclude) or (client.username != exclude.username):
                 client.send(message)
 
     def get_players_in_finish_square(self) -> list[Player]:
@@ -233,9 +233,9 @@ class GameRoom:
         return grid_pos.x == cellPos.x and grid_pos.y == cellPos.y
 
     def player_finished(self, p: Player):
-        print(f"Player {p.name} finished!")
+        print(f"Player {p.username} finished!")
         new_result = {
-            "name": p.name,
+            "username": p.username,
             "timeMs": get_time_ms() - self.start_time
         }
         self.game_results.append(new_result)
@@ -267,7 +267,7 @@ class GameRoom:
             if self.game_active:
                 # TODO: Optimize?
                 finishers = self.get_players_in_finish_square()
-                new_finishers = [x for x in finishers if all(x.name != y["name"] for y in self.game_results)]
+                new_finishers = [x for x in finishers if all(x.username != y["username"] for y in self.game_results)]
                 if len(new_finishers):
                     for f in new_finishers:
                         self.player_finished(f)

@@ -152,7 +152,7 @@ class Server:
     # Returns None if there's no client with the given name
     def find_client_by_name(self, client_name: str) -> ClientInfo | None:
         for c in self.clients:
-            if c.account_data.username == client_name:
+            if c.username == client_name:
                 return c
         return None
 

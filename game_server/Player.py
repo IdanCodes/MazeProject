@@ -49,8 +49,8 @@ class Player:
         return self.client_info.account_data
 
     @property
-    def name(self):
-        return self.account_data.username
+    def username(self):
+        return self.client_info.username
 
     def to_string(self) -> str:
         return self.client_info.to_string()
@@ -60,7 +60,7 @@ class Player:
 
     def get_player_info(self) -> dict:
         return {
-            "name": self.name,
+            "username": self.username,
             "role": self.role.value,
             "position": self.position.__dict__,
             "isReady": self.isReady,

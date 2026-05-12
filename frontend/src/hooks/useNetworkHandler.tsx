@@ -53,7 +53,7 @@ export function useGameNetworkHandler(
   const lastSentPos = useRef<Vector2>(ZERO_VEC);
   const [otherPlayers, setOtherPlayers] = useState<PlayerInfo[]>([]);
   const playerIndexByName = useCallback(
-    (name: string) => otherPlayers.findIndex((p) => p.name == name),
+    (name: string) => otherPlayers.findIndex((p) => p.username == name),
     [otherPlayers],
   );
 
@@ -89,7 +89,7 @@ export function useGameNetworkHandler(
     setOtherPlayers((op) => {
       const newOp = [...op];
       for (const [src, pos] of posList) {
-        const index = newOp.findIndex((p) => p.name === src);
+        const index = newOp.findIndex((p) => p.username === src);
         if (index >= 0) newOp[index].position = pos;
         else
           console.error(
@@ -290,7 +290,7 @@ export function useGameNetworkHandler(
 
       const posList: [string, Vector2][] = [];
       Object.entries(data).forEach(([name, rawPos]) => {
-        if (name === localPlayer.name) return;
+        if (name === localPlayer.username) return;
 
         const newPos = parseVector2(rawPos);
         if (!newPos) return;
@@ -307,14 +307,16 @@ export function useGameNetworkHandler(
     onMessage(callerId, GameMsgType.PLAYER_CONNECTED, (msg) => {
       const newPlayer = parsePlayerInfo(msg.data);
       if (!newPlayer) return;
-      const index = otherPlayers.findIndex((p) => p.name === newPlayer.name);
+      const index = otherPlayers.findIndex(
+        (p) => p.username === newPlayer.username,
+      );
       if (index < 0) setOtherPlayers((op) => [...op, newPlayer]);
     });
 
     onMessage(callerId, GameMsgType.PLAYER_DISCONNECTED, (msg) => {
       setOtherPlayers((op) => {
         const newOp = [...op];
-        const index = newOp.findIndex((p) => p.name === msg.source);
+        const index = newOp.findIndex((p) => p.username === msg.source);
         if (index >= 0) newOp.splice(index, 1);
         return newOp;
       });
@@ -324,7 +326,7 @@ export function useGameNetworkHandler(
       if (typeof msg.data != "boolean") return;
       setOtherPlayers((op) => {
         const newOp = [...op];
-        const index = newOp.findIndex((p) => p.name === msg.source);
+        const index = newOp.findIndex((p) => p.username === msg.source);
         if (index >= 0) newOp[index].isReady = msg.data;
         return newOp;
       });
@@ -354,7 +356,7 @@ export function useGameNetworkHandler(
       const data = msg.data;
       if (
         !(data && typeof data === "object") ||
-        !(data.name && typeof data.name === "string") ||
+        !(data.username && typeof data.username === "string") ||
         !(data.timeMs && typeof data.timeMs === "number") ||
         !(data.place && typeof data.place === "number")
       ) {
@@ -364,16 +366,16 @@ export function useGameNetworkHandler(
         return;
       }
       const {
-        name,
+        username,
         timeMs,
         place,
-      }: { name: string; timeMs: number; place: number } = msg.data;
+      }: { username: string; timeMs: number; place: number } = msg.data;
 
       console.log(
-        `Player "${name}" finished in place ${place} in ${timeMs / 10 / 100.0}s`,
+        `Player "${username}" finished in place ${place} in ${timeMs / 10 / 100.0}s`,
       );
       // TODO: handle other players finishing
-      if (name != localPlayer.name) return;
+      if (username != localPlayer.username) return;
 
       onFinishMaze(place, timeMs);
     });
@@ -411,7 +413,7 @@ export function useGameNetworkHandler(
         return;
       }
 
-      if (newAdminName == localPlayer.name) {
+      if (newAdminName == localPlayer.username) {
         setOtherPlayers((op) => {
           const newOp = [...op];
           for (let i = 0; i < newOp.length; i++)
