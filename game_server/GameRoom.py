@@ -230,9 +230,15 @@ class GameRoom:
     # pos: normalized position
     # cellPos: grid position
     def pos_is_on_cell(self, pos: Vector2, cellPos: Vector2) -> bool:
-        cellScale = 1. / (self.stored_maze.width)
-        grid_pos = Vector2(floor((pos.x + cellScale) * self.stored_maze.width), floor((pos.y + cellScale) * self.stored_maze.height + cellScale))
-        return grid_pos.x == cellPos.x and grid_pos.y == cellPos.y
+        cell_top_left = Vector2(
+            x=cellPos.x * self.cell_scale,
+            y=cellPos.y * self.cell_scale
+        )
+        cell_bottom_right = Vector2(
+            x=cellPos.x * self.cell_scale + self.cell_scale * 2,
+            y=cellPos.y * self.cell_scale + self.cell_scale * 2
+        )
+        return cell_top_left.x < pos.x < cell_bottom_right.x and cell_top_left.y < pos.y < cell_bottom_right.y
 
     def player_finished(self, p: Player):
         print(f"Player {p.username} finished!")
@@ -257,6 +263,7 @@ class GameRoom:
         # TODO: Disconnect all players and close room?
 
     def game_loop(self):
+        self.last_0_pos = Vector2(0, 0)
         while self.running:
             start = time.perf_counter()
 
@@ -284,6 +291,35 @@ class GameRoom:
     def disconnect_all(self):
         for player in self.players:
             self.on_client_disconnect(player)
+
+    # region "Canvas" Methods
+    @property
+    def cell_scale(self) -> float:
+        RENDER_HEIGHT = float(1.) # normalized maze size
+        return RENDER_HEIGHT / (self.stored_maze.height + 1)
+
+    def canvas_to_visual_grid(self, canvas_pos: Vector2) -> Vector2:
+        return Vector2(
+            x=int(floor(canvas_pos.x / self.cell_scale) / 2.),
+            y=int(floor(canvas_pos.y / self.cell_scale) / 2.),
+        )
+    
+    def canvas_to_grid(self, canvas_pos: Vector2) -> Vector2:
+        return Vector2(
+            x=floor(canvas_pos.x / self.cell_scale),
+            y=floor(canvas_pos.y / self.cell_scale),
+        )
+    
+    def apply_canvas_circle_offset(self, pos: Vector2) -> Vector2:
+        return Vector2(
+            x=pos.x + self.cell_scale/2,
+            y=pos.y + self.cell_scale /2,
+        )
+    
+    def get_cell_of_player_pos(self, player_pos: Vector2) -> Vector2:
+        return self.canvas_to_visual_grid(self.apply_canvas_circle_offset(player_pos))
+
+    # endregion
 
 ROOM_NAME_MAX_LEN = 20
 ROOM_NAME_MIN_LEN = 3

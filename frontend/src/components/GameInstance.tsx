@@ -71,8 +71,8 @@ const GameInstance = forwardRef<
 
     // cells per second
     const playerSpeed = 2.8;
-    const accelerationRate = 0.15;
-    const decelerationRate = 0.1;
+    const accelerationRate = 0.1;
+    const decelerationRate = 0.15;
 
     const speedAmplifier = useMemo(() => {
       return (playerSpeed * cellScale * 4) / GAME_FPS;
