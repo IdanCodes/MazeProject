@@ -24,7 +24,7 @@ class AccountData:
             self.conn.execute("""UPDATE accounts SET
                               username = ?,
                               password = ?,
-                              games_played = ?,
+                              games_played = ?
                               WHERE account_id = ?
                          """,
             (self.username, self.password, games_json, self.account_id))
@@ -37,7 +37,7 @@ class AccountData:
 
         with self.conn:
             self.conn.execute("""UPDATE accounts SET
-                              games_played = ?,
+                              games_played = ?
                               WHERE account_id = ?""", (games_json, self.account_id))
 
 

@@ -47,6 +47,10 @@ class Player:
     @property
     def account_data(self):
         return self.client_info.account_data
+    
+    @property
+    def account_id(self):
+        return self.account_data.account_id
 
     @property
     def username(self):

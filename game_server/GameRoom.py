@@ -4,6 +4,7 @@ import time
 from typing import TYPE_CHECKING
 import uuid
 from ClientInfo import ClientInfo
+from Database.GameData import GameData, GameResult
 from MazeGen.Maze import Maze
 from MazeGen.MazeGenerator import generateDFSRectMaze
 from Player import Player, RoomClientRole
@@ -28,11 +29,10 @@ class GameRoom:
         self.id: uuid.UUID = uuid.uuid4()
         self.players: list[Player] = []
         self.dirty_pos_dict = {}
-        self.start_time = -1
         self.game_active = False
-        self.game_options = GameOptions.GameOptions() #TODO: implement
-        self.game_results = [] # {name: string, timeMs: number}[]
-        
+        self.cached_results = [] # {username, timeMs, place}
+        self.game_data = GameData(str(self.id), self.name, get_time_ms(), GameOptions.GameOptions())
+
         self.generate_new_maze()
         self.running = True
         self.game_loop_thread = threading.Thread(target=self.game_loop)
@@ -41,6 +41,18 @@ class GameRoom:
     @property
     def is_full(self):
         return len(self.players) == self.capacity
+    
+    @property
+    def start_time(self) -> int:
+        return self.game_data.start_time
+
+    @property
+    def game_options(self) -> int:
+        return self.game_data.game_options
+    
+    @property
+    def game_results(self) -> list[GameResult]:
+        return self.game_data.game_results
 
     def check_password(self, password: str | None) -> bool:
         return self.password == password or (len(password) == 0 and self.password == None)
@@ -181,7 +193,7 @@ class GameRoom:
         self.finish_cell = Vector2(self.stored_maze.width - 1, self.stored_maze.height - 1)
 
         # start_time = now + 3 seconds (in ms from epoch)
-        self.start_time = get_time_ms() + (3 * 1_000)
+        self.game_data.start_time = get_time_ms() + (3 * 1_000)
         self.game_active = True
         bc_msg = {
             "maze": self.stored_maze.get_matrix(),
@@ -242,13 +254,14 @@ class GameRoom:
 
     def player_finished(self, p: Player):
         print(f"Player {p.username} finished!")
+        finish_time = get_time_ms() - self.start_time
+        self.game_results.append(GameResult(account_id=p.account_id, time_ms=finish_time))
         new_result = {
             "username": p.username,
-            "timeMs": get_time_ms() - self.start_time
+            "timeMs": finish_time,
+            "place": len(self.game_results)
         }
-        self.game_results.append(new_result)
-        player_place = len(self.game_results)
-        new_result["place"] = player_place
+        self.cached_results.append(new_result)
         self.send_broadcast(build_network_msg(None, MsgType.PLAYER_FINISHED, new_result))
         p.account_data.register_finish_game(str(self.id))
 
@@ -261,7 +274,7 @@ class GameRoom:
     def end_game(self):
         self.running = False
         self.game_active = False
-        self.send_broadcast(build_network_msg(None, MsgType.END_GAME, self.game_results))
+        self.send_broadcast(build_network_msg(None, MsgType.END_GAME, self.cached_results))
         # TODO: Disconnect all players and close room?
 
     def game_loop(self):
@@ -278,7 +291,7 @@ class GameRoom:
             if self.game_active:
                 # TODO: Optimize?
                 finishers = self.get_players_in_finish_cell()
-                new_finishers = [x for x in finishers if all(x.username != y["username"] for y in self.game_results)]
+                new_finishers = [x for x in finishers if all(x.account_id != y["account_id"] for y in self.game_results)]
                 if len(new_finishers):
                     for f in new_finishers:
                         self.player_finished(f)

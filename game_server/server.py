@@ -12,6 +12,7 @@ from ClientInfo import ClientInfo
 from GameRoom import GameRoom, valid_room_capacity, valid_room_name, valid_room_password
 import protocol
 from protocol import SOCK_RECV_CHUNK_SIZE, MsgType, ResponseCode, build_error_msg, build_error_obj, build_network_msg, build_response, build_success_msg, parse_request
+from Database.DBManagers import accounts_manager
 
 # Default exception hook for threads
 def default_excepthook(args):
@@ -22,8 +23,7 @@ def default_excepthook(args):
 threading.excepthook = default_excepthook
 
 class Server:
-    def __init__(self, accounts_manager: AccountsManager):
-        self.accounts_manager = accounts_manager
+    def __init__(self):
         self.clients: list[ClientInfo] = []
         self.rooms: list[GameRoom] = []
     
@@ -110,9 +110,9 @@ class Server:
 
     # try logging in
     def try_login(self, username: str, password: str) -> tuple[AccountData | None, str | None]:
-        acc_data = self.accounts_manager.authenticate_user(username, password)
+        acc_data = accounts_manager.authenticate_user(username, password)
         if not acc_data:
-            if self.accounts_manager.does_user_exist(username): return None, "Invalid Password"
+            if accounts_manager.does_user_exist(username): return None, "Invalid Password"
             else: return None, "User doesn't exist"
         if any(c.username == username for c in self.clients):
             return None, "This account is currently in use by another client"
@@ -120,9 +120,9 @@ class Server:
 
     # try signing up
     def try_signup(self, username: str, password: str) -> tuple[AccountData | None, str | None]:
-        if self.accounts_manager.does_user_exist(username):
+        if accounts_manager.does_user_exist(username):
             return None, "Username is taken"
-        acc_data = self.accounts_manager.sign_up(username, password)
+        acc_data = accounts_manager.sign_up(username, password)
         if not acc_data:
             return None, "Sign Up Failed"
         return acc_data, None
@@ -243,8 +243,7 @@ class Server:
         return True
 
 if __name__ == "__main__":
-    accounts_manager = AccountsManager()
-    server = Server(accounts_manager)
+    server = Server()
 
     try:
         server.start_server()
