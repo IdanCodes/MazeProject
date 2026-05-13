@@ -31,7 +31,8 @@ class GameRoom:
         self.players: list[Player] = []
         self.dirty_pos_dict = {}
         self.game_active = False
-        self.cached_results = [] # {username, timeMs, place}
+        self.total_results = [] # {username, timeMs} - stores results of all all players who played the game (importantly, those who finished and quit)
+        self.current_results = [] # {username, timeMs} - stores results of players who are currently still in the game
         self.game_data = GameData(str(self.id), self.name, get_time_ms(), GameOptions.GameOptions())
 
         self.generate_new_maze()
@@ -102,13 +103,14 @@ class GameRoom:
 
     def on_client_disconnect(self, player: Player):
         if not player in self.players: return
+        self.current_results = [x for x in self.current_results if x["username"] != player.username]
         player.unsubscribe_receive(self.id)
         player.unsubscribe_disconnect(self.id)
         player.set_room(None)
         self.players.remove(player)
         print(f"{player.to_string()} disconnected from room {self.name}")
         if len(self.players) == 0:
-            self.parent_server.remove_room_by_id(self.id)
+            self.remove_room()
             return
         self.send_broadcast(build_network_msg(player, MsgType.PLAYER_DISCONNECTED))
         try:
@@ -268,7 +270,8 @@ class GameRoom:
             "username": p.username,
             "timeMs": finish_time,
         }
-        self.cached_results.append(new_result)
+        self.total_results.append(new_result)
+        self.current_results.append(new_result)
         new_result["place"] = len(self.game_results)
         self.send_broadcast(build_network_msg(None, MsgType.PLAYER_FINISHED, new_result))
         p.account_data.register_finish_game(str(self.id))
@@ -277,19 +280,22 @@ class GameRoom:
     # - All players finished the maze (in self.game_results)
     # - ... add more options in the future (time limit etc..)
     def should_stop_game(self) -> bool:
-        return (len(self.players) > 1) and (len(self.game_results) == len(self.players))
+        return len(self.current_results) == len(self.players)
+        # return (len(self.players) > 1) and (len(self.game_results) == len(self.players))
 
     def end_game(self):
+        if not self.running: return
+
         self.running = False
         self.game_active = False
-        self.send_broadcast(build_network_msg(None, MsgType.END_GAME, self.cached_results))
+        self.send_broadcast(build_network_msg(None, MsgType.END_GAME, self.total_results))
         games_manager.save_game(self.game_data)
         self.restart_game()
         # TODO: Disconnect all players and close room?
 
     def restart_game(self):
         self.game_data = GameData(str(uuid.uuid4()), self.name, get_time_ms(), GameOptions.GameOptions())
-        self.cached_results = []
+        self.current_results = self.total_results = []
         self.generate_new_maze()
         self.running = True
         self.send_broadcast(build_network_msg(None, MsgType.RESTART_GAME))
@@ -321,6 +327,12 @@ class GameRoom:
                     self.end_game()
 
             time.sleep(max(1. / GAME_LOOP_RATE - (time.perf_counter() - start), 0))
+
+    def remove_room(self):
+        if self.game_active:
+            try: self.end_game()
+            except: pass
+        self.parent_server.remove_room_by_id(self.id)
 
     # disconnect all players from the room
     def disconnect_all(self):
