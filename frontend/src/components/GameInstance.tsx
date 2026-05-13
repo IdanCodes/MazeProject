@@ -9,7 +9,7 @@ import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
 import { Maze } from "../types/Maze";
 import GameCanvas, { GameCanvasHandle, PLAYER_RADIUS } from "./GameCanvas";
-import { lerp } from "../utils/common-helpers";
+import { lerp, moveTowards } from "../utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
 import {
   calcMagnitude,
@@ -70,9 +70,11 @@ const GameInstance = forwardRef<
     }, [cellScale]);
 
     // cells per second
-    const playerSpeed = 2.8;
-    const accelerationRate = 0.1;
-    const decelerationRate = 0.15;
+    const playerSpeed = 2.5;
+    // const accelerationRate = 0.12;
+    // const decelerationRate = 0.17;
+    const accelerationRate = 0.7;
+    const decelerationRate = 0.4;
 
     const speedAmplifier = useMemo(() => {
       return (playerSpeed * cellScale * 4) / GAME_FPS;
@@ -166,12 +168,12 @@ const GameInstance = forwardRef<
     useAnimationUpdate(PHYSICS_UPDATE_FPS, () => {
       const epsilon = 0.05;
       velocity.current = {
-        x: lerp(
+        x: moveTowards(
           velocity.current.x,
           targetVelocity.current.x,
           targetVelocity.current.x != 0 ? accelerationSpeed : decelerationSpeed,
         ),
-        y: lerp(
+        y: moveTowards(
           velocity.current.y,
           targetVelocity.current.y,
           targetVelocity.current.y != 0 ? accelerationSpeed : decelerationSpeed,

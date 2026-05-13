@@ -11,7 +11,7 @@ class GameDataDB:
         atexit.register(self.close)
 
         with self.conn:
-            # game_options, game_results stored as json string
+            # game_options, maze_data, game_results stored as json string
             self.conn.execute('''CREATE TABLE IF NOT EXISTS games (
                               game_id TEXT PRIMARY KEY,
                               room_name TEXT NOT NULL,

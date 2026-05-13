@@ -1,6 +1,7 @@
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { ErrorLabel } from "@src/components/ErrorLabel";
 import GameInstance, { GameInstanceHandle } from "@src/components/GameInstance";
+import OverlayModal from "@src/components/OverlayModal";
 import { GameMsgType } from "@src/constants/GameMsgType";
 import GameState from "@src/constants/GameState";
 import { PlayerRole } from "@src/constants/PlayerRole";
@@ -10,9 +11,11 @@ import { usePassedState } from "@src/hooks/usePassedState";
 import { GameOptions, MazeDifficulty } from "@src/interfaces/GameOptions";
 import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 import { equalVec, Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
+import { GameResult } from "@src/types/GameResult";
 import { Maze } from "@src/types/Maze";
 import { MazeSize } from "@src/types/maze-size";
 import { PassedState, SetStateFunc } from "@src/types/passed-state";
+import { formatTime } from "@src/utils/common-helpers";
 import clsx from "clsx";
 import { JSX, useEffect, useMemo, useRef, useState } from "react";
 
@@ -68,6 +71,9 @@ function GameView({
   const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
   const [finishTimes, setFinishTimes] = useState<Map<string, number>>(
     new Map(),
+  );
+  const [lastGameResults, setLastGameResults] = useState<GameResult[] | null>(
+    null,
   );
   const canvasDimensions = useMemo<{
     width: number;
@@ -152,7 +158,8 @@ function GameView({
     }
   }
 
-  function onEndGame(gameResults: { username: string; timeMs: number }[]) {
+  function onEndGame(gameResults: GameResult[]) {
+    setLastGameResults(gameResults);
     setGameState(GameState.Ended);
     setCanMove(true);
 
@@ -245,6 +252,9 @@ function GameView({
               />
             )}
           </div>
+          {gameState != GameState.Active && lastGameResults && (
+            <GameResultsPanel />
+          )}
         </div>
       </div>
     </div>
@@ -420,7 +430,6 @@ function GameView({
     const [timeSinceStart, setTimeSinceStart] = useState<number>(
       () => Date.now() - startTime,
     );
-    const formatTime = (time: number): string => (time / 1000.0).toFixed(2);
 
     useEffect(() => {
       if (finishTime != null) return;
@@ -480,6 +489,26 @@ function GameView({
   //     </>
   //   );
   // }
+
+  function GameResultsPanel() {
+    if (!lastGameResults) return <></>;
+
+    return (
+      <>
+        {/* <OverlayModal></OverlayModal> */}
+        <div className="bg-gray-400/30">
+          <p className="text-3xl">Results:</p>
+          {lastGameResults.map((res, i) => (
+            <div key={res.username}>
+              <p className="text-2xl">
+                {i + 1}. {res.username} - {formatTime(res.timeMs)}s
+              </p>
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
 
   function PlayersList({
     players,

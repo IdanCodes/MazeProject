@@ -41,10 +41,10 @@ def difficultyToDims(diff: MazeDifficulty) -> dict:
             width = height = 13
             pass
         case MazeDifficulty.Medium:
-            width = height = 18
+            width = height = 20
             pass
         case MazeDifficulty.Hard:
-            width = height = 24
+            width = height = 28
             pass
 
     return {

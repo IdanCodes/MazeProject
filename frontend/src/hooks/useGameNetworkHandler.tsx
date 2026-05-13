@@ -30,6 +30,7 @@ import { PlayerRole } from "@src/constants/PlayerRole";
 import { GameOptions, parseGameOptions } from "@src/interfaces/GameOptions";
 import { NetworkMessage } from "@src/interfaces/NetworkMessage";
 import { useNetworkContext } from "@src/contexts/NetworkContext";
+import { isGameResult } from "@src/types/GameResult";
 
 export function useGameNetworkHandler(
   localPlayer: PlayerInfo,
@@ -398,25 +399,13 @@ export function useGameNetworkHandler(
 
     onMessage(callerId, GameMsgType.END_GAME, (msg) => {
       const data: { username: string; timeMs: number }[] = msg.data;
-      if (!(data && Array.isArray(data)))
+      if (!(data && Array.isArray(data)) || data.find((x) => !isGameResult(x)))
         return console.error(
           "useNetworkHandler: Invalid format for endGame message",
           msg,
         );
 
-      for (const x of data) {
-        if (
-          !(x && typeof x === "object") ||
-          !(x.username && typeof x.username === "string") ||
-          !(x.timeMs && typeof x.timeMs === "number")
-        )
-          return console.error(
-            "useNetworkHandler: Invalid format for endGame message",
-            msg,
-          );
-
-        onEndGame(data);
-      }
+      onEndGame(data);
     });
 
     onMessage(callerId, GameMsgType.ROOM_ADMIN, (msg) => {
