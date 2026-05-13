@@ -10,7 +10,6 @@ import { JSX, useEffect, useMemo, useState } from "react";
 function RoomsView({ callerId }: { callerId: string }) {
   const { sendMessage, onResponse } = useNetworkContext();
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
-  const [createRoomError, setCreateRoomError] = useState<string>("");
   const [roomsError, setRoomsError] = useState<string>("");
 
   useEffect(() => {
@@ -27,15 +26,6 @@ function RoomsView({ callerId }: { callerId: string }) {
       setRoomsList(res.data);
     });
 
-    onResponse(callerId, GameMsgType.CREATE_ROOM, (res) => {
-      if (res.code != ResponseCode.SUCCESS) {
-        console.error("Encountered an error when creating a room", res.data);
-        setCreateRoomError(res.data.error);
-        return;
-      }
-      console.log("Room created successfuly!");
-    });
-
     onResponse(callerId, GameMsgType.JOIN_ROOM, (res) => {
       if (res.code == ResponseCode.SUCCESS) {
         console.log("Successfuly joined room");
@@ -49,24 +39,6 @@ function RoomsView({ callerId }: { callerId: string }) {
     refreshRoomsList();
   }, []);
 
-  const createRoom = (name: string, capacity: number, password: string) => {
-    setCreateRoomError("");
-    sendMessage(GameMsgType.CREATE_ROOM, {
-      name,
-      capacity,
-      password,
-    });
-    refreshRoomsList();
-  };
-
-  const joinRoom = (room_id: string, room_password: string) => {
-    sendMessage(GameMsgType.JOIN_ROOM, {
-      id: room_id,
-      password: room_password,
-    });
-    refreshRoomsList();
-  };
-
   function refreshRoomsList() {
     setRoomsList([]);
     sendMessage(GameMsgType.ROOMS_LIST);
@@ -76,11 +48,8 @@ function RoomsView({ callerId }: { callerId: string }) {
     <>
       <RedirectButton path={RoutePath.Home}>Back</RedirectButton>
       <RoomsPanel
-        handleCreateRoom={createRoom}
-        handleJoinRoom={joinRoom}
         refreshList={refreshRoomsList}
         roomsList={roomsList}
-        createRoomError={createRoomError}
         roomsError={roomsError}
       />
     </>
@@ -88,24 +57,14 @@ function RoomsView({ callerId }: { callerId: string }) {
 
   function RoomsPanel({
     refreshList,
-    handleCreateRoom,
-    handleJoinRoom,
     roomsError,
     roomsList,
     refreshTimeoutMS = 5000,
-    createRoomError = "",
   }: {
     refreshList: () => void;
-    handleCreateRoom: (
-      name: string,
-      capacity: number,
-      password: string,
-    ) => void;
-    handleJoinRoom: (room_id: string, room_password: string) => void;
     roomsError: string;
     roomsList: GameRoomInfo[];
     refreshTimeoutMS?: number;
-    createRoomError?: string;
   }): JSX.Element {
     const [disabledRefresh, setDisabledRefresh] = useState<boolean>(false);
     function handleRefresh() {
@@ -128,8 +87,8 @@ function RoomsView({ callerId }: { callerId: string }) {
     return (
       <div>
         <CreateRoomPanel
-          handleCreateRoom={handleCreateRoom}
-          error={createRoomError}
+          callerId={callerId + ".CreateRoomPanel"}
+          refreshRoomsList={refreshList}
         />
         <div className="w-7/10 mx-auto">
           <RefreshRoomListBtn
@@ -138,7 +97,7 @@ function RoomsView({ callerId }: { callerId: string }) {
           />
           <ErrorLabel text={roomsError} />
           <p className="text-2xl">{roomCountStr}</p>
-          <RoomList rooms={roomsList} handleJoinRoom={handleJoinRoom} />
+          <RoomList rooms={roomsList} refreshRoomsList={refreshList} />
         </div>
       </div>
     );
@@ -161,40 +120,66 @@ function RoomsView({ callerId }: { callerId: string }) {
       </PrimaryButton>
     );
   }
+}
 
-  function CreateRoomPanel({
-    handleCreateRoom,
-    error,
-  }: {
-    handleCreateRoom: (
-      name: string,
-      capacity: number,
-      password: string,
-    ) => void;
-    error: string;
-  }): JSX.Element {
-    const [name, setName] = useState<string>("New Room");
-    const [capacity, setCapacity] = useState<number>(2);
-    const [password, setPassword] = useState<string>("");
-    const btnDisabled = useMemo(
-      () =>
-        name.length <= 2 ||
-        name.length > 20 ||
-        capacity <= 1 ||
-        capacity > 10 ||
-        password.length > 16,
-      [name, capacity, password],
-    );
+function CreateRoomPanel({
+  callerId,
+  refreshRoomsList,
+}: {
+  callerId: string;
+  refreshRoomsList: () => void;
+}): JSX.Element {
+  const { sendMessage, onResponse } = useNetworkContext();
+  const [createRoomError, setCreateRoomError] = useState<string>("");
+  const [name, setName] = useState<string>("New Room");
+  const [capacity, setCapacity] = useState<number>(2);
+  const [password, setPassword] = useState<string>("");
+  const btnDisabled = useMemo(
+    () =>
+      name.length <= 2 ||
+      name.length > 20 ||
+      capacity <= 1 ||
+      capacity > 10 ||
+      password.length > 16,
+    [name, capacity, password],
+  );
 
-    const handleClick = () => {
-      setName("");
-      setCapacity(2);
-      setPassword("");
-      handleCreateRoom(name, capacity, password);
-    };
+  const sendCreateRoom = (name: string, capacity: number, password: string) => {
+    setCreateRoomError("");
+    sendMessage(GameMsgType.CREATE_ROOM, {
+      name,
+      capacity,
+      password,
+    });
+    refreshRoomsList();
+  };
 
-    return (
-      <div className="w-full flex flex-col">
+  const handleCreteRoom = () => {
+    setName("");
+    setCapacity(2);
+    setPassword("");
+    sendCreateRoom(name, capacity, password);
+  };
+
+  useEffect(() => {
+    onResponse(callerId, GameMsgType.CREATE_ROOM, (res) => {
+      if (res.code != ResponseCode.SUCCESS) {
+        console.error("Encountered an error when creating a room", res.data);
+        setCreateRoomError(res.data.error);
+        return;
+      }
+      console.log("Room created successfuly!");
+    });
+  }, []);
+
+  return (
+    <div className="w-full flex flex-col">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleCreteRoom;
+        }}
+      >
         <div className="flex flex-row w-3/5 justify-between mx-auto">
           <div>
             <p className="text-3xl">Room Name: </p>
@@ -229,87 +214,95 @@ function RoomsView({ callerId }: { callerId: string }) {
         </div>
         <PrimaryButton
           className="bg-green-500 hover:bg-green-600 text-2xl w-50 mx-auto"
-          onClick={handleClick}
           disabled={btnDisabled}
+          btnType="submit"
         >
           Create Room
         </PrimaryButton>
-        <div className="mx-auto">
-          <ErrorLabel text={error} />
-        </div>
+      </form>
+      <div className="mx-auto">
+        <ErrorLabel text={createRoomError} />
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  function RoomList({
-    rooms,
-    handleJoinRoom,
+function RoomList({
+  rooms,
+  refreshRoomsList,
+}: {
+  rooms: GameRoomInfo[];
+  refreshRoomsList: () => void;
+}) {
+  const { sendMessage } = useNetworkContext();
+
+  const handleJoinRoom = (room_id: string, room_password: string) => {
+    sendMessage(GameMsgType.JOIN_ROOM, {
+      id: room_id,
+      password: room_password,
+    });
+    refreshRoomsList();
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      {rooms.map((roomInfo) => (
+        <RoomDisplay
+          key={roomInfo.id}
+          room={roomInfo}
+          joinRoom={(room_password: string) => {
+            handleJoinRoom(roomInfo.id, room_password);
+          }}
+        />
+      ))}
+    </div>
+  );
+
+  function RoomDisplay({
+    room,
+    joinRoom,
   }: {
-    rooms: GameRoomInfo[];
-    handleJoinRoom: (room_id: string, room_password: string) => void;
+    room: GameRoomInfo;
+    joinRoom: (room_password: string) => void;
   }) {
+    const [password, setPassword] = useState<string>("");
     return (
-      <div className="flex flex-col gap-3">
-        {rooms.map((roomInfo) => (
-          <RoomDisplay
-            key={roomInfo.id}
-            room={roomInfo}
-            joinRoom={(room_password: string) => {
-              handleJoinRoom(roomInfo.id, room_password);
-            }}
-          />
-        ))}
-      </div>
-    );
-
-    function RoomDisplay({
-      room,
-      joinRoom,
-    }: {
-      room: GameRoomInfo;
-      joinRoom: (room_password: string) => void;
-    }) {
-      const [password, setPassword] = useState<string>("");
-      return (
-        <div className="bg-gray-300 border-black border-4 rounded-2xl flex-row flex px-5 justify-between gap-5">
-          <div className="flex flex-col w-1/2">
-            <p className="font-semibold text-4xl">{room.name}</p>
-            <div className="flex flex-row justify-between">
-              <p className="text-xl">
-                Active: {room.playerCount}/{room.capacity}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-row justify-between w-full">
-            {room.hasPassword ? (
-              <div className="flex flex-row my-1 gap-2">
-                <p className="text-2xl my-auto">Password:</p>
-                <input
-                  type="text"
-                  className="bg-white text-2xl w-50 h-10 my-auto rounded-md"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            ) : (
-              <p className="text-2xl my-auto">No Password</p>
-            )}
-            <p>
-              {room.gameActive ? "Game is active" : "Waiting for players..."}
+      <div className="bg-gray-300 border-black border-4 rounded-2xl flex-row flex px-5 justify-between gap-5">
+        <div className="flex flex-col w-1/2">
+          <p className="font-semibold text-4xl">{room.name}</p>
+          <div className="flex flex-row justify-between">
+            <p className="text-xl">
+              Active: {room.playerCount}/{room.capacity}
             </p>
-            <PrimaryButton
-              className="text-5xl"
-              disabled={roomIsFull(room)}
-              onClick={() => {
-                joinRoom(password);
-              }}
-            >
-              Join
-            </PrimaryButton>
           </div>
         </div>
-      );
-    }
+        <div className="flex flex-row justify-between w-full">
+          {room.hasPassword ? (
+            <div className="flex flex-row my-1 gap-2">
+              <p className="text-2xl my-auto">Password:</p>
+              <input
+                type="text"
+                className="bg-white text-2xl w-50 h-10 my-auto rounded-md"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          ) : (
+            <p className="text-2xl my-auto">No Password</p>
+          )}
+          <p>{room.gameActive ? "Game is active" : "Waiting for players..."}</p>
+          <PrimaryButton
+            className="text-5xl"
+            disabled={roomIsFull(room)}
+            onClick={() => {
+              joinRoom(password);
+            }}
+          >
+            Join
+          </PrimaryButton>
+        </div>
+      </div>
+    );
   }
 }
 
