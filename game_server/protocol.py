@@ -15,6 +15,10 @@ class CustomJSONEncoder(json.JSONEncoder):
             return {"x": obj.x, "y": obj.y}
         return super().default(obj)
 
+# use a custom json encoder to encode 
+def encodeToJson(data: any) -> str:
+    return json.dumps(data, cls=CustomJSONEncoder)
+
 # message structure:
 """
 Message Structure

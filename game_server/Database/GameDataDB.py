@@ -1,5 +1,4 @@
 import atexit
-import json
 import sqlite3
 from Database.GameData import GameData
 
@@ -19,6 +18,7 @@ class GameDataDB:
                               create_time INTEGER NOT NULL,
                               game_options TEXT,
                               start_time INTEGER,
+                              maze_data TEXT,
                               game_results TEXT)''')
 
     def close(self):
@@ -26,14 +26,14 @@ class GameDataDB:
 
     def get_game_by_id(self, game_id_str: str) -> GameData | None:
         cursor = self.conn.execute("""SELECT
-                                   game_id, room_name, create_time, game_options, start_time, game_results
+                                   game_id, room_name, create_time, game_options, start_time, maze_data, game_results
                                    FROM games WHERE game_id = ?""",
                                    (game_id_str,))
         row = cursor.fetchone()
         return GameData.from_row(row) if row else None
 
     def save_game(self, data: GameData):
-        game_id_str, room_name, create_time, options_str, start_time, results_str = data.serialize()
+        game_id_str, room_name, create_time, options_str, start_time, maze_data_str, results_str = data.serialize()
         with self.conn:
             if self.get_game_by_id(data.game_id_str) != None:
                 self.conn.execute("""UPDATE games SET
@@ -41,11 +41,12 @@ class GameDataDB:
                                   create_time = ?,
                                   game_options = ?,
                                   start_time = ?,
+                                  maze_data = ?,
                                   game_results = ?
                                   WHERE game_id = ?""",
-                                  (room_name, create_time, options_str, start_time, results_str, game_id_str))
+                                  (room_name, create_time, options_str, start_time, maze_data_str, results_str, game_id_str))
             else:
                 self.conn.execute("""INSERT INTO games
-                                  (game_id, room_name, create_time, game_options, start_time, game_results)
-                                  VALUES (?, ?, ?, ?, ?, ?)""",
-                                  (game_id_str, room_name, create_time, options_str, start_time, results_str))
+                                  (game_id, room_name, create_time, game_options, start_time, maze_data, game_results)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                                  (game_id_str, room_name, create_time, options_str, start_time, maze_data_str, results_str))

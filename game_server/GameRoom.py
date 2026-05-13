@@ -4,7 +4,7 @@ import time
 from typing import TYPE_CHECKING
 import uuid
 from ClientInfo import ClientInfo
-from Database.GameData import GameData, GameResult
+from Database.GameData import GameData, GameResult, MazeData
 from MazeGen.Maze import Maze
 from MazeGen.MazeGenerator import generateDFSRectMaze
 from Player import Player, RoomClientRole
@@ -197,6 +197,7 @@ class GameRoom:
         # Generate maze & set finish cell
         self.generate_new_maze()
         self.finish_cell = Vector2(self.stored_maze.width - 1, self.stored_maze.height - 1)
+        self.game_data.maze_data = MazeData(grid=self.stored_maze.get_matrix(), finish_cell=self.finish_cell)
 
         # start_time = now + 3 seconds (in ms from epoch)
         self.game_data.start_time = get_time_ms() + (3 * 1_000)
