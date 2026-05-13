@@ -1,7 +1,7 @@
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { RedirectButton } from "@src/components/buttons/RedirectButton";
 import { ErrorLabel } from "@src/components/ErrorLabel";
-import { GameMsgType, ResponseCode } from "@src/constants/game-msg-type";
+import { GameMsgType, ResponseCode } from "@src/constants/GameMsgType";
 import { RoutePath } from "@src/constants/route-path";
 import { useNetworkContext } from "@src/contexts/NetworkContext";
 import { GameRoomInfo, roomIsFull } from "@src/interfaces/GameRoomInfo";

@@ -1,4 +1,4 @@
-import { GameMsgType } from "@src/constants/game-msg-type";
+import { GameMsgType } from "@src/constants/GameMsgType";
 import { NetworkMessage } from "@src/interfaces/NetworkMessage";
 import { ServerResponse } from "@src/interfaces/ServerResponse";
 import { createContext, useContext } from "react";

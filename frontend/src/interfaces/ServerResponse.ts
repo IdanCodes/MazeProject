@@ -1,4 +1,4 @@
-import { GameMsgType, ResponseCode } from "@src/constants/game-msg-type";
+import { GameMsgType, ResponseCode } from "@src/constants/GameMsgType";
 
 // A response from the server
 export interface ServerResponse {

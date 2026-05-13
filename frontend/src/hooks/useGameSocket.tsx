@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import {
   GameMsgType,
   ResponseCode as ResponseCode,
-} from "@src/constants/game-msg-type";
+} from "@src/constants/GameMsgType";
 import {
   buildGameRequest,
   getUsernameError,

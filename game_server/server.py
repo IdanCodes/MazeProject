@@ -14,6 +14,10 @@ import protocol
 from protocol import SOCK_RECV_CHUNK_SIZE, MsgType, ResponseCode, build_error_msg, build_error_obj, build_network_msg, build_response, build_success_msg, parse_request
 from Database.DBManagers import accounts_manager
 
+# TODO: Add a "Restart" button for the admin when the game ends so players can rematch.
+#       The button sends a mesasge to the server, which broadcasts to the players that the game restarted, and the room does a full "reset" of a sort
+#       The room saves the GameData (in the db) and creates a new GameData
+
 # Default exception hook for threads
 def default_excepthook(args):
     import traceback

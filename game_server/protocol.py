@@ -67,6 +67,7 @@ class MsgType(Enum):
     START_GAME = "start_game" # client->server - no params; server->client - { maze, finishCell, startTime }
     PLAYER_FINISHED = "player_finished" # server->client(broadcast) - { name: string, timeMs: number, place: number }
     END_GAME = "end_game" # server->client - { name: string, timeMs: number }[]
+    RESTART_GAME = "restart_game"
 
     RESPONSE = "response" # data = { code: ResponseType, response_to: MsgType, data: dict | None }
 

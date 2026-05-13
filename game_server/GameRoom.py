@@ -180,6 +180,11 @@ class GameRoom:
                 if not self.update_game_options(new_options):
                     return ResponseCode.ERROR, "Could not set game options - invalid game options"
                 return ResponseCode.SUCCESS, None
+            case MsgType.RESTART_GAME:
+                if sender.role != RoomClientRole.ADMIN:
+                    return ResponseCode.ERROR, "Only an admin can restart the game"
+                self.restart_game()
+                return ResponseCode.SUCCESS, None
         return None, None
 
     # can_start_game: Check if the requirements for starting a game are fulfilled
@@ -202,7 +207,7 @@ class GameRoom:
             "startTime": self.start_time,
         }
         self.send_broadcast(build_network_msg(None, MsgType.START_GAME, bc_msg))
-        
+
     def update_pos(self, sender: Player, pos: dict):
         if is_valid_position(pos):
             self.dirty_pos_dict[sender.username] = sender.position = Vector2(pos["x"], pos["y"])
@@ -278,10 +283,23 @@ class GameRoom:
         self.game_active = False
         self.send_broadcast(build_network_msg(None, MsgType.END_GAME, self.cached_results))
         games_manager.save_game(self.game_data)
+        self.restart_game()
         # TODO: Disconnect all players and close room?
 
+    def restart_game(self):
+        self.game_data = GameData(str(uuid.uuid4()), self.name, get_time_ms(), GameOptions.GameOptions())
+        self.cached_results = []
+        self.generate_new_maze()
+        self.running = True
+        self.send_broadcast(build_network_msg(None, MsgType.RESTART_GAME))
+        self.send_broadcast(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
+        self.send_broadcast(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_json()))
+        # for player in self.players:
+        #     player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
+        #     player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_json()))
+
     def game_loop(self):
-        while self.running:
+        while True:
             start = time.perf_counter()
 
             # send dirty positions
@@ -300,7 +318,6 @@ class GameRoom:
 
                 if self.should_stop_game():
                     self.end_game()
-                    break
 
             time.sleep(max(1. / GAME_LOOP_RATE - (time.perf_counter() - start), 0))
 

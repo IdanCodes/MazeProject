@@ -23,6 +23,7 @@ export enum GameMsgType {
   START_GAME = "start_game",
   PLAYER_FINISHED = "player_finished",
   END_GAME = "end_game",
+  RESTART_GAME = "restart_game",
 
   RESPONSE = "response",
 }

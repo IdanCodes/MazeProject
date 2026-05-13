@@ -9,7 +9,7 @@ import { NetworkMessage } from "./interfaces/NetworkMessage";
 import { ServerResponse } from "./interfaces/ServerResponse";
 import { ErrorLabel } from "./components/ErrorLabel";
 import { NetworkContext, NetworkContextType } from "./contexts/NetworkContext";
-import { GameMsgType, ResponseCode } from "./constants/game-msg-type";
+import { GameMsgType, ResponseCode } from "./constants/GameMsgType";
 import LoadingSpinner from "./components/LoadingSpinner";
 import { getRandomInt } from "./utils/common-helpers";
 import { LoginPage } from "./pages/LoginPage";

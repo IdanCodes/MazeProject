@@ -1,5 +1,5 @@
 import PageTitle from "@src/components/PageTitle";
-import { GameMsgType } from "@src/constants/game-msg-type";
+import { GameMsgType } from "@src/constants/GameMsgType";
 import { GameRoomInfo, isRoomInfo } from "@src/interfaces/GameRoomInfo";
 import { JSX, useEffect, useState } from "react";
 import { useNetworkContext } from "@src/contexts/NetworkContext";

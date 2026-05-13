@@ -16,7 +16,7 @@ import {
 import {
   GameMsgType,
   ResponseCode as ResponseCode,
-} from "@src/constants/game-msg-type";
+} from "@src/constants/GameMsgType";
 import { CellType, Grid } from "@src/types/Grid";
 import { Maze } from "@src/types/Maze";
 import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
@@ -42,6 +42,7 @@ export function useGameNetworkHandler(
   onStartGame: (startTime: number) => void,
   onFinishMaze: (username: string, place: number, timeMs: number) => void,
   onEndGame: (gameResults: { username: string; timeMs: number }[]) => void,
+  onRestartGame: () => void,
   posUpdateRate: number = 25,
 ): {
   otherPlayers: PlayerInfo[];
@@ -465,6 +466,8 @@ export function useGameNetworkHandler(
         );
       setGameOptions(newOptions);
     });
+
+    onMessage(callerId, GameMsgType.RESTART_GAME, (_) => onRestartGame());
   }, []);
 
   // #endregion

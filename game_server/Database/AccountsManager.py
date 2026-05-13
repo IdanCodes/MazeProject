@@ -46,11 +46,10 @@ class AccountsManager:
         # TODO: hash password
         hashed_password = password
         
-        new_account = AccountData(self.conn, username, password)
         try:
             with self.conn:
                 self.conn.execute('''INSERT INTO accounts (username, password) VALUES (?, ?)''', (username, hashed_password))
-            return new_account
+            return self.get_account_data_by_username(username)
         except Exception as e:
             print(f"User creation failed for {username}:", e)
             return None

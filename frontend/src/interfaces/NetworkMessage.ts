@@ -1,4 +1,4 @@
-import { GameMsgType } from "@src/constants/game-msg-type";
+import { GameMsgType } from "@src/constants/GameMsgType";
 
 // A network message
 export interface NetworkMessage {

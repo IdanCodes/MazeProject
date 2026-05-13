@@ -1,10 +1,11 @@
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { ErrorLabel } from "@src/components/ErrorLabel";
 import GameInstance, { GameInstanceHandle } from "@src/components/GameInstance";
-import { GameMsgType } from "@src/constants/game-msg-type";
+import { GameMsgType } from "@src/constants/GameMsgType";
+import GameState from "@src/constants/GameState";
 import { PlayerRole } from "@src/constants/PlayerRole";
 import { useNetworkContext } from "@src/contexts/NetworkContext";
-import { useGameNetworkHandler } from "@src/hooks/useNetworkHandler";
+import { useGameNetworkHandler } from "@src/hooks/useGameNetworkHandler";
 import { usePassedState } from "@src/hooks/usePassedState";
 import { GameOptions, MazeDifficulty } from "@src/interfaces/GameOptions";
 import { PlayerInfo } from "@src/interfaces/PlayerInfo";
@@ -33,7 +34,8 @@ function GameView({
   } as PlayerInfo);
   const [canMove, setCanMove] = useState<boolean>(true);
   const [gameStartTime, setGameStartTime] = useState<number>(-1);
-  const [isGameActive, setIsGameActive] = useState<boolean>(false);
+  const [gameState, setGameState] = useState<GameState>(GameState.Waiting);
+  const [gameStarted, setGameStarted] = useState<boolean>(false);
   const [gameOptions, setGameOptions] = useState<GameOptions | undefined>(
     undefined,
   );
@@ -90,6 +92,7 @@ function GameView({
     onStartGame,
     onPlayerFinishMaze,
     onEndGame,
+    onRestartGame,
   );
   const allPlayersReady = useMemo(
     () => isReady && !otherPlayers.find((p) => !p.isReady),
@@ -117,7 +120,7 @@ function GameView({
   function onStartGame(startTime: number) {
     setGameStartTime(startTime);
     console.log(`Game starting in ${startTime - Date.now()}ms`);
-    setIsGameActive(true);
+    setGameState(GameState.Active);
     setCanMove(false);
     setIsReady(false);
     setTimeout(() => {
@@ -131,7 +134,9 @@ function GameView({
   }
 
   function onFinishCountdown() {
+    setGameStarted(true);
     setCanMove(true);
+
     console.log("Start!");
   }
 
@@ -148,12 +153,24 @@ function GameView({
   }
 
   function onEndGame(gameResults: { username: string; timeMs: number }[]) {
+    setGameState(GameState.Ended);
+    setCanMove(true);
+
     // print results
     for (let i = 0; i < gameResults.length; i++) {
       console.log(
         `${i + 1}. ${gameResults[i].username} (${gameResults[i].timeMs / 10 / 100.0}s)`,
       );
     }
+  }
+
+  function onRestartGame() {
+    console.log("Restarting Game!");
+    setGameStarted(false);
+    setGameState(GameState.Waiting);
+    setGameStartTime(-1);
+    setFinishCell({ x: -1, y: -1 });
+    setFinishTimes(new Map());
   }
 
   return !maze ? (
@@ -169,7 +186,7 @@ function GameView({
       <div className="flex flex-col items-center">
         <div className="flex flex-col justify-center w-fit">
           <div className="mx-auto  w-full">
-            {!isGameActive ? (
+            {gameState == GameState.Waiting && (
               <>
                 {isAdmin && (
                   <StartGameButton
@@ -188,7 +205,8 @@ function GameView({
                   />
                 )}
               </>
-            ) : (
+            )}
+            {gameState == GameState.Active && !gameStarted && (
               <GameStartCountdown
                 startTime={gameStartTime}
                 onStart={onFinishCountdown}
@@ -208,19 +226,19 @@ function GameView({
               },
             ]}
           />
-          {isGameActive && (
+          {gameState == GameState.Active && gameStarted && (
             <GameStopwatch
               startTime={gameStartTime}
               finishTime={finishTimes.get(localPlayer.username)}
             />
           )}
+          {/* {isAdmin && gameState == GameState.Ended && <RestartButton />} */}
           <div className="flex flex-row justify-between">
             <PlayersList
               players={[localPlayer, ...otherPlayers]}
-              gameActive={isGameActive}
               finishTimes={finishTimes}
             />
-            {!isGameActive && (
+            {gameState == GameState.Waiting && (
               <ReadyButton
                 readyState={[isReady, setIsReady]}
                 disabled={false}
@@ -262,19 +280,23 @@ function GameView({
     DELTA_MS?: number;
   }) {
     const [timeLeft, setTimeLeft] = useState(() => startTime - Date.now());
-    const hasStarted = useMemo<boolean>(() => timeLeft <= DELTA_MS, [timeLeft]);
+    const hasStarted = useRef<boolean>(false);
 
     useEffect(() => {
+      if (hasStarted.current) return;
+      if (timeLeft <= DELTA_MS) {
+        hasStarted.current = true;
+        onStart();
+      }
       setTimeout(() => {
-        if (!hasStarted) setTimeLeft(startTime - Date.now());
-        else onStart();
+        setTimeLeft(startTime - Date.now());
       }, DELTA_MS);
-    }, [startTime, timeLeft]);
+    }, [timeLeft]);
 
     return (
       <>
         <p className="text-3xl">
-          {hasStarted ? "Start!" : (timeLeft / 1000.0).toFixed(2)}
+          {hasStarted.current ? "Start!" : (timeLeft / 1000.0).toFixed(2)}
         </p>
       </>
     );
@@ -406,15 +428,15 @@ function GameView({
         setTimeSinceStart(Date.now() - startTime);
       }, DELTA_MS);
     }, [startTime, timeSinceStart]);
-    useEffect(() => {
-      if (finishTime != null) setTimeSinceStart(finishTime);
-    }, [finishTime]);
+    // useEffect(() => {
+    //   if (finishTime != null) setTimeSinceStart(finishTime);
+    // }, [finishTime]);
 
     return (
       <>
         <div className="w-full my-1">
           <p className="text-4xl text-center font-semibold">
-            {formatTime(timeSinceStart)}
+            {formatTime(finishTime ?? timeSinceStart)}
           </p>
         </div>
       </>
@@ -451,13 +473,19 @@ function GameView({
     );
   }
 
+  // function RestartButton({}: {}) {
+  //   return (
+  //     <>
+  //       <PrimaryButton className="text-2xl">Restart</PrimaryButton>
+  //     </>
+  //   );
+  // }
+
   function PlayersList({
     players,
-    gameActive,
     finishTimes,
   }: {
     players: PlayerInfo[];
-    gameActive: boolean;
     finishTimes: Map<string, number>; // map player name -> finish time ms
   }) {
     return (
@@ -473,7 +501,7 @@ function GameView({
           >
             {p.username}
             {p.role == PlayerRole.ADMIN ? " (admin)" : ""}
-            {!gameActive ? (
+            {gameState == GameState.Waiting ? (
               <>
                 {" - "}
                 {p.isReady ? (
