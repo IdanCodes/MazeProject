@@ -16,17 +16,27 @@ import { generateMaze, Maze } from "@src/types/Maze";
 import { RedirectButton } from "@src/components/buttons/RedirectButton";
 import { generateDFSRectGrid } from "@src/utils/maze-generator";
 import LoadingSpinner from "@src/components/LoadingSpinner";
-import { Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
+import {
+  isVector2,
+  parseVector2,
+  Vector2,
+  ZERO_VEC,
+} from "@src/interfaces/Vector2";
 import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 import { PlayerRole } from "@src/constants/PlayerRole";
 import { GameOptions, MazeDifficulty } from "@src/interfaces/GameOptions";
 import GameState from "@src/constants/GameState";
 import GameOptionsDisplay from "./SharedComponents/GameOptionsDisplay";
 import StartGameButton from "./SharedComponents/StartGameButton";
+import { useNetworkContext } from "@src/contexts/NetworkContext";
+import { GameMsgType, ResponseCode } from "@src/constants/GameMsgType";
+import { CellType, Grid } from "@src/types/Grid";
 
 export default function Singleplayer({
+  callerId = "Singleplayer",
   playerName,
 }: {
+  callerId?: string;
   playerName: string;
 }): JSX.Element {
   // const [maze, setMaze] = useState<Maze>(generateMaze(gameOptions.mazeScale));
@@ -65,10 +75,12 @@ export default function Singleplayer({
   // );
 
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
+  const { sendMessage, onResponse } = useNetworkContext();
   const [maze, setMaze] = useState<Maze>(new Maze(generateDFSRectGrid(20, 20)));
   const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
   const [gameState, setGameState] = useState<GameState>(GameState.Waiting);
   const [disableStartBtn, setDisableStartBtn] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
   const [gameOptions, setGameOptions] = useState<GameOptions>({
     difficulty: MazeDifficulty.Medium,
   });
@@ -95,7 +107,7 @@ export default function Singleplayer({
 
   const handleStartGame = () => {
     setDisableStartBtn(true);
-    console.log("Starting game!");
+    sendMessage(GameMsgType.GENERATE_MAZE, gameOptions);
   };
 
   useEffect(() => {
@@ -104,6 +116,44 @@ export default function Singleplayer({
       y: cellScale / 2,
     });
   }, [maze, cellScale]);
+
+  useEffect(() => {
+    onResponse(callerId, GameMsgType.GENERATE_MAZE, (res) => {
+      setDisableStartBtn(false);
+      if (res.code == ResponseCode.ERROR) {
+        setError(res.data);
+        return console.error(
+          "Singleplayer: Received invalid GENERATE_MAZE response:",
+          res.data,
+        );
+      }
+
+      const data = res.data;
+      if (
+        !data ||
+        typeof data != "object" ||
+        !data.maze ||
+        !data.finishCell ||
+        !isVector2(data.finishCell)
+      ) {
+        setError("Encountered An Error Generating The Maze. Check Console");
+        return console.error(
+          "Singleplayer: Received invalid GENERATE_MAZE response:",
+          res.data,
+        );
+      }
+      const matrix = res.data.maze as CellType[][];
+      const grid = new Grid(matrix);
+      const maze = new Maze(grid);
+      setMaze(maze);
+
+      const finishCell = parseVector2(res.data.finishCell)!;
+      setFinishCell(finishCell);
+      onGameStart(Date.now() + 3 * 1_000);
+    });
+  }, []);
+
+  const onGameStart = (startTime: number) => {};
 
   return (
     <>

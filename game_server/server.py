@@ -6,12 +6,14 @@
 from uuid import UUID
 import socket
 import threading
-from Database.AccountData import AccountData, get_credentials_error, get_username_error
-from Database.AccountsManager import AccountsManager
+from Database.AccountData import AccountData, get_credentials_error
 from ClientInfo import ClientInfo
 from GameRoom import GameRoom, valid_room_capacity, valid_room_name, valid_room_password
+from MazeGen.MazeGenerator import generate_maze_data_by_game_options
+from Structures.GameOptions import GameOptions
+from Structures.Vector2 import vector2_to_dict
 import protocol
-from protocol import SOCK_RECV_CHUNK_SIZE, MsgType, ResponseCode, build_error_msg, build_error_obj, build_network_msg, build_response, build_success_msg, parse_request
+from protocol import SOCK_RECV_CHUNK_SIZE, MsgType, ResponseCode, build_error_obj, build_response, parse_request
 from Database.DBManagers import accounts_manager
 
 # TODO: Add a "Restart" button for the admin when the game ends so players can rematch.
@@ -197,8 +199,18 @@ class Server:
                 if not successful:
                     return ResponseCode.ERROR, build_error_obj(reason)
                 return ResponseCode.SUCCESS, None
+            case MsgType.GENERATE_MAZE:
+                game_options = GameOptions()
+                if not game_options.load_game_options(req_data):
+                    return ResponseCode.ERROR, "Received invalid game options"
+                
+                maze_data = generate_maze_data_by_game_options(game_options)
+                return ResponseCode.SUCCESS, {
+                    "maze": maze_data["grid"],
+                    "finishCell": vector2_to_dict(maze_data["finish_cell"])
+                }
         return ResponseCode.ERROR, None
-
+    
     def get_rooms_info(self) -> list[GameRoom]:
         return [room.get_room_info() for room in self.rooms]
     

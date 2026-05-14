@@ -1,6 +1,9 @@
 import numpy as np
+from Database.GameData import MazeData
 from MazeGen.CellType import CellType
 from MazeGen.Maze import Maze
+from Structures import GameOptions
+from Structures.GameOptions import MazeDifficulty, difficultyToDims
 from Structures.Vector2 import Vector2
 from helpers import get_random_int
 
@@ -30,3 +33,12 @@ def generateDFSRectMaze(width: int, height: int) -> Maze:
     maze = Maze(grid)
     recursiveDFS(maze, Vector2(0, 0))
     return maze
+
+def generate_maze_by_difficulty(diff: MazeDifficulty) -> Maze:
+    dims = difficultyToDims(diff)
+    return generateDFSRectMaze(dims["width"], dims["height"])
+
+def generate_maze_data_by_game_options(options: GameOptions.GameOptions) -> MazeData:
+    maze = generate_maze_by_difficulty(options.difficulty)
+    finish_cell = Vector2(-1, -1)
+    return MazeData(grid=maze.get_matrix(), finish_cell=finish_cell)

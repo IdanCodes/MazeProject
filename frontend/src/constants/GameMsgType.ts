@@ -19,6 +19,7 @@ export enum GameMsgType {
   LEAVE_ROOM = "leave_room",
   ROOM_ADMIN = "room_admin",
   GAME_OPTIONS = "game_options",
+  GENERATE_MAZE = "generate_maze",
 
   START_GAME = "start_game",
   PLAYER_FINISHED = "player_finished",

@@ -67,6 +67,7 @@ class MsgType(Enum):
     LEAVE_ROOM = "leave_room" # params: { room_id: number }
     ROOM_ADMIN = "room_admin" # server->client - params: string
     GAME_OPTIONS = "game_options" # params: GameOptions
+    GENERATE_MAZE = "generate_maze" # client->server: params: {difficulty}; response: { grid, finishCell }
 
     START_GAME = "start_game" # client->server - no params; server->client - { maze, finishCell, startTime }
     PLAYER_FINISHED = "player_finished" # server->client(broadcast) - { name: string, timeMs: number, place: number }

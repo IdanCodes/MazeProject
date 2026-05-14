@@ -17,7 +17,10 @@ class GameOptions:
         }
     
     def load_game_options(self, opts: any) -> bool:
-        maze_difficulty = opts["difficulty"]
+        maze_difficulty = None
+        try:
+            maze_difficulty = opts["difficulty"]
+        except: return False
         if not is_valid_maze_difficulty(maze_difficulty):
             return False
         
