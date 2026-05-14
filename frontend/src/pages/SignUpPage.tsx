@@ -39,7 +39,10 @@ export function SignUpPage({
   return (
     <>
       <div className="w-full">
-        <RedirectButton path={RoutePath.Home} className="text-2xl">
+        <RedirectButton
+          path={RoutePath.Home}
+          className="text-2xl absolute left-10"
+        >
           Back
         </RedirectButton>
         <PageTitle text="Sign Up" />
@@ -51,6 +54,7 @@ export function SignUpPage({
           disabled={disableSignUp}
           onSubmit={doSignUp}
         />
+        <div className="h-full my-auto flex flex-col justify-center items-center"></div>
       </div>
     </>
   );

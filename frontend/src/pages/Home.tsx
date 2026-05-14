@@ -21,18 +21,18 @@ export function AuthenticatedHome({
       <p className="text-2xl mt-4 text-center">{`Welcome, ${username}`}</p>
       <div className="flex flex-col justify-center w-3/10 py-7 mx-auto gap-3">
         <RedirectButton
-          className="text-4xl"
+          className="text-4xl py-3"
           path={RoutePath.GameModes.Singleplayer}
         >
           Singleplayer
         </RedirectButton>
         <RedirectButton
-          className="text-4xl"
+          className="text-4xl py-3"
           path={RoutePath.GameModes.Multiplayer}
         >
           Multiplayer
         </RedirectButton>
-        <RedirectButton className="text-4xl" path={RoutePath.Stats}>
+        <RedirectButton className="text-4xl py-3" path={RoutePath.Stats}>
           Stats
         </RedirectButton>
       </div>
@@ -58,15 +58,15 @@ export function UnauthenticatedHome() {
       <p className="text-2xl my-3 text-center">
         Authenticate To Enter The Game
       </p>
-      <div className="flex flex-col justify-center w-4/10 py-10 mx-auto gap-3">
+      <div className="flex flex-col justify-center w-3/10 py-10 mx-auto gap-4">
         <RedirectButton
-          className="text-4xl"
+          className="text-4xl py-5 px-3"
           path={RoutePath.Authentication.Login}
         >
           Login
         </RedirectButton>
         <RedirectButton
-          className="text-4xl"
+          className="text-4xl py-5 px-3"
           path={RoutePath.Authentication.Signup}
         >
           Sign Up

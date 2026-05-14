@@ -4,6 +4,7 @@ import { ErrorLabel } from "../ErrorLabel";
 import PrimaryButton from "../buttons/PrimaryButton";
 import { useState } from "react";
 import clsx from "clsx";
+import LoadingSpinner from "../LoadingSpinner";
 
 export function CredentialsForm({
   usernameState,
@@ -28,13 +29,16 @@ export function CredentialsForm({
 
   return (
     <>
+      <div className="mx-auto w-fit my-2">
+        <ErrorLabel text={errorTxt ?? " "} />
+      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit();
         }}
       >
-        <div className="my-4 mx-auto w-4/5 py-5 flex gap-3 flex-col border-3 rounded-2xl">
+        <div className="my-5 mx-auto w-1/2 py-5 flex gap-3 flex-col border-3 rounded-2xl">
           <div className="flex flex-col mx-auto gap-2 py-2">
             <div className="flex justify-start gap-3">
               <p className="text-3xl">Username:</p>
@@ -69,16 +73,14 @@ export function CredentialsForm({
             </div>
           </div>
         </div>
-        <div className="mx-auto w-fit my-2">
-          <ErrorLabel text={errorTxt} />
-        </div>
         <PrimaryButton
           btnType="submit"
-          className="mx-auto text-2xl"
+          className="mx-auto text-3xl p-4 bg-blue-500/90 hover:bg-blue-500 active:bg-blue-600/90"
           disabled={disabled}
         >
           {btnTxt}
         </PrimaryButton>
+        {disabled && <LoadingSpinner />}
       </form>
     </>
   );

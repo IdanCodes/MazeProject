@@ -39,7 +39,10 @@ export function LoginPage({
   return (
     <>
       <div className="w-full">
-        <RedirectButton path={RoutePath.Home} className="text-2xl">
+        <RedirectButton
+          path={RoutePath.Home}
+          className="text-2xl absolute left-10"
+        >
           Back
         </RedirectButton>
         <PageTitle text="Log In" />
