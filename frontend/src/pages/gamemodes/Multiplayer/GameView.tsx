@@ -219,14 +219,7 @@ function GameView({
           </div>
         </div>
         <div className="flex flex-col justify-center w-fit">
-          <div className="mx-auto  w-full">
-            {gameState == GameState.Active && !gameStarted && (
-              <GameStartCountdown
-                startTime={gameStartTime}
-                onStart={onFinishCountdown}
-              />
-            )}
-          </div>
+          <div className="mx-auto w-full"></div>
           <GameInstance
             ref={gameInstanceRef}
             mazeSize={MazeSize.Medium}
@@ -240,6 +233,12 @@ function GameView({
               },
             ]}
           />
+          {gameState == GameState.Active && !gameStarted && (
+            <GameStartCountdown
+              startTime={gameStartTime}
+              onStart={onFinishCountdown}
+            />
+          )}
           {gameState == GameState.Active && gameStarted && (
             <GameStopwatch
               startTime={gameStartTime}
@@ -266,15 +265,15 @@ function GameView({
               )}
             </div>
           </div>
-          {gameState != GameState.Active && lastGameResults && (
-            <GameResultsPanel />
-          )}
         </div>
-        <div className="w-full">
+        <div className="w-full flex flex-col justify-start gap-15">
           <PlayersList
             players={[localPlayer, ...otherPlayers]}
             finishTimes={finishTimes}
           />
+          {gameState != GameState.Active && lastGameResults && (
+            <GameResultsPanel />
+          )}
         </div>
       </div>
     </div>
@@ -326,7 +325,7 @@ function GameView({
     return (
       <>
         <p className="text-3xl">
-          {hasStarted.current ? "Start!" : (timeLeft / 1000.0).toFixed(2)}
+          {hasStarted.current ? "Start!" : (timeLeft / 1000.0).toFixed(1)}
         </p>
       </>
     );
@@ -427,9 +426,10 @@ function GameView({
             <select
               value={newOptions.difficulty}
               onChange={(t) => onChangeOpt("difficulty", t.target.value)}
+              className="border-2 rounded-xl p-1"
             >
               {Object.values(MazeDifficulty).map((d) => (
-                <option key={d} value={d} className="border-2 rounded-xl">
+                <option key={d} value={d}>
                   {d}
                 </option>
               ))}
@@ -547,7 +547,7 @@ function GameView({
     finishTimes: Map<string, number>; // map player name -> finish time ms
   }) {
     return (
-      <div className="text-2xl flex flex-col justify-start h-full truncate text-left">
+      <div className="text-2xl flex flex-col justify-start truncate text-left">
         {players.map((p) => (
           <span
             key={p.username}
