@@ -19,6 +19,9 @@ import LoadingSpinner from "@src/components/LoadingSpinner";
 import { Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
 import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 import { PlayerRole } from "@src/constants/PlayerRole";
+import { GameOptions, MazeDifficulty } from "@src/interfaces/GameOptions";
+import GameState from "@src/constants/GameState";
+import GameOptionsDisplay from "./SharedComponents/GameOptionsDisplay";
 
 export default function Singleplayer({
   playerName,
@@ -63,16 +66,21 @@ export default function Singleplayer({
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
   const [maze, setMaze] = useState<Maze>(new Maze(generateDFSRectGrid(20, 20)));
   const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
-  const cellScale = useMemo(
-    () => (gameInstanceRef.current ? gameInstanceRef.current.cellScale : 0),
-    [gameInstanceRef.current],
-  );
+  const [gameState, setGameState] = useState<GameState>(GameState.Waiting);
+  const [gameOptions, setGameOptions] = useState<GameOptions>({
+    difficulty: MazeDifficulty.Medium,
+  });
   const [player, setPlayer] = useState<PlayerInfo>({
     username: playerName,
     position: ZERO_VEC,
     isReady: true,
     role: PlayerRole.ADMIN,
   } as PlayerInfo);
+
+  const cellScale = useMemo(
+    () => (gameInstanceRef.current ? gameInstanceRef.current.cellScale : 0),
+    [gameInstanceRef.current],
+  );
 
   const setPlayerPos = (action: SetStateAction<Vector2>) => {
     setPlayer((pl) => {
@@ -99,20 +107,29 @@ export default function Singleplayer({
         Back
       </RedirectButton>
       <PageTitle text="Singleplayer" />
-
       {maze ? (
-        <div className="flex justify-center my-5">
-          <GameInstance
-            ref={gameInstanceRef}
-            mazeSize={MazeSize.Medium}
-            maze={maze}
-            finishCell={finishCell}
-            otherPlayers={[]}
-            playerPosState={[player.position, setPlayerPos]}
-            onPlayerMove={(pos) => {
-              setPlayerPos(pos);
-            }}
-          />
+        <div className="flex justify-center my-5 gap-5">
+          <div className="w-full">
+            <GameOptionsDisplay
+              optionsState={[gameOptions, setGameOptions]}
+              canEditOptions={true}
+              gameOptionsError=""
+            />
+          </div>
+          <div className="w-full">
+            <GameInstance
+              ref={gameInstanceRef}
+              mazeSize={MazeSize.Medium}
+              maze={maze}
+              finishCell={finishCell}
+              otherPlayers={[]}
+              playerPosState={[player.position, setPlayerPos]}
+              onPlayerMove={(pos) => {
+                setPlayerPos(pos);
+              }}
+            />
+          </div>
+          <div className="w-full"></div>
         </div>
       ) : (
         <>

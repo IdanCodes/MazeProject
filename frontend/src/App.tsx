@@ -216,7 +216,7 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
                 />
                 <Route
                   path={RoutePath.GameModes.Singleplayer}
-                  element={<Singleplayer />}
+                  element={<Singleplayer playerName={username} />}
                 />
                 <Route
                   path={RoutePath.GameModes.Multiplayer}
