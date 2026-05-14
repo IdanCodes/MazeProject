@@ -1,10 +1,12 @@
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { RedirectButton } from "@src/components/buttons/RedirectButton";
 import { ErrorLabel } from "@src/components/ErrorLabel";
+import OverlayModal from "@src/components/OverlayModal";
 import { GameMsgType, ResponseCode } from "@src/constants/GameMsgType";
 import { RoutePath } from "@src/constants/route-path";
 import { useNetworkContext } from "@src/contexts/NetworkContext";
 import { GameRoomInfo, roomIsFull } from "@src/interfaces/GameRoomInfo";
+import clsx from "clsx";
 import { JSX, useEffect, useMemo, useState } from "react";
 
 function RoomsView({ callerId }: { callerId: string }) {
@@ -46,106 +48,49 @@ function RoomsView({ callerId }: { callerId: string }) {
 
   return (
     <>
-      <RedirectButton path={RoutePath.Home}>Back</RedirectButton>
+      <RedirectButton path={RoutePath.Home} className="text-3xl">
+        Back
+      </RedirectButton>
       <RoomsPanel
+        callerId={callerId + ".RoomsPanel"}
         refreshList={refreshRoomsList}
         roomsList={roomsList}
         roomsError={roomsError}
       />
     </>
   );
-
-  function RoomsPanel({
-    refreshList,
-    roomsError,
-    roomsList,
-    refreshTimeoutMS = 5000,
-  }: {
-    refreshList: () => void;
-    roomsError: string;
-    roomsList: GameRoomInfo[];
-    refreshTimeoutMS?: number;
-  }): JSX.Element {
-    const [disabledRefresh, setDisabledRefresh] = useState<boolean>(false);
-    function handleRefresh() {
-      setDisabledRefresh(true);
-      refreshList();
-
-      setTimeout(() => setDisabledRefresh(false), refreshTimeoutMS);
-    }
-
-    useEffect(() => {
-      if (roomsList.length > 0) setDisabledRefresh(false);
-    }, [roomsList]);
-
-    const roomCountStr = useMemo<string>(() => {
-      if (roomsList.length == 0) return "There are no rooms open";
-      if (roomsList.length == 1) return "There is 1 room open";
-      return `There are ${roomsList.length} rooms open`;
-    }, [roomsList]);
-
-    return (
-      <div>
-        <CreateRoomPanel
-          callerId={callerId + ".CreateRoomPanel"}
-          refreshRoomsList={refreshList}
-        />
-        <div className="w-7/10 mx-auto">
-          <RefreshRoomListBtn
-            handleRefresh={handleRefresh}
-            disabled={disabledRefresh}
-          />
-          <ErrorLabel text={roomsError} />
-          <p className="text-2xl">{roomCountStr}</p>
-          <RoomList rooms={roomsList} refreshRoomsList={refreshList} />
-        </div>
-      </div>
-    );
-  }
-
-  function RefreshRoomListBtn({
-    handleRefresh,
-    disabled,
-  }: {
-    handleRefresh: () => void;
-    disabled: boolean;
-  }): JSX.Element {
-    return (
-      <PrimaryButton
-        className="text-2xl p-3 rounded-2xl"
-        onClick={handleRefresh}
-        disabled={disabled}
-      >
-        Refresh List
-      </PrimaryButton>
-    );
-  }
 }
 
 function CreateRoomPanel({
   callerId,
+  setError,
+  closeModal,
   refreshRoomsList,
 }: {
   callerId: string;
+  setError: (err: string) => void;
+  closeModal: () => void;
   refreshRoomsList: () => void;
 }): JSX.Element {
   const { sendMessage, onResponse } = useNetworkContext();
-  const [createRoomError, setCreateRoomError] = useState<string>("");
   const [name, setName] = useState<string>("New Room");
+  const [tempCapacity, setTempCapacity] = useState<string>("2");
+  // const [editingCapacity, setEditingCapacity]
   const [capacity, setCapacity] = useState<number>(2);
+  const [passwordActive, setPasswordActive] = useState<boolean>(false);
   const [password, setPassword] = useState<string>("");
   const btnDisabled = useMemo(
     () =>
       name.length <= 2 ||
       name.length > 20 ||
-      capacity <= 1 ||
+      capacity < 2 ||
       capacity > 10 ||
-      password.length > 16,
+      ((password.length == 0 || password.length > 16) && passwordActive),
     [name, capacity, password],
   );
 
   const sendCreateRoom = (name: string, capacity: number, password: string) => {
-    setCreateRoomError("");
+    setError("");
     sendMessage(GameMsgType.CREATE_ROOM, {
       name,
       capacity,
@@ -158,14 +103,23 @@ function CreateRoomPanel({
     setName("");
     setCapacity(2);
     setPassword("");
-    sendCreateRoom(name, capacity, password);
+    setName(name.trim());
+    sendCreateRoom(name.trim(), capacity, passwordActive ? password : "");
+    closeModal();
+  };
+
+  const updateCapacity = (newCapStr: string) => {
+    const newCap = Number(newCapStr);
+    if (isNaN(newCap) || newCap < 2 || newCap > 10)
+      return setTempCapacity(capacity.toString());
+    setCapacity(newCap);
   };
 
   useEffect(() => {
     onResponse(callerId, GameMsgType.CREATE_ROOM, (res) => {
       if (res.code != ResponseCode.SUCCESS) {
         console.error("Encountered an error when creating a room", res.data);
-        setCreateRoomError(res.data.error);
+        setError(res.data.error);
         return;
       }
       console.log("Room created successfuly!");
@@ -173,57 +127,86 @@ function CreateRoomPanel({
   }, []);
 
   return (
-    <div className="w-full flex flex-col">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleCreteRoom;
-        }}
-      >
-        <div className="flex flex-row w-3/5 justify-between mx-auto">
-          <div>
-            <p className="text-3xl">Room Name: </p>
-            <input
-              type="text"
-              placeholder="Room Name"
-              className="bg-white w-50 py-1 rounded-md"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div>
-            <p className="text-3xl">Capacity: </p>
-            <input
-              type="number"
-              placeholder="1"
-              className="bg-white w-50 rounded-md"
-              value={capacity}
-              onChange={(e) => setCapacity(e.target.value as unknown as number)}
-            />
-          </div>
-          <div>
-            <p className="text-3xl">Password (Optional): </p>
-            <input
-              type="text"
-              placeholder=""
-              className="bg-white w-50 rounded-md text-xl"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-        </div>
+    <OverlayModal
+      closeModal={closeModal}
+      className="bg-gray-300 p-6 rounded-lg"
+    >
+      <div className="w-full flex flex-col">
         <PrimaryButton
-          className="bg-green-500 hover:bg-green-600 text-2xl w-50 mx-auto"
-          disabled={btnDisabled}
-          btnType="submit"
+          className="bg-red-500/90 hover:bg-red-500 text-2xl w-30"
+          onClick={closeModal}
         >
-          Create Room
+          Close
         </PrimaryButton>
-      </form>
-      <div className="mx-auto">
-        <ErrorLabel text={createRoomError} />
+        <form
+          className="pb-7 pt-5 px-10"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleCreteRoom();
+          }}
+        >
+          <div className="flex flex-col gap-5 justify-around mx-auto p-5">
+            <div className="flex w-full justify-between gap-5">
+              <p className="text-4xl">Room Name: </p>
+              <input
+                type="text"
+                placeholder="Room Name"
+                className="bg-white rounded-md text-3xl py-2 text-center"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="flex w-full justify-between gap-5">
+              <p className="text-4xl">Capacity: </p>
+              <input
+                type="number"
+                // placeholder="1"
+                className="bg-white rounded-md text-3xl py-2 text-center"
+                value={tempCapacity}
+                onChange={(e) => setTempCapacity(e.target.value)}
+                onBlur={(e) => updateCapacity(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="w-fit text-3xl flex gap-5 pb-1">
+                <input
+                  type="checkbox"
+                  className="size-6 m-auto"
+                  checked={passwordActive}
+                  onChange={(e) => setPasswordActive(!passwordActive)}
+                />
+                Use Password
+              </label>
+              <div
+                className={clsx(
+                  "flex w-full justify-between gap-15 transition-all",
+                  !passwordActive && "opacity-50",
+                )}
+              >
+                <p className="text-4xl">Password: </p>
+                <input
+                  type="text"
+                  placeholder=""
+                  className="bg-white rounded-md text-3xl py-2 text-center"
+                  value={password}
+                  disabled={!passwordActive}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="w-fit mx-auto flex gap-10">
+            <PrimaryButton
+              className="bg-green-500 hover:bg-green-600 text-3xl px-10 py-5 mx-auto"
+              disabled={btnDisabled}
+              btnType="submit"
+            >
+              Create Room
+            </PrimaryButton>
+          </div>
+        </form>
       </div>
-    </div>
+    </OverlayModal>
   );
 }
 
@@ -304,6 +287,98 @@ function RoomList({
       </div>
     );
   }
+}
+
+function RoomsPanel({
+  callerId,
+  refreshList,
+  roomsError,
+  roomsList,
+  refreshTimeoutMS = 5000,
+}: {
+  callerId: string;
+  refreshList: () => void;
+  roomsError: string;
+  roomsList: GameRoomInfo[];
+  refreshTimeoutMS?: number;
+}): JSX.Element {
+  const [disabledRefresh, setDisabledRefresh] = useState<boolean>(false);
+  const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
+  const [createRoomError, setCreateRoomError] = useState<string>("");
+  function handleRefresh() {
+    setDisabledRefresh(true);
+    refreshList();
+
+    setTimeout(() => setDisabledRefresh(false), refreshTimeoutMS);
+  }
+
+  useEffect(() => {
+    if (roomsList.length > 0) setDisabledRefresh(false);
+  }, [roomsList]);
+
+  const roomCountStr = useMemo<string>(() => {
+    if (roomsList.length == 0) return "There are no rooms open";
+    if (roomsList.length == 1) return "There is 1 room open";
+    return `There are ${roomsList.length} rooms open`;
+  }, [roomsList]);
+
+  return (
+    <div>
+      {createModalOpen && (
+        <CreateRoomPanel
+          callerId={callerId + ".CreateRoomPanel"}
+          setError={setCreateRoomError}
+          closeModal={() => setCreateModalOpen(false)}
+          refreshRoomsList={refreshList}
+        />
+      )}
+      <div className="w-7/10 mx-auto">
+        <ErrorLabel text={createRoomError} />
+        <div className="flex">
+          <NewRoomButton handleNewRoom={() => setCreateModalOpen(true)} />
+          <RefreshRoomListBtn
+            handleRefresh={handleRefresh}
+            disabled={disabledRefresh}
+          />
+        </div>
+        <ErrorLabel text={roomsError} />
+        {roomsList.length == 0 ? (
+          <p className="text-4xl text-center">{roomCountStr}</p>
+        ) : (
+          <>
+            <p className="text-4xl text-center py-2">{roomCountStr}</p>
+            <RoomList rooms={roomsList} refreshRoomsList={refreshList} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RefreshRoomListBtn({
+  handleRefresh,
+  disabled,
+}: {
+  handleRefresh: () => void;
+  disabled: boolean;
+}): JSX.Element {
+  return (
+    <PrimaryButton
+      className="text-2xl p-3 rounded-2xl"
+      onClick={handleRefresh}
+      disabled={disabled}
+    >
+      Refresh List
+    </PrimaryButton>
+  );
+}
+
+function NewRoomButton({ handleNewRoom }: { handleNewRoom: () => void }) {
+  return (
+    <PrimaryButton className="text-2xl" onClick={handleNewRoom}>
+      New Room
+    </PrimaryButton>
+  );
 }
 
 export default RoomsView;

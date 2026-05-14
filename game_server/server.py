@@ -61,6 +61,7 @@ class Server:
                 rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE)
                 rec_text = rec_text.decode(encoding=protocol.NETWORK_ENCODING)
                 req_type, req_data = protocol.parse_request(rec_text)
+                if not req_type: raise Exception(f"Invalid request - {rec_text}")
                 acc_data, error_text = self.handle_auth_request(req_type, req_data)
                 if not acc_data:
                     protocol.send_str(client_sock, build_response(ResponseCode.ERROR, req_type, error_text))                    
