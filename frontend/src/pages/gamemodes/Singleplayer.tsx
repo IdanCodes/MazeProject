@@ -22,6 +22,7 @@ import { PlayerRole } from "@src/constants/PlayerRole";
 import { GameOptions, MazeDifficulty } from "@src/interfaces/GameOptions";
 import GameState from "@src/constants/GameState";
 import GameOptionsDisplay from "./SharedComponents/GameOptionsDisplay";
+import StartGameButton from "./SharedComponents/StartGameButton";
 
 export default function Singleplayer({
   playerName,
@@ -67,6 +68,7 @@ export default function Singleplayer({
   const [maze, setMaze] = useState<Maze>(new Maze(generateDFSRectGrid(20, 20)));
   const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
   const [gameState, setGameState] = useState<GameState>(GameState.Waiting);
+  const [disableStartBtn, setDisableStartBtn] = useState<boolean>(false);
   const [gameOptions, setGameOptions] = useState<GameOptions>({
     difficulty: MazeDifficulty.Medium,
   });
@@ -89,6 +91,11 @@ export default function Singleplayer({
       newPl.position = newVal;
       return newPl;
     });
+  };
+
+  const handleStartGame = () => {
+    setDisableStartBtn(true);
+    console.log("Starting game!");
   };
 
   useEffect(() => {
@@ -128,6 +135,19 @@ export default function Singleplayer({
                 setPlayerPos(pos);
               }}
             />
+            {disableStartBtn && <LoadingSpinner size={20} />}
+            <div className="flex justify-around pt-2 pb-1">
+              <div className="w-3/5 flex justify-center">
+                {gameState == GameState.Waiting && (
+                  <>
+                    <StartGameButton
+                      canStart={!disableStartBtn}
+                      startGame={handleStartGame}
+                    />
+                  </>
+                )}
+              </div>
+            </div>
           </div>
           <div className="w-full"></div>
         </div>

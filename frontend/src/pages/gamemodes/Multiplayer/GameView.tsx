@@ -21,6 +21,7 @@ import { formatTime } from "@src/utils/common-helpers";
 import clsx from "clsx";
 import { JSX, useEffect, useMemo, useRef, useState } from "react";
 import GameOptionsDisplay from "../SharedComponents/GameOptionsDisplay";
+import StartGameButton from "../SharedComponents/StartGameButton";
 
 function GameView({
   callerId,
@@ -281,26 +282,6 @@ function GameView({
       </div>
     </div>
   );
-
-  function StartGameButton({
-    canStart,
-    startGame,
-  }: {
-    canStart: boolean;
-    startGame: () => void;
-  }) {
-    return (
-      <>
-        <PrimaryButton
-          className="text-2xl bg-blue-500 my-1 hover:bg-blue-600/90 active:bg-blue-500/90"
-          disabled={!canStart}
-          onClick={startGame}
-        >
-          Start Game
-        </PrimaryButton>
-      </>
-    );
-  }
 
   function GameStartCountdown({
     startTime,
