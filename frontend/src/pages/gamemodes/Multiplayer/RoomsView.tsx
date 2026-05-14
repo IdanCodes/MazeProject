@@ -1,6 +1,7 @@
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { RedirectButton } from "@src/components/buttons/RedirectButton";
 import { ErrorLabel } from "@src/components/ErrorLabel";
+import LoadingSpinner from "@src/components/LoadingSpinner";
 import OverlayModal from "@src/components/OverlayModal";
 import { GameMsgType, ResponseCode } from "@src/constants/GameMsgType";
 import { RoutePath } from "@src/constants/route-path";
@@ -294,7 +295,7 @@ function RoomsPanel({
   refreshList,
   roomsError,
   roomsList,
-  refreshTimeoutMS = 5000,
+  refreshTimeoutMS = 1500,
 }: {
   callerId: string;
   refreshList: () => void;
@@ -303,9 +304,11 @@ function RoomsPanel({
   refreshTimeoutMS?: number;
 }): JSX.Element {
   const [disabledRefresh, setDisabledRefresh] = useState<boolean>(false);
+  const [isLoadingRooms, setIsLoadingRooms] = useState<boolean>(false);
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
   const [createRoomError, setCreateRoomError] = useState<string>("");
   function handleRefresh() {
+    setIsLoadingRooms(true);
     setDisabledRefresh(true);
     refreshList();
 
@@ -313,7 +316,7 @@ function RoomsPanel({
   }
 
   useEffect(() => {
-    if (roomsList.length > 0) setDisabledRefresh(false);
+    setIsLoadingRooms(false);
   }, [roomsList]);
 
   const roomCountStr = useMemo<string>(() => {
@@ -342,7 +345,9 @@ function RoomsPanel({
           />
         </div>
         <ErrorLabel text={roomsError} />
-        {roomsList.length == 0 ? (
+        {isLoadingRooms ? (
+          <LoadingSpinner />
+        ) : roomsList.length == 0 ? (
           <p className="text-4xl text-center">{roomCountStr}</p>
         ) : (
           <>

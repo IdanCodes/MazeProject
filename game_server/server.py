@@ -180,6 +180,10 @@ class Server:
                     return ResponseCode.ERROR, build_error_obj("An unexpected error occurred while creating the room")
                 
                 # Join automatically after creating a room
+                join_success, reason = self.join_room(sender, new_room.id, room_password)
+                if not join_success:
+                    return ResponseCode.ERROR, f"Error joining room: {reason}"
+                
                 return ResponseCode.SUCCESS, { "room_id": str(new_room.id) }
             case MsgType.JOIN_ROOM:
                 room_id = room_password = ""
