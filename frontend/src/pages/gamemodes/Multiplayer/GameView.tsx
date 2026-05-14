@@ -2,6 +2,7 @@ import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { ErrorLabel } from "@src/components/ErrorLabel";
 import GameInstance, { GameInstanceHandle } from "@src/components/GameInstance";
 import OverlayModal from "@src/components/OverlayModal";
+import PageTitle from "@src/components/PageTitle";
 import { GameMsgType } from "@src/constants/GameMsgType";
 import GameState from "@src/constants/GameState";
 import { PlayerRole } from "@src/constants/PlayerRole";
@@ -9,6 +10,7 @@ import { useNetworkContext } from "@src/contexts/NetworkContext";
 import { useGameNetworkHandler } from "@src/hooks/useGameNetworkHandler";
 import { usePassedState } from "@src/hooks/usePassedState";
 import { GameOptions, MazeDifficulty } from "@src/interfaces/GameOptions";
+import { GameRoomInfo } from "@src/interfaces/GameRoomInfo";
 import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 import { equalVec, Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
 import { GameResult } from "@src/types/GameResult";
@@ -21,10 +23,12 @@ import { JSX, useEffect, useMemo, useRef, useState } from "react";
 
 function GameView({
   callerId,
+  roomInfo,
   playerName,
   leaveRoom,
 }: {
   callerId: string;
+  roomInfo: GameRoomInfo;
   playerName: string;
   leaveRoom: () => void;
 }): JSX.Element {
@@ -184,23 +188,22 @@ function GameView({
     <>Waiting for maze...</>
   ) : (
     <div>
-      <PrimaryButton
-        onClick={leaveRoom}
-        className="bg-red-500 hover:bg-red-600 rounded-2xl text-xl mx-3 absolute"
-      >
-        Leave Room
-      </PrimaryButton>
-      <div className="flex flex-col items-center">
-        <div className="flex flex-col justify-center w-fit">
-          <div className="mx-auto  w-full">
+      <div className="flex justify-center flex-row">
+        <PrimaryButton
+          onClick={leaveRoom}
+          className="bg-red-500 hover:bg-red-600 rounded-2xl text-lg h-10 left-1/3 top-5 absolute"
+        >
+          Leave Room
+        </PrimaryButton>
+        <p className="text-4xl text-center font-semibold my-4">
+          {roomInfo.name}
+        </p>
+      </div>
+      <div className="flex flex-row justify-center gap-5">
+        <div className="flex flex-row justify-center w-full">
+          <div className="flex flex-col">
             {gameState == GameState.Waiting && (
               <>
-                {isAdmin && (
-                  <StartGameButton
-                    canStart={allPlayersReady && otherPlayers.length > 0}
-                    startGame={sendStartGame}
-                  />
-                )}
                 {gameOptions && (
                   <GameOptionsDisplay
                     canEditOptions={isAdmin}
@@ -213,6 +216,10 @@ function GameView({
                 )}
               </>
             )}
+          </div>
+        </div>
+        <div className="flex flex-col justify-center w-fit">
+          <div className="mx-auto  w-full">
             {gameState == GameState.Active && !gameStarted && (
               <GameStartCountdown
                 startTime={gameStartTime}
@@ -240,21 +247,34 @@ function GameView({
             />
           )}
           {/* {isAdmin && gameState == GameState.Ended && <RestartButton />} */}
-          <div className="flex flex-row justify-between">
-            <PlayersList
-              players={[localPlayer, ...otherPlayers]}
-              finishTimes={finishTimes}
-            />
-            {gameState == GameState.Waiting && (
-              <ReadyButton
-                readyState={[isReady, setIsReady]}
-                disabled={false}
-              />
+
+          <div className="flex justify-around pt-2 pb-1">
+            {isAdmin && (
+              <div className="w-3/5 flex justify-center">
+                <StartGameButton
+                  canStart={allPlayersReady && otherPlayers.length > 0}
+                  startGame={sendStartGame}
+                />
+              </div>
             )}
+            <div className="w-3/5 flex justify-center">
+              {gameState == GameState.Waiting && (
+                <ReadyButton
+                  readyState={[isReady, setIsReady]}
+                  disabled={false}
+                />
+              )}
+            </div>
           </div>
           {gameState != GameState.Active && lastGameResults && (
             <GameResultsPanel />
           )}
+        </div>
+        <div className="w-full">
+          <PlayersList
+            players={[localPlayer, ...otherPlayers]}
+            finishTimes={finishTimes}
+          />
         </div>
       </div>
     </div>
@@ -356,37 +376,43 @@ function GameView({
 
     return (
       <>
-        <div className="flex flex-col w-full mx-auto px-10 border-black border-2 my-3">
+        <p className="text-2xl text-center bold">Game Options:</p>
+        <div
+          className={clsx(
+            "flex flex-col w-full mx-auto gap-3 justify-between items-center my-1",
+            !canEditOptions && "opacity-0.4",
+          )}
+        >
           {gameOptionsError && <ErrorLabel text={gameOptionsError} />}
-          <div className="flex"></div>
-          <p className="text-2xl text-center bold">Game Options:</p>
           {/* Maze Dimensions */}
           <MazeDifficultySection />
           {/* Edit buttons */}
           <div className="my-1">
             {canEditOptions &&
               (isEditing ? (
-                <div className="flex justify-center">
+                <div className="flex justify-between w-full">
                   <PrimaryButton
-                    className="text-2xl w-1/4 bg-red-500/90 hover:bg-red-500"
+                    className="text-2xl bg-red-500/90 hover:bg-red-500"
                     onClick={cancelEdit}
                   >
                     Cancel
                   </PrimaryButton>
                   <PrimaryButton
-                    className="text-2xl w-1/4 bg-green-500/90 hover:bg-green-500 "
+                    className="text-2xl w-1/2 bg-green-500/90 hover:bg-green-500 "
                     onClick={saveEdit}
                   >
                     Save
                   </PrimaryButton>
                 </div>
               ) : (
-                <PrimaryButton
-                  className="text-2xl w-1/2 bg-gray-500/90 hover:bg-gray-500"
-                  onClick={startEdit}
-                >
-                  Edit
-                </PrimaryButton>
+                <div className="w-full">
+                  <PrimaryButton
+                    className="text-xl mx-auto bg-gray-500/90 hover:bg-gray-500"
+                    onClick={startEdit}
+                  >
+                    Edit
+                  </PrimaryButton>
+                </div>
               ))}
           </div>
         </div>
@@ -395,7 +421,7 @@ function GameView({
 
     function MazeDifficultySection() {
       return isEditing ? (
-        <div className="text-xl">
+        <div className="text-xl truncate">
           <span>Maze Difficulty: </span>
           <div className="flex justify-around w-4/5 my-2">
             <select
@@ -411,8 +437,11 @@ function GameView({
           </div>
         </div>
       ) : (
-        <div className="text-xl">
-          <span>Maze Difficulty: {options.difficulty}</span>
+        <div className="text-xl truncate">
+          <span>Maze Difficulty: </span>
+          <span className="text-blue-500/80 font-semibold">
+            {options.difficulty}
+          </span>
         </div>
       );
     }
@@ -518,7 +547,7 @@ function GameView({
     finishTimes: Map<string, number>; // map player name -> finish time ms
   }) {
     return (
-      <div className="text-xl flex flex-col truncate text-left">
+      <div className="text-2xl flex flex-col justify-start h-full truncate text-left">
         {players.map((p) => (
           <span
             key={p.username}

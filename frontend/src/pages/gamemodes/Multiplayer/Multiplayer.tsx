@@ -37,15 +37,18 @@ export default function Multiplayer({
 
   return (
     <>
-      <PageTitle text="Multiplayer" />
       {!currentRoom ? (
         <>
-          <p className="text-3xl">Name: {playerName}</p>
-          <RoomsView callerId={"Multiplayer.RoomsView"} />
+          {/* <p className="text-3xl">Name: {playerName}</p> */}
+          <RoomsView
+            callerId={"Multiplayer.RoomsView"}
+            playerName={playerName}
+          />
         </>
       ) : (
         <GameView
           callerId={"Multiplayer.GameView"}
+          roomInfo={currentRoom}
           playerName={playerName}
           leaveRoom={leaveRoom}
         />

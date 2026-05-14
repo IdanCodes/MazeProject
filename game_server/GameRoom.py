@@ -10,7 +10,7 @@ from MazeGen.MazeGenerator import generateDFSRectMaze
 from Player import Player, RoomClientRole
 from Structures import GameOptions
 from Structures.Vector2 import Vector2
-from helpers import get_time_ms
+from helpers import contains_whitespace, get_time_ms
 from protocol import MsgType, ResponseCode, build_network_msg, build_response, is_valid_position, parse_request
 from math import floor
 from Database.DBManagers import games_manager
@@ -295,7 +295,8 @@ class GameRoom:
 
     def restart_game(self):
         self.game_data = GameData(str(uuid.uuid4()), self.name, get_time_ms(), GameOptions.GameOptions())
-        self.current_results = self.total_results = []
+        self.current_results = []
+        self.total_results = []
         self.generate_new_maze()
         self.running = True
         self.send_broadcast(build_network_msg(None, MsgType.RESTART_GAME))
@@ -368,6 +369,7 @@ class GameRoom:
 
     # endregion
 
+# TODO: maybe have a text error along with the validity check?
 ROOM_NAME_MAX_LEN = 20
 ROOM_NAME_MIN_LEN = 3
 def valid_room_name(name: str) -> bool:
@@ -378,4 +380,4 @@ def valid_room_capacity(cap: int) -> bool:
 
 PASSWORD_MAX_LENGTH = 16
 def valid_room_password(password: str | None) -> bool:
-    return password == None or len(password) <= PASSWORD_MAX_LENGTH
+    return password == None or (len(password) <= PASSWORD_MAX_LENGTH and len(password) > 0 and not contains_whitespace(password))

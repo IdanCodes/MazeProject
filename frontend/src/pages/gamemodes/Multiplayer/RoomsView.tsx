@@ -10,7 +10,13 @@ import { GameRoomInfo, roomIsFull } from "@src/interfaces/GameRoomInfo";
 import clsx from "clsx";
 import { JSX, useEffect, useMemo, useState } from "react";
 
-function RoomsView({ callerId }: { callerId: string }) {
+function RoomsView({
+  callerId,
+  playerName,
+}: {
+  callerId: string;
+  playerName: string;
+}) {
   const { sendMessage, onResponse } = useNetworkContext();
   const [roomsList, setRoomsList] = useState<GameRoomInfo[]>([]);
   const [roomsError, setRoomsError] = useState<string>("");
@@ -54,6 +60,7 @@ function RoomsView({ callerId }: { callerId: string }) {
       </RedirectButton>
       <RoomsPanel
         callerId={callerId + ".RoomsPanel"}
+        playerName={playerName}
         refreshList={refreshRoomsList}
         roomsList={roomsList}
         roomsError={roomsError}
@@ -64,20 +71,22 @@ function RoomsView({ callerId }: { callerId: string }) {
 
 function CreateRoomPanel({
   callerId,
+  playerName,
   setError,
   closeModal,
   refreshRoomsList,
 }: {
   callerId: string;
+  playerName: string;
   setError: (err: string) => void;
   closeModal: () => void;
   refreshRoomsList: () => void;
 }): JSX.Element {
   const { sendMessage, onResponse } = useNetworkContext();
-  const [name, setName] = useState<string>("New Room");
-  const [tempCapacity, setTempCapacity] = useState<string>("2");
+  const [name, setName] = useState<string>(`${playerName}'s Room`);
+  const [tempCapacity, setTempCapacity] = useState<string>("5");
   // const [editingCapacity, setEditingCapacity]
-  const [capacity, setCapacity] = useState<number>(2);
+  const [capacity, setCapacity] = useState<number>(5);
   const [passwordActive, setPasswordActive] = useState<boolean>(false);
   const [password, setPassword] = useState<string>("");
   const btnDisabled = useMemo(
@@ -86,8 +95,9 @@ function CreateRoomPanel({
       name.length > 20 ||
       capacity < 2 ||
       capacity > 10 ||
-      ((password.length == 0 || password.length > 16) && passwordActive),
-    [name, capacity, password],
+      ((password.length == 0 || password.length > 16 || /\s/.test(password)) &&
+        passwordActive),
+    [name, capacity, password, passwordActive],
   );
 
   const sendCreateRoom = (name: string, capacity: number, password: string) => {
@@ -143,7 +153,7 @@ function CreateRoomPanel({
           className="pb-7 pt-5 px-10"
           onSubmit={(e) => {
             e.preventDefault();
-            handleCreteRoom();
+            // handleCreteRoom();
           }}
         >
           <div className="flex flex-col gap-5 justify-around mx-auto p-5">
@@ -200,7 +210,8 @@ function CreateRoomPanel({
             <PrimaryButton
               className="bg-green-500 hover:bg-green-600 text-3xl px-10 py-5 mx-auto"
               disabled={btnDisabled}
-              btnType="submit"
+              // btnType="submit"
+              onClick={handleCreteRoom}
             >
               Create Room
             </PrimaryButton>
@@ -292,12 +303,14 @@ function RoomList({
 
 function RoomsPanel({
   callerId,
+  playerName,
   refreshList,
   roomsError,
   roomsList,
   refreshTimeoutMS = 1500,
 }: {
   callerId: string;
+  playerName: string;
   refreshList: () => void;
   roomsError: string;
   roomsList: GameRoomInfo[];
@@ -330,6 +343,7 @@ function RoomsPanel({
       {createModalOpen && (
         <CreateRoomPanel
           callerId={callerId + ".CreateRoomPanel"}
+          playerName={playerName}
           setError={setCreateRoomError}
           closeModal={() => setCreateModalOpen(false)}
           refreshRoomsList={refreshList}

@@ -18,3 +18,6 @@ def get_random_int(min: int, max: int) -> int:
 # get time in ms since epoch
 def get_time_ms() -> int:
     return (time.time_ns() // 1_000_000)
+
+def contains_whitespace(s: str) -> bool:
+    return any(char.isspace() for char in s)

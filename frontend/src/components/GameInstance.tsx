@@ -70,10 +70,10 @@ const GameInstance = forwardRef<
     }, [cellScale]);
 
     // cells per second
-    const playerSpeed = 2.5;
+    const playerSpeed = 2.6;
     // const accelerationRate = 0.12;
     // const decelerationRate = 0.17;
-    const accelerationRate = 0.7;
+    const accelerationRate = 0.6;
     const decelerationRate = 0.4;
 
     const speedAmplifier = useMemo(() => {

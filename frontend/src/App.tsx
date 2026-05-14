@@ -203,7 +203,7 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
       {networkContext.isConnected || true ? (
         isAuthenticated ? (
           <>
-            <div className="py-5">
+            <div className="py-0.5">
               <Routes>
                 <Route
                   path={RoutePath.Home}
