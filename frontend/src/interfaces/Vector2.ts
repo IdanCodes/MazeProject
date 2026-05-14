@@ -7,7 +7,7 @@ export function calcMagnitude(vec: Vector2): number {
   return Math.sqrt(vec.x ** 2 + vec.y ** 2);
 }
 
-export const ZERO_VEC: Vector2 = { x: 0, y: 0 };
+export const ZERO_VEC: Vector2 = { ...{ x: 0, y: 0 } };
 
 export function calcNormalized(vec: Vector2): Vector2 {
   const mag = calcMagnitude(vec);

@@ -1,14 +1,30 @@
-import React, { JSX, useEffect, useRef, useState } from "react";
+import React, {
+  JSX,
+  SetStateAction,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import PageTitle from "@src/components/PageTitle";
 import { MazeSize } from "@src/types/maze-size";
-import GameInstance from "@src/components/GameInstance";
+import GameInstance, { GameInstanceHandle } from "@src/components/GameInstance";
 import { ButtonSize } from "@src/components/buttons/ButtonSize";
 import { RoutePath } from "@src/constants/route-path";
 import PrimaryButton from "@src/components/buttons/PrimaryButton";
 import { generateMaze, Maze } from "@src/types/Maze";
 import { RedirectButton } from "@src/components/buttons/RedirectButton";
+import { generateDFSRectGrid } from "@src/utils/maze-generator";
+import LoadingSpinner from "@src/components/LoadingSpinner";
+import { Vector2, ZERO_VEC } from "@src/interfaces/Vector2";
+import { PlayerInfo } from "@src/interfaces/PlayerInfo";
+import { PlayerRole } from "@src/constants/PlayerRole";
 
-export default function Singleplayer(): JSX.Element {
+export default function Singleplayer({
+  playerName,
+}: {
+  playerName: string;
+}): JSX.Element {
   // const [maze, setMaze] = useState<Maze>(generateMaze(gameOptions.mazeScale));
   // const navigate = useNavigate();
   // function handleClickGenerate() {
@@ -43,14 +59,67 @@ export default function Singleplayer(): JSX.Element {
   //     </div>
   //   </>
   // );
+
+  const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
+  const [maze, setMaze] = useState<Maze>(new Maze(generateDFSRectGrid(20, 20)));
+  const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
+  const cellScale = useMemo(
+    () => (gameInstanceRef.current ? gameInstanceRef.current.cellScale : 0),
+    [gameInstanceRef.current],
+  );
+  const [player, setPlayer] = useState<PlayerInfo>({
+    username: playerName,
+    position: ZERO_VEC,
+    isReady: true,
+    role: PlayerRole.ADMIN,
+  } as PlayerInfo);
+
+  const setPlayerPos = (action: SetStateAction<Vector2>) => {
+    setPlayer((pl) => {
+      const newPl = { ...pl };
+      const newVal = typeof action == "function" ? action(pl.position) : action;
+      newPl.position = newVal;
+      return newPl;
+    });
+  };
+
+  useEffect(() => {
+    setPlayerPos({
+      x: cellScale / 2,
+      y: cellScale / 2,
+    });
+  }, [maze, cellScale]);
+
   return (
     <>
-      <h1 className="text-center text-3xl">
-        Singleplayer mode is under construction...
-      </h1>
-      <RedirectButton path={RoutePath.Home} className="text-4xl">
+      <RedirectButton
+        path={RoutePath.Home}
+        className="text-2xl absolute left-10"
+      >
         Back
       </RedirectButton>
+      <PageTitle text="Singleplayer" />
+
+      {maze ? (
+        <div className="flex justify-center my-5">
+          <GameInstance
+            ref={gameInstanceRef}
+            mazeSize={MazeSize.Medium}
+            maze={maze}
+            finishCell={finishCell}
+            otherPlayers={[]}
+            playerPosState={[player.position, setPlayerPos]}
+            onPlayerMove={(pos) => {
+              setPlayerPos(pos);
+            }}
+          />
+        </div>
+      ) : (
+        <>
+          <p className="text-3xl text-center">Waiting for a maze from</p>
+          <LoadingSpinner />
+        </>
+      )}
     </>
   );
 }
