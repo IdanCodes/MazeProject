@@ -76,7 +76,7 @@ function GameView({
   // #endregion
   const [maze, setMaze] = useState<Maze | undefined>(undefined);
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
-  const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
+  const [finishCell, setFinishCell] = useState<Vector2>({ x: -2, y: -2 });
   const [finishTimes, setFinishTimes] = useState<Map<string, number>>(
     new Map(),
   );
@@ -184,7 +184,7 @@ function GameView({
     setGameStarted(false);
     setGameState(GameState.Waiting);
     setGameStartTime(-1);
-    setFinishCell({ x: -1, y: -1 });
+    setFinishCell({ x: -2, y: -2 });
     setFinishTimes(new Map());
   }
 

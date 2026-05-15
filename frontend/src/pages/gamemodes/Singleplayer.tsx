@@ -80,9 +80,10 @@ export default function Singleplayer({
 
   const gameInstanceRef = useRef<GameInstanceHandle | null>(null);
   const { sendMessage, onResponse } = useNetworkContext();
-  const [maze, setMaze] = useState<Maze>(new Maze(generateDFSRectGrid(20, 20)));
+  const [maze, setMaze] = useState<Maze | undefined>(undefined);
   const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
-  const [gameState, setGameState] = useState<GameState>(GameState.Waiting);
+  const [gameState, setGameState] = useState<GameState>(GameState.Ended);
+  const gState = useRef<GameState>(GameState.Waiting);
   const [disableStartBtn, setDisableStartBtn] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [canMove, setCanMove] = useState<boolean>(true);
@@ -103,10 +104,10 @@ export default function Singleplayer({
     [gameInstanceRef.current],
   );
 
-  const canvasToGrid = useMemo(
+  const canvasToVisualGrid = useMemo(
     () =>
       gameInstanceRef.current && gameInstanceRef.current.gameCanvasRef
-        ? gameInstanceRef.current.gameCanvasRef.canvasToGrid
+        ? gameInstanceRef.current.gameCanvasRef.canvasToVisualGrid
         : (_: Vector2) => ZERO_VEC,
     [gameInstanceRef.current],
   );
@@ -120,8 +121,7 @@ export default function Singleplayer({
   const onEnterCell = (gridCell: Vector2) => {
     if (equalVec(gridCell, finishCell)) {
       console.log("Finish Maze!", gridCell);
-      // On player finished
-      onPlayerFinishMaze();
+      onPlayerFinishMaze(Date.now() - gameStartTime);
     }
   };
 
@@ -129,7 +129,7 @@ export default function Singleplayer({
     setPlayer((pl) => {
       const newPl = { ...pl };
       const newVal = typeof action == "function" ? action(pl.position) : action;
-      const newGridCell = canvasToGrid(newVal);
+      const newGridCell = canvasToVisualGrid(newVal);
       if (!equalVec(newGridCell, playerGridCell.current)) {
         playerGridCell.current = newGridCell;
         onEnterCell(newGridCell);
@@ -148,6 +148,7 @@ export default function Singleplayer({
 
   const handleStartGame = () => {
     setDisableStartBtn(true);
+    console.log("in handle:", gameState);
     sendMessage(GameMsgType.GENERATE_MAZE, gameOptions);
   };
 
@@ -181,17 +182,29 @@ export default function Singleplayer({
       const matrix = res.data.grid as CellType[][];
       const grid = new Grid(matrix);
       const maze = new Maze(grid);
-      setMaze(maze);
-
       const finishCell = parseVector2(res.data.finishCell)!;
-      setFinishCell(finishCell);
-      onStartGame(Date.now() + 3 * 1_000);
+
+      if (gState.current == GameState.Waiting) {
+        onStartGame(maze, finishCell, Date.now() + 3 * 1_000);
+      } else if (gState.current == GameState.Ended) {
+        onRestartGame(maze);
+      }
     });
+
+    if (gState.current == GameState.Ended) return;
+    gState.current = GameState.Ended;
+    sendMessage(GameMsgType.GENERATE_MAZE, {
+      difficulty: MazeDifficulty.Medium,
+    } as GameOptions);
   }, []);
 
-  const onStartGame = (startTime: number) => {
+  const onStartGame = (maze: Maze, finishCell: Vector2, startTime: number) => {
+    console.log("On start");
+    setMaze(maze);
+    setFinishCell(finishCell);
     setGameStartTime(startTime);
     setGameState(GameState.Active);
+    gState.current = GameState.Active;
     setCanMove(false);
     setTimeout(resetPlayerPosition, 0);
   };
@@ -201,8 +214,26 @@ export default function Singleplayer({
     setCanMove(true);
   };
 
-  function onPlayerFinishMaze() {
-    // TODO: implement
+  const onRestartGame = (maze: Maze) => {
+    console.log("On restart");
+    setMaze(maze);
+    setGameStarted(false);
+    setGameState(GameState.Waiting);
+    gState.current = GameState.Waiting;
+    setGameStartTime(-1);
+    setFinishCell({ x: -1, y: -1 });
+    setFinishTime(undefined);
+  };
+
+  function onPlayerFinishMaze(timeMs: number) {
+    // TODO: handle local player finishing
+    setGameState(GameState.Ended);
+    gState.current = GameState.Ended;
+    setFinishTime(timeMs);
+    setMaze(undefined);
+    sendMessage(GameMsgType.GENERATE_MAZE, {
+      difficulty: MazeDifficulty.Medium,
+    } as GameOptions);
   }
 
   return (
@@ -275,7 +306,7 @@ export default function Singleplayer({
         </div>
       ) : (
         <>
-          <p className="text-3xl text-center">Waiting for a maze from</p>
+          <p className="text-3xl text-center">Waiting for a maze...</p>
           <LoadingSpinner />
         </>
       )}

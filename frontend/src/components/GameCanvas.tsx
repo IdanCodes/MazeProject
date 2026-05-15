@@ -13,13 +13,14 @@ import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
 
 const bgColor = "rgb(245, 245, 245)";
-export const PLAYER_RADIUS = 0.21; // in grid cells
+export const PLAYER_RADIUS = 0.25; // in grid cells
 export const GAME_FPS = 60;
 
 export interface GameCanvasHandle {
   dimensions: { width: number; height: number };
   gridToCanvas: (gridPos: Vector2) => Vector2;
   canvasToGrid: (canvasPos: Vector2) => Vector2;
+  canvasToVisualGrid: (gridPos: Vector2) => Vector2;
   checkCircleCollision: (
     pos: Vector2,
     radius: number,
@@ -313,6 +314,7 @@ const GameCanvas = forwardRef<
         dimensions,
         gridToCanvas,
         canvasToGrid,
+        canvasToVisualGrid,
         checkCircleCollision,
       }),
       [canvasWidth, canvasHeight, maze],
