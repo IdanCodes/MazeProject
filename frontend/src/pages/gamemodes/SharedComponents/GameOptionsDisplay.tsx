@@ -48,11 +48,11 @@ function GameOptionsDisplay({
   };
 
   return (
-    <>
+    <div className="bg-gray-500/20 w-fit p-5 rounded-2xl">
       <p className="text-2xl text-center bold">Game Options:</p>
       <div
         className={clsx(
-          "flex flex-col w-full mx-auto gap-3 justify-between items-center my-1",
+          "flex flex-col mx-auto gap-3 justify-between items-center my-1 transition-all px-3",
           !canEditOptions && "opacity-0.4",
         )}
       >
@@ -65,7 +65,7 @@ function GameOptionsDisplay({
           newOptions={newOptions}
         />
         {/* Edit buttons */}
-        <div className="my-1">
+        <div className="my-3 px-5">
           {canEditOptions &&
             (isEditing ? (
               <div className="flex justify-between w-full">
@@ -94,7 +94,7 @@ function GameOptionsDisplay({
             ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

@@ -35,6 +35,7 @@ import { CellType, Grid } from "@src/types/Grid";
 import GameStartCountdown from "./SharedComponents/GameStartCountdown";
 import GameStopwatch from "./SharedComponents/GameStopwatch";
 import { ErrorLabel } from "@src/components/ErrorLabel";
+import { formatTime } from "@src/utils/common-helpers";
 
 export default function Singleplayer({
   callerId = "Singleplayer",
@@ -82,8 +83,7 @@ export default function Singleplayer({
   const { sendMessage, onResponse } = useNetworkContext();
   const [maze, setMaze] = useState<Maze | undefined>(undefined);
   const [finishCell, setFinishCell] = useState<Vector2>({ x: -1, y: -1 });
-  const [gameState, setGameState] = useState<GameState>(GameState.Ended);
-  const gState = useRef<GameState>(GameState.Waiting);
+  const [gameState, setGameState] = useState<GameState>(GameState.Waiting);
   const [disableStartBtn, setDisableStartBtn] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [canMove, setCanMove] = useState<boolean>(true);
@@ -129,7 +129,10 @@ export default function Singleplayer({
     setPlayer((pl) => {
       const newPl = { ...pl };
       const newVal = typeof action == "function" ? action(pl.position) : action;
-      const newGridCell = canvasToVisualGrid(newVal);
+      const newGridCell = canvasToVisualGrid({
+        x: newVal.x - cellScale / 2,
+        y: newVal.y - cellScale / 2,
+      });
       if (!equalVec(newGridCell, playerGridCell.current)) {
         playerGridCell.current = newGridCell;
         onEnterCell(newGridCell);
@@ -149,6 +152,12 @@ export default function Singleplayer({
   const handleStartGame = () => {
     setDisableStartBtn(true);
     console.log("in handle:", gameState);
+    setMaze(undefined);
+    setGameStarted(false);
+    setGameState(GameState.Waiting);
+    setGameStartTime(-1);
+    setFinishCell({ x: -1, y: -1 });
+    setFinishTime(undefined);
     sendMessage(GameMsgType.GENERATE_MAZE, gameOptions);
   };
 
@@ -184,18 +193,16 @@ export default function Singleplayer({
       const maze = new Maze(grid);
       const finishCell = parseVector2(res.data.finishCell)!;
 
-      if (gState.current == GameState.Waiting) {
-        onStartGame(maze, finishCell, Date.now() + 3 * 1_000);
-      } else if (gState.current == GameState.Ended) {
-        onRestartGame(maze);
-      }
+      // if (gState.current == GameState.Waiting) {
+      onStartGame(maze, finishCell, Date.now() + 3 * 1_000);
+      // } else if (gState.current == GameState.Ended) {
+      //   onRestartGame(maze);
+      // }
     });
 
-    if (gState.current == GameState.Ended) return;
-    gState.current = GameState.Ended;
-    sendMessage(GameMsgType.GENERATE_MAZE, {
-      difficulty: MazeDifficulty.Medium,
-    } as GameOptions);
+    // sendMessage(GameMsgType.GENERATE_MAZE, {
+    //   difficulty: MazeDifficulty.Medium,
+    // } as GameOptions);
   }, []);
 
   const onStartGame = (maze: Maze, finishCell: Vector2, startTime: number) => {
@@ -204,7 +211,6 @@ export default function Singleplayer({
     setFinishCell(finishCell);
     setGameStartTime(startTime);
     setGameState(GameState.Active);
-    gState.current = GameState.Active;
     setCanMove(false);
     setTimeout(resetPlayerPosition, 0);
   };
@@ -215,25 +221,20 @@ export default function Singleplayer({
   };
 
   const onRestartGame = (maze: Maze) => {
-    console.log("On restart");
+    // console.log("On restart");
     setMaze(maze);
     setGameStarted(false);
     setGameState(GameState.Waiting);
-    gState.current = GameState.Waiting;
     setGameStartTime(-1);
     setFinishCell({ x: -1, y: -1 });
     setFinishTime(undefined);
   };
 
   function onPlayerFinishMaze(timeMs: number) {
-    // TODO: handle local player finishing
-    setGameState(GameState.Ended);
-    gState.current = GameState.Ended;
+    setGameStarted(false);
+    setGameState(GameState.Waiting);
+    setFinishCell({ x: -1, y: -1 });
     setFinishTime(timeMs);
-    setMaze(undefined);
-    sendMessage(GameMsgType.GENERATE_MAZE, {
-      difficulty: MazeDifficulty.Medium,
-    } as GameOptions);
   }
 
   return (
@@ -245,69 +246,78 @@ export default function Singleplayer({
         Back
       </RedirectButton>
       <PageTitle text="Singleplayer" />
-      {maze ? (
-        <div className="flex justify-center my-5 gap-5">
-          <div className="w-full">
+      <ErrorLabel text={error} />
+      {gameState == GameState.Waiting ? (
+        <div className="my-5">
+          <div className="flex justify-center">
             <GameOptionsDisplay
               optionsState={[gameOptions, setGameOptions]}
               canEditOptions={true}
               gameOptionsError=""
             />
           </div>
-          <div className="w-full">
-            <ErrorLabel text={error} />
-            <GameInstance
-              ref={gameInstanceRef}
-              mazeSize={MazeSize.Medium}
-              maze={maze}
-              finishCell={finishCell}
-              otherPlayers={[]}
-              playerPosState={[
-                player.position,
-                (action: React.SetStateAction<Vector2>) => {
-                  if (canMove) setPlayerPos(action);
-                },
-              ]}
-              onPlayerMove={(pos) => {
-                setPlayerPos(pos);
-              }}
-            />
-            {gameState == GameState.Active && !gameStarted && (
-              <GameStartCountdown
-                startTime={gameStartTime}
-                onStart={onFinishCountdown}
-              />
-            )}
-            {gameState == GameState.Active && gameStarted && (
-              <GameStopwatch
-                startTime={gameStartTime}
-                finishTime={finishTime}
-              />
-            )}
-            {gameState == GameState.Waiting && (
-              <>
-                {disableStartBtn && <LoadingSpinner size={20} />}
-                <div className="flex justify-around pt-2 pb-1">
-                  <div className="w-3/5 flex justify-center">
-                    {gameState == GameState.Waiting && (
-                      <>
-                        <StartGameButton
-                          canStart={!disableStartBtn}
-                          startGame={handleStartGame}
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+          {disableStartBtn && <LoadingSpinner size={20} />}
+          <div className="flex justify-around pt-2 pb-1">
+            <div className="w-3/5 flex justify-center">
+              {gameState == GameState.Waiting && (
+                <>
+                  <StartGameButton
+                    canStart={!disableStartBtn}
+                    startGame={handleStartGame}
+                  />
+                </>
+              )}
+            </div>
           </div>
-          <div className="w-full"></div>
+          {finishTime && (
+            <p className="text-center text-2xl">
+              Finished in: {formatTime(finishTime)}s
+            </p>
+          )}
         </div>
       ) : (
         <>
-          <p className="text-3xl text-center">Waiting for a maze...</p>
-          <LoadingSpinner />
+          {maze ? (
+            <div className="flex justify-center my-5 gap-5">
+              <div className="w-full"></div>
+              <div className="w-full">
+                <GameInstance
+                  ref={gameInstanceRef}
+                  mazeSize={MazeSize.Medium}
+                  maze={maze}
+                  finishCell={finishCell}
+                  otherPlayers={[]}
+                  playerPosState={[
+                    player.position,
+                    (action: React.SetStateAction<Vector2>) => {
+                      if (canMove) setPlayerPos(action);
+                    },
+                  ]}
+                  onPlayerMove={(pos) => {
+                    setPlayerPos(pos);
+                  }}
+                />
+                {gameState == GameState.Active && !gameStarted && (
+                  <GameStartCountdown
+                    startTime={gameStartTime}
+                    onStart={onFinishCountdown}
+                  />
+                )}
+                {gameState == GameState.Active && gameStarted && (
+                  <GameStopwatch
+                    startTime={gameStartTime}
+                    finishTime={finishTime}
+                  />
+                )}
+              </div>
+              <div className="w-full"></div>
+            </div>
+          ) : (
+            <>
+              <p className="text-3xl text-center">Waiting for a maze...</p>
+              <LoadingSpinner />
+            </>
+          )}
         </>
       )}
     </>

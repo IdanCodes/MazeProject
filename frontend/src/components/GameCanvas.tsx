@@ -511,7 +511,7 @@ const GameCanvas = forwardRef<
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        className="border-4 border-solid border-black block rounded-xl size-fit"
+        className="border-4 border-solid border-black block rounded-xl size-fit mx-auto w-fit"
       />
     );
   },
