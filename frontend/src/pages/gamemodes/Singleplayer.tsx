@@ -142,7 +142,7 @@ export default function Singleplayer({
           res.data,
         );
       }
-      const matrix = res.data.maze as CellType[][];
+      const matrix = res.data.grid as CellType[][];
       const grid = new Grid(matrix);
       const maze = new Maze(grid);
       setMaze(maze);

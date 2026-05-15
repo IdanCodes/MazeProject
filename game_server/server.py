@@ -206,7 +206,7 @@ class Server:
                 
                 maze_data = generate_maze_data_by_game_options(game_options)
                 return ResponseCode.SUCCESS, {
-                    "maze": maze_data["grid"],
+                    "grid": maze_data["grid"],
                     "finishCell": vector2_to_dict(maze_data["finish_cell"])
                 }
         return ResponseCode.ERROR, None
