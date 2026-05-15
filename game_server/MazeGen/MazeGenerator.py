@@ -40,5 +40,5 @@ def generate_maze_by_difficulty(diff: MazeDifficulty) -> Maze:
 
 def generate_maze_data_by_game_options(options: GameOptions.GameOptions) -> MazeData:
     maze = generate_maze_by_difficulty(options.difficulty)
-    finish_cell = Vector2(-1, -1)
+    finish_cell = Vector2(maze.width - 1, maze.height - 1)
     return MazeData(grid=maze.get_matrix(), finish_cell=finish_cell)

@@ -9,7 +9,7 @@ import usePlayerInputHandler from "../hooks/usePlayerPositionHandler";
 import { getMazeRenderHeight, MazeSize } from "../types/maze-size";
 import { Maze } from "../types/Maze";
 import GameCanvas, { GameCanvasHandle, PLAYER_RADIUS } from "./GameCanvas";
-import { lerp, moveTowards } from "../utils/common-helpers";
+import { getRaw, lerp, moveTowards } from "../utils/common-helpers";
 import useAnimationUpdate from "../hooks/useAnimationUpdate";
 import {
   calcMagnitude,
@@ -71,10 +71,10 @@ const GameInstance = forwardRef<
 
     // cells per second
     const playerSpeed = 2.6;
-    // const accelerationRate = 0.12;
-    // const decelerationRate = 0.17;
-    const accelerationRate = 0.6;
-    const decelerationRate = 0.4;
+    // const accelerationRate = 0.09;
+    // const decelerationRate = 0.12;
+    const accelerationRate = 0.3;
+    const decelerationRate = 0.13;
 
     const speedAmplifier = useMemo(() => {
       return (playerSpeed * cellScale * 4) / GAME_FPS;
@@ -99,12 +99,96 @@ const GameInstance = forwardRef<
     });
 
     useAnimationUpdate(GAME_FPS, () => {
+      // setPlayerPos((cp: Vector2): Vector2 => {
+      //   if (!gameCanvasRef.current) return cp;
+      //   const checkCollision = (pos: Vector2) =>
+      //     gameCanvasRef.current?.checkCircleCollision(
+      //       { x: pos.x + cellScale / 2, y: pos.y + cellScale / 2 },
+      //       PLAYER_RADIUS * cellScale,
+      //     );
+      //   const newPos: Vector2 = {
+      //     x: cp.x + velocity.current.x,
+      //     y: cp.y + velocity.current.y,
+      //   };
+      //   // Check full movement
+      //   if (!checkCollision(newPos)) return newPos;
+      //   // Try horizontal only
+      //   const onlyHorizontal: Vector2 = {
+      //     x: newPos.x,
+      //     y: cp.y,
+      //   };
+      //   if (!checkCollision(onlyHorizontal)) return onlyHorizontal;
+      //   // Try vertical only
+      //   const onlyVertical: Vector2 = {
+      //     x: cp.x,
+      //     y: newPos.y,
+      //   };
+      //   if (!checkCollision(onlyVertical)) return onlyVertical;
+      //   // const newGridPos: Vector2 = gameCanvasRef.current.canvasToGrid(newPos);
+      //   // if (
+      //   //   maze.inBounds(newGridPos) &&
+      //   //   maze.getCell(newGridPos) !== CellType.Wall
+      //   // )
+      //   //   return newPos;
+      //   // const onlyHorizontal: Vector2 = {
+      //   //   x: newPos.x,
+      //   //   y: cp.y,
+      //   // };
+      //   // const onlyHorizontalGP: Vector2 =
+      //   //   gameCanvasRef.current.canvasToGrid(onlyHorizontal);
+      //   // if (
+      //   //   maze.inBounds(onlyHorizontalGP) &&
+      //   //   maze.getCell(onlyHorizontalGP) === CellType.Passage
+      //   // )
+      //   //   return onlyHorizontal;
+      //   // const onlyVertical: Vector2 = {
+      //   //   x: cp.x,
+      //   //   y: newPos.y,
+      //   // };
+      //   // const onlyVerticalGP: Vector2 =
+      //   //   gameCanvasRef.current.canvasToGrid(onlyVertical);
+      //   // if (
+      //   //   maze.inBounds(onlyVerticalGP) &&
+      //   //   maze.getCell(onlyVerticalGP) === CellType.Passage
+      //   // )
+      //   //   return onlyVertical;
+      //   return cp;
+      // });
+    });
+
+    // const tempTargetVelocity = useRef<Vector2>(ZERO_VEC);
+    useAnimationUpdate(PHYSICS_UPDATE_FPS, () => {
+      const epsilon = 0.05;
+
+      const updateVel = (target: Vector2, forceZero = false) => {
+        const newX =
+          target.x == 0 && forceZero
+            ? 0
+            : lerp(
+                velocity.current.x,
+                target.x,
+                target.x != 0 ? accelerationSpeed : decelerationSpeed,
+              );
+        const newY =
+          target.y == 0 && forceZero
+            ? 0
+            : lerp(
+                velocity.current.y,
+                target.y,
+                target.y != 0 ? accelerationSpeed : decelerationSpeed,
+              );
+        velocity.current = {
+          x: newX,
+          y: newY,
+        };
+      };
+
       setPlayerPos((cp: Vector2): Vector2 => {
         if (!gameCanvasRef.current) return cp;
         const checkCollision = (pos: Vector2) =>
           gameCanvasRef.current?.checkCircleCollision(
-            pos,
-            PLAYER_RADIUS / (PHYSICS_UPDATE_FPS * 0.4),
+            { x: pos.x + cellScale / 2, y: pos.y + cellScale / 2 },
+            PLAYER_RADIUS * cellScale,
           );
 
         const newPos: Vector2 = {
@@ -113,21 +197,43 @@ const GameInstance = forwardRef<
         };
 
         // Check full movement
-        if (!checkCollision(newPos)) return newPos;
+        if (!checkCollision(newPos)) {
+          updateVel(targetVelocity.current);
+          return newPos;
+        }
 
         // Try horizontal only
         const onlyHorizontal: Vector2 = {
           x: newPos.x,
           y: cp.y,
         };
-        if (!checkCollision(onlyHorizontal)) return onlyHorizontal;
+        if (!checkCollision(onlyHorizontal)) {
+          updateVel(
+            {
+              x: targetVelocity.current.x,
+              y: 0,
+            },
+            true,
+          );
+          return onlyHorizontal;
+        }
 
         // Try vertical only
         const onlyVertical: Vector2 = {
           x: cp.x,
           y: newPos.y,
         };
-        if (!checkCollision(onlyVertical)) return onlyVertical;
+        if (!checkCollision(onlyVertical)) {
+          updateVel(
+            {
+              x: 0,
+              y: targetVelocity.current.y,
+            },
+            true,
+          );
+          return onlyVertical;
+        }
+        updateVel(ZERO_VEC, true);
 
         // const newGridPos: Vector2 = gameCanvasRef.current.canvasToGrid(newPos);
 
@@ -163,22 +269,6 @@ const GameInstance = forwardRef<
 
         return cp;
       });
-    });
-
-    useAnimationUpdate(PHYSICS_UPDATE_FPS, () => {
-      const epsilon = 0.05;
-      velocity.current = {
-        x: moveTowards(
-          velocity.current.x,
-          targetVelocity.current.x,
-          targetVelocity.current.x != 0 ? accelerationSpeed : decelerationSpeed,
-        ),
-        y: moveTowards(
-          velocity.current.y,
-          targetVelocity.current.y,
-          targetVelocity.current.y != 0 ? accelerationSpeed : decelerationSpeed,
-        ),
-      };
 
       if (calcMagnitude(velocity.current) < epsilon)
         velocity.current = ZERO_VEC;

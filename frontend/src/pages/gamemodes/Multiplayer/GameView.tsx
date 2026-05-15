@@ -22,6 +22,8 @@ import clsx from "clsx";
 import { JSX, useEffect, useMemo, useRef, useState } from "react";
 import GameOptionsDisplay from "../SharedComponents/GameOptionsDisplay";
 import StartGameButton from "../SharedComponents/StartGameButton";
+import GameStartCountdown from "../SharedComponents/GameStartCountdown";
+import GameStopwatch from "../SharedComponents/GameStopwatch";
 
 function GameView({
   callerId,
@@ -136,7 +138,7 @@ function GameView({
     setCanMove(false);
     setIsReady(false);
     setTimeout(() => {
-      // Access the scale directly from the ref to ensure it's current
+      // Access the scale directly from the ref to ensure it's new
       const scale = gameInstanceRef.current?.cellScale ?? 0;
       setPlayerPos({
         x: scale / 2,
@@ -282,72 +284,6 @@ function GameView({
       </div>
     </div>
   );
-
-  function GameStartCountdown({
-    startTime,
-    onStart,
-    DELTA_MS = 50,
-  }: {
-    startTime: number;
-    onStart: () => void;
-    DELTA_MS?: number;
-  }) {
-    const [timeLeft, setTimeLeft] = useState(() => startTime - Date.now());
-    const hasStarted = useRef<boolean>(false);
-
-    useEffect(() => {
-      if (hasStarted.current) return;
-      if (timeLeft <= DELTA_MS) {
-        hasStarted.current = true;
-        onStart();
-      }
-      setTimeout(() => {
-        setTimeLeft(startTime - Date.now());
-      }, DELTA_MS);
-    }, [timeLeft]);
-
-    return (
-      <>
-        <p className="text-3xl">
-          {hasStarted.current ? "Start!" : (timeLeft / 1000.0).toFixed(1)}
-        </p>
-      </>
-    );
-  }
-
-  function GameStopwatch({
-    startTime,
-    finishTime,
-    DELTA_MS = 50,
-  }: {
-    startTime: number;
-    finishTime: number | undefined;
-    DELTA_MS?: number;
-  }) {
-    const [timeSinceStart, setTimeSinceStart] = useState<number>(
-      () => Date.now() - startTime,
-    );
-
-    useEffect(() => {
-      if (finishTime != null) return;
-      setTimeout(() => {
-        setTimeSinceStart(Date.now() - startTime);
-      }, DELTA_MS);
-    }, [startTime, timeSinceStart]);
-    // useEffect(() => {
-    //   if (finishTime != null) setTimeSinceStart(finishTime);
-    // }, [finishTime]);
-
-    return (
-      <>
-        <div className="w-full my-1">
-          <p className="text-4xl text-center font-semibold">
-            {formatTime(finishTime ?? timeSinceStart)}
-          </p>
-        </div>
-      </>
-    );
-  }
 
   function ReadyButton({
     readyState,

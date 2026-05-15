@@ -22,3 +22,5 @@ export function moveTowards(a: number, b: number, step: number): number {
 
 // format a time from ms to a string representing seconds
 export const formatTime = (time: number): string => (time / 1000.0).toFixed(2);
+
+export const getRaw = (x: number): number => (x > 0 ? 1 : x < 0 ? -1 : 0);

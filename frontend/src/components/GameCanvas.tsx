@@ -8,12 +8,12 @@ import React, {
 } from "react";
 import { Maze } from "../types/Maze";
 import { CellType } from "../types/Grid";
-import { Vector2 } from "../interfaces/Vector2";
+import { calcNormalized, Vector2 } from "../interfaces/Vector2";
 import { PlayerInfo } from "@src/interfaces/PlayerInfo";
 import useAnimationUpdate from "@src/hooks/useAnimationUpdate";
 
 const bgColor = "rgb(245, 245, 245)";
-export const PLAYER_RADIUS = 0.25; // in grid cells
+export const PLAYER_RADIUS = 0.21; // in grid cells
 export const GAME_FPS = 60;
 
 export interface GameCanvasHandle {
@@ -25,6 +25,7 @@ export interface GameCanvasHandle {
     radius: number,
     cellType?: CellType,
   ) => boolean;
+  // applyCanvasCircleOffset: (vec: Vector2) => ;
 }
 
 const GameCanvas = forwardRef<
@@ -101,40 +102,209 @@ const GameCanvas = forwardRef<
       y: pos.y * canvasHeight,
     });
 
-    // check if a circle at pos with radius collides with another CellType in the maze or the boundary.
-    // defaults to checking for walls.
     function checkCircleCollision(
       pos: Vector2,
       radius: number,
       cellType: CellType = CellType.Wall,
     ): boolean {
-      // Check multiple points around the circle's perimeter
-      const checkPoints = [
-        { x: 0, y: -radius }, // top
-        { x: radius, y: 0 }, // right
-        { x: 0, y: radius }, // bottom
-        { x: -radius, y: 0 }, // left
-        { x: radius * 0.7, y: -radius * 0.7 }, // diagonals
-        { x: radius * 0.7, y: radius * 0.7 },
-        { x: -radius * 0.7, y: radius * 0.7 },
-        { x: -radius * 0.7, y: -radius * 0.7 },
-      ];
+      // To match your visual drawings, we check the lines around the player's current area
+      const playerGrid = canvasToGrid(pos);
 
-      for (const offset of checkPoints) {
-        const checkPos = {
-          x: pos.x + (offset.x * dimensions.width) / (maze.width * 2),
-          y: pos.y + (offset.y * dimensions.height) / (maze.height * 2),
+      const visualRadius = radius + wallWidth / 1.2;
+      if (
+        pos.x - visualRadius < 0 ||
+        pos.x + visualRadius > canvasWidth ||
+        pos.y - visualRadius < 0 ||
+        pos.y + visualRadius > canvasHeight
+      )
+        return true;
+
+      // Look at a small neighborhood of cells around the player to check for walls
+      const scanRadius = 2;
+      const startY = Math.max(0, Math.floor(playerGrid.y / 2) * 2 - scanRadius);
+      const endY = Math.min(
+        maze.height,
+        Math.floor(playerGrid.y / 2) * 2 + scanRadius,
+      );
+      const startX = Math.max(0, Math.floor(playerGrid.x / 2) * 2 - scanRadius);
+      const endX = Math.min(
+        maze.width,
+        Math.floor(playerGrid.x / 2) * 2 + scanRadius,
+      );
+
+      // Helper function to check if a circle collides with a line segment
+      function checkCircleLineCollision(
+        p: Vector2,
+        r: number,
+        v: Vector2,
+        w: Vector2,
+      ): boolean {
+        const l2 = (v.x - w.x) ** 2 + (v.y - w.y) ** 2;
+        if (l2 === 0) return false; // Line is a point
+
+        // Calculate projection factor t, clamped between 0 and 1
+        let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+
+        // Find closest point on the line segment
+        const closestPoint = {
+          x: v.x + t * (w.x - v.x),
+          y: v.y + t * (w.y - v.y),
         };
 
-        const gridPos = canvasToGrid(checkPos);
+        // Distance check
+        const distSq =
+          (p.x - closestPoint.x) ** 2 + (p.y - closestPoint.y) ** 2;
+        return distSq < r * r;
+      }
 
-        // Check bounds or other collisions
-        if (!maze.inBounds(gridPos) || maze.getCell(gridPos) === cellType)
-          return true;
+      for (let i = startY; i < endY; i += 2) {
+        for (let j = startX; j < endX; j += 2) {
+          // 1. Check Vertical Walls (Right Bars)
+          const rightBar = { x: j + 1, y: i };
+          if (maze.inBounds(rightBar) && maze.getCell(rightBar) === cellType) {
+            const rightCanvasPos = gridToCanvas({ x: j + 2, y: i });
+            const from = rightCanvasPos;
+            const to = {
+              x: rightCanvasPos.x,
+              y: rightCanvasPos.y + cellScale * 2,
+            };
+
+            if (checkCircleLineCollision(pos, visualRadius, from, to)) {
+              return true;
+            }
+          }
+
+          // 2. Check Horizontal Walls (Down Bars)
+          const downBar = { x: j, y: i + 1 };
+          if (maze.inBounds(downBar) && maze.getCell(downBar) === cellType) {
+            const downCanvasPos = gridToCanvas({ x: j, y: i + 2 });
+            const from = downCanvasPos;
+            const to = {
+              x: downCanvasPos.x + cellScale * 2,
+              y: downCanvasPos.y,
+            };
+
+            if (checkCircleLineCollision(pos, visualRadius, from, to)) {
+              return true;
+            }
+          }
+        }
       }
 
       return false;
     }
+
+    // function checkCircleCollision(
+    //   pos: Vector2,
+    //   radius: number,
+    //   cellType: CellType = CellType.Wall,
+    // ): boolean {
+    //   // 1. Determine which grid cells the player's bounding box is overlapping
+    //   const startGrid = canvasToGrid({ x: pos.x - radius, y: pos.y - radius });
+    //   const endGrid = canvasToGrid({ x: pos.x + radius, y: pos.y + radius });
+
+    //   // 2. Scan through all potentially overlapping cells
+    //   for (let gy = startGrid.y; gy <= endGrid.y; gy++) {
+    //     for (let gx = startGrid.x; gx <= endGrid.x; gx++) {
+    //       const currentGrid = { x: gx, y: gy };
+
+    //       // If it's out of bounds or it's a wall, check the pixel-perfect distance
+    //       if (
+    //         !maze.inBounds(currentGrid) ||
+    //         maze.getCell(currentGrid) === cellType
+    //       ) {
+    //         // Find the canvas pixel boundaries of this specific grid cell
+    //         const inset = wallWidth / 2;
+    //         const cellLeft = gx * cellScale + inset;
+    //         const cellRight = cellLeft + cellScale - inset;
+    //         // const cellLeft = gx * cellScale;
+    //         // const cellRight = cellLeft + cellScale;
+    //         const cellTop = gy * cellScale;
+    //         const cellBottom = cellTop + cellScale;
+
+    //         // Find the closest point on this cell to the player's center
+    //         const closestX = Math.max(cellLeft, Math.min(pos.x, cellRight));
+    //         const closestY = Math.max(cellTop, Math.min(pos.y, cellBottom));
+
+    //         // Calculate the distance from the player's center to this closest point
+    //         const distX = pos.x - closestX;
+    //         const distY = pos.y - closestY;
+    //         const distanceSquared = distX * distX + distY * distY;
+
+    //         // If the distance is less than the radius, we have a collision!
+    //         if (distanceSquared < radius * radius) {
+    //           return true;
+    //         }
+    //       }
+    //     }
+    //   }
+
+    //   return false;
+    // }
+
+    // check if a circle at pos with radius collides with another CellType in the maze or the boundary.
+    // defaults to checking for walls.
+    // function checkCircleCollision(
+    //   pos: Vector2,
+    //   radius: number,
+    //   cellType: CellType = CellType.Wall,
+    // ): boolean {
+    //   // Check multiple points around the circle's perimeter
+    //   // const checkPoints = [
+    //   //   { x: 0, y: -radius }, // top
+    //   //   { x: radius, y: 0 }, // right
+    //   //   { x: 0, y: radius }, // bottom
+    //   //   { x: -radius, y: 0 }, // left
+    //   //   // { x: radius * 0.7, y: -radius * 0.7 }, // diagonals
+    //   //   // { x: radius * 0.7, y: radius * 0.7 },
+    //   //   // { x: -radius * 0.7, y: radius * 0.7 },
+    //   //   // { x: -radius * 0.7, y: -radius * 0.7 },
+    //   // ];
+    //   const diag = radius * 0.7071;
+
+    //   // Since radius is in canvas pixels, these offsets are directly in canvas pixels
+    //   const checkPoints = [
+    //     { x: 0, y: -radius }, // top
+    //     { x: radius, y: 0 }, // right
+    //     { x: 0, y: radius }, // bottom
+    //     { x: -radius, y: 0 }, // left
+    //     { x: diag, y: -diag }, // top-right
+    //     { x: diag, y: diag }, // bottom-right
+    //     { x: -diag, y: diag }, // bottom-left
+    //     { x: -diag, y: -diag }, // top-left
+    //   ];
+
+    //   // for (const offset of checkPoints) {
+    //   //   const checkPos = {
+    //   //     x: pos.x + (offset.x * dimensions.width) / (maze.width * 2),
+    //   //     y: pos.y + (offset.y * dimensions.height) / (maze.height * 2),
+    //   //   };
+
+    //   //   const gridPos = canvasToGrid(checkPos);
+
+    //   //   // Check bounds or other collisions
+    //   //   if (!maze.inBounds(gridPos) || maze.getCell(gridPos) === cellType)
+    //   //     return true;
+    //   // }
+    //   for (const offset of checkPoints) {
+    //     // Add the pixel offset directly to the pixel position
+    //     const checkPos = {
+    //       x: pos.x + offset.x,
+    //       y: pos.y + offset.y,
+    //     };
+
+    //     // Convert this canvas pixel point back to a grid coordinate to check the maze
+    //     const gridPos = canvasToGrid(checkPos);
+
+    //     // Check bounds or wall collisions
+    //     if (!maze.inBounds(gridPos) || maze.getCell(gridPos) === cellType) {
+    //       return true;
+    //     }
+    //   }
+
+    //   return false;
+    // }
 
     // export functions
     useImperativeHandle(

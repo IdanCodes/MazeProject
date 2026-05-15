@@ -380,4 +380,4 @@ def valid_room_capacity(cap: int) -> bool:
 
 PASSWORD_MAX_LENGTH = 16
 def valid_room_password(password: str | None) -> bool:
-    return password == None or (len(password) <= PASSWORD_MAX_LENGTH and len(password) > 0 and not contains_whitespace(password))
+    return password == None or len(password) == 0 or (0 < len(password) <= PASSWORD_MAX_LENGTH and not contains_whitespace(password))
