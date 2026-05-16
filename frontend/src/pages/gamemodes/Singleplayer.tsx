@@ -120,7 +120,6 @@ export default function Singleplayer({
 
   const onEnterCell = (gridCell: Vector2) => {
     if (equalVec(gridCell, finishCell)) {
-      console.log("Finish Maze!", gridCell);
       onPlayerFinishMaze(Date.now() - gameStartTime);
     }
   };
@@ -151,7 +150,6 @@ export default function Singleplayer({
 
   const handleStartGame = () => {
     setDisableStartBtn(true);
-    console.log("in handle:", gameState);
     setMaze(undefined);
     setGameStarted(false);
     setGameState(GameState.Waiting);
@@ -206,7 +204,6 @@ export default function Singleplayer({
   }, []);
 
   const onStartGame = (maze: Maze, finishCell: Vector2, startTime: number) => {
-    console.log("On start");
     setMaze(maze);
     setFinishCell(finishCell);
     setGameStartTime(startTime);
@@ -221,7 +218,6 @@ export default function Singleplayer({
   };
 
   const onRestartGame = (maze: Maze) => {
-    // console.log("On restart");
     setMaze(maze);
     setGameStarted(false);
     setGameState(GameState.Waiting);
@@ -233,20 +229,31 @@ export default function Singleplayer({
   function onPlayerFinishMaze(timeMs: number) {
     setGameStarted(false);
     setGameState(GameState.Waiting);
-    setFinishCell({ x: -1, y: -1 });
+    setFinishCell({ x: -2, y: -2 });
     setFinishTime(timeMs);
+  }
+
+  function stopGame() {
+    setGameStarted(false);
+    setGameState(GameState.Waiting);
+    setFinishCell({ x: -2, y: -2 });
+    setFinishTime(undefined);
+    // setFinishTime(timeMs);
   }
 
   return (
     <>
-      <RedirectButton
-        path={RoutePath.Home}
-        className="text-2xl absolute left-10"
-      >
-        Back
-      </RedirectButton>
-      <PageTitle text="Singleplayer" />
+      {gameState != GameState.Active && (
+        <RedirectButton
+          path={RoutePath.Home}
+          className="text-2xl absolute left-10"
+        >
+          Back
+        </RedirectButton>
+      )}
+
       <ErrorLabel text={error} />
+      <PageTitle text="Singleplayer" />
       {gameState == GameState.Waiting ? (
         <div className="my-5">
           <div className="flex justify-center">
@@ -308,6 +315,14 @@ export default function Singleplayer({
                     startTime={gameStartTime}
                     finishTime={finishTime}
                   />
+                )}
+                {gameState == GameState.Active && (
+                  <PrimaryButton
+                    className="bg-red-500 hover:bg-red-500/90 active:bg-red-600 mx-auto text-3xl "
+                    onClick={stopGame}
+                  >
+                    Stop
+                  </PrimaryButton>
                 )}
               </div>
               <div className="w-full"></div>
