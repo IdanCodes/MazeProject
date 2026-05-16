@@ -50,7 +50,7 @@ function AppNetworkConfigWrapper() {
   return wsServerUrl !== null ? (
     <App wsServerUrl={wsServerUrl} />
   ) : (
-    <h1 className="text-4xl text-center flex justify-center">
+    <h1 className="text-4xl text-center flex justify-center flex-col items-center">
       {/* ERROR! Could not retrieve proxy information! */}
       Retrieving proxy information...
       <LoadingSpinner />
@@ -170,6 +170,7 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
   );
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const autoConnected = useRef<boolean>(false);
 
   function doConnect() {
     setIsConnecting(true);
@@ -196,6 +197,11 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
       console.log("Server denied connection!", e);
     }
   }
+
+  useEffect(() => {
+    if (!autoConnected.current) autoConnected.current = true;
+    doConnect();
+  }, []);
 
   return isConnected ? (
     <>
