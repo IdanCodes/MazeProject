@@ -27,11 +27,7 @@ export default function GameStartCountdown({
     }
     setTimeout(() => {
       setTimeLeft(startTime - Date.now());
-      console.log(getTimedColor());
-      if (getTimedColor() != textColor) {
-        setTextColor(getTimedColor());
-        console.log(getTimedColor());
-      }
+      if (getTimedColor() != textColor) setTextColor(getTimedColor());
     }, DELTA_MS);
   }, [timeLeft]);
 

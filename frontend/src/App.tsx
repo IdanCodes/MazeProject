@@ -18,6 +18,7 @@ import { RedirectButton } from "./components/buttons/RedirectButton";
 import PageTitle from "./components/PageTitle";
 import { AuthenticatedHome, UnauthenticatedHome } from "./pages/Home";
 import { Stats } from "./pages/Stats";
+import PrimaryButton from "./components/buttons/PrimaryButton";
 
 export const WS_PORT_PARAM = "wsPort";
 export const WS_TOKEN_PARAM = "wsToken";
@@ -49,29 +50,30 @@ function AppNetworkConfigWrapper() {
   return wsServerUrl !== null ? (
     <App wsServerUrl={wsServerUrl} />
   ) : (
-    <h1 className="text-4xl text-center">
-      ERROR! Could not retrieve proxy information!
+    <h1 className="text-4xl text-center flex justify-center">
+      {/* ERROR! Could not retrieve proxy information! */}
+      Retrieving proxy information...
+      <LoadingSpinner />
     </h1>
   );
 }
 
-function useNetworkContextHandler(wsServerUrl: string): {
+function useNetworkContextHandler(
+  wsServerUrl: string,
+  onDisconnect: ((e: CloseEvent) => void) | undefined = undefined,
+): {
   networkContext: NetworkContextType;
-  signUp: (username: string, password: string) => Promise<string>;
-  login: (username: string, password: string) => Promise<string>;
+  establishConnection: () => Promise<string>;
 } {
-  const startedConnectLoop = useRef<boolean>(false);
-  const { sendMessage, login, signUp, disconnect, isConnected } = useGameSocket(
-    wsServerUrl,
-    {
+  const { establishConnection, sendMessage, disconnect, isConnected } =
+    useGameSocket(wsServerUrl, {
       onConnect: () => {
         console.log("Connection is open!");
       },
       onMessage: (msg: NetworkMessage) => triggerOnMessage(msg),
       onResponse: (res: ServerResponse) => triggerOnResponse(res),
       onDisconnect: (e: CloseEvent) => triggerOnDisconnect(e),
-    },
-  );
+    });
   const onMessageCallbacks = useRef<
     Map<GameMsgType, Map<string, (msg: NetworkMessage) => void>>
   >(new Map());
@@ -89,7 +91,6 @@ function useNetworkContextHandler(wsServerUrl: string): {
       onMessageCallbacks.current.get(msgType) ?? new Map();
     currCallbackPairs.set(callerId, cb);
     onMessageCallbacks.current.set(msgType, currCallbackPairs);
-    // onMessageCallbacks.current.set(msgType, [...currCallbacks, [callerId, cb]]);
   };
 
   const onResponse = (
@@ -134,9 +135,7 @@ function useNetworkContextHandler(wsServerUrl: string): {
   }
 
   function triggerOnDisconnect(e: CloseEvent) {
-    // // TODO: Call Subscribers
-    console.log("Disconnected! CloseEvent:", e);
-    // setTimeout(attemptConnect, 2000);
+    if (onDisconnect != undefined) onDisconnect(e);
   }
 
   // const attemptConnect = () => {
@@ -161,22 +160,105 @@ function useNetworkContextHandler(wsServerUrl: string): {
   //     setTimeout(attemptConnect, RECONNECT_TIMEOUT_MS);
   // });
 
-  return { networkContext, login, signUp };
+  return { networkContext, establishConnection };
 }
 
 function App({ wsServerUrl }: { wsServerUrl: string }) {
+  const { networkContext, establishConnection } = useNetworkContextHandler(
+    wsServerUrl,
+    onDisconnect,
+  );
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+
+  function doConnect() {
+    setIsConnecting(true);
+    establishConnection()
+      .then((s) => {
+        console.log("Connection successful! Going to authentication...");
+        setIsConnected(true);
+      })
+      .catch((error) => {
+        alert(`Error occurred while connecting! ${error}. Check console`);
+        console.error("Error occurred while connecting!", error);
+      })
+      .finally(() => {
+        setIsConnecting(false);
+      });
+  }
+
+  function onDisconnect(e: CloseEvent) {
+    setIsConnecting(false);
+    if (isConnected) {
+      console.log("Disconnected: server closed the connection!", e);
+      return setIsConnected(false);
+    } else {
+      console.log("Server denied connection!", e);
+    }
+  }
+
+  return isConnected ? (
+    <>
+      <AppContent networkContext={networkContext} />
+    </>
+  ) : (
+    <>
+      <div className="flex justify-center w-full flex-col items-center">
+        {isConnecting ? (
+          <>
+            <p className="text-center text-4xl">Connecting...</p>
+            <LoadingSpinner size={20} />
+          </>
+        ) : (
+          <PrimaryButton
+            className="text-4xl bg-green-500 hover:bg-green-500/90 active:bg-green-600/90"
+            onClick={doConnect}
+          >
+            Connect
+          </PrimaryButton>
+        )}
+      </div>
+    </>
+  );
+}
+
+function AppContent({
+  callerId = "AppContent",
+  networkContext,
+}: {
+  callerId?: string;
+  networkContext: NetworkContextType;
+}) {
   const navigate = useNavigate();
-  const { networkContext, login, signUp } =
-    useNetworkContextHandler(wsServerUrl);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [username, setUsername] = useState<string>("");
+
+  const authenticateUser = (msgType: GameMsgType, p: string) =>
+    new Promise<string>((res, rej) => {
+      try {
+        networkContext.onResponse(callerId, msgType, (response) => {
+          if (response.code == ResponseCode.ERROR) return rej(response.data);
+
+          navigate(RoutePath.Home);
+          setIsAuthenticated(true);
+          res("Connected Successfuly");
+        });
+        networkContext.sendMessage(msgType, {
+          username: username,
+          password: p,
+        });
+      } catch (e: unknown) {
+        rej(e as string);
+      }
+    });
 
   const formLogin = (p: string) =>
     new Promise<string>(async (res, rej) => {
       try {
-        await login(username, p);
+        const r = await authenticateUser(GameMsgType.LOGIN, p);
         navigate(RoutePath.Home);
         setIsAuthenticated(true);
+        res(r);
       } catch (e: unknown) {
         rej(e);
       }
@@ -184,9 +266,10 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
   const formSignUp = (p: string) =>
     new Promise<string>(async (res, rej) => {
       try {
-        await signUp(username, p);
+        const r = await authenticateUser(GameMsgType.SIGN_UP, p);
         navigate(RoutePath.Home);
         setIsAuthenticated(true);
+        res(r);
       } catch (e: unknown) {
         rej(e);
       }

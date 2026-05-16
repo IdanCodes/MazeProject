@@ -10,6 +10,7 @@ from Database.AccountData import AccountData, get_credentials_error
 from ClientInfo import ClientInfo
 from GameRoom import GameRoom, valid_room_capacity, valid_room_name, valid_room_password
 from MazeGen.MazeGenerator import generate_maze_data_by_game_options
+from ProtocolHelpers.EncryptedSocket import EncryptedSocket
 from Structures.GameOptions import GameOptions
 from Structures.Vector2 import vector2_to_dict
 import protocol
@@ -37,7 +38,7 @@ class Server:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.server_sock:
             self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server_sock.bind((protocol.IP_ADDR, protocol.PORT))
-            self.server_sock.listen(10)
+            self.server_sock.listen(15)
             print(f"Server listening on {protocol.IP_ADDR}:{protocol.PORT}")
 
             self.accept_connections()
@@ -56,26 +57,44 @@ class Server:
 
     # initialize the connection with a client - "handshake" before connection
     def init_connection(self, client_sock: socket.socket, remote_addr):
+        # Step 1 - Handshake
+        secure_sock = EncryptedSocket(client_sock)
+
+        print(f"Starting handshake with {remote_addr}")
+        if not secure_sock.execute_server_handshake():
+            print(f"Handshake with {remote_addr} failed. Aborting thread.")
+            secure_sock.close()
+            return
+        print(f"Succesfully finished handshake with {remote_addr}!")
+
         new_client = None
         try:
             while new_client == None:
                 # TODO: Maybe receive with respect to the delimiter like in ClientInfo
-                rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE)
-                rec_text = rec_text.decode(encoding=protocol.NETWORK_ENCODING)
+                # rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE)
+                # rec_text = rec_text.decode(encoding=protocol.NETWORK_ENCODING)
+                rec_text = secure_sock.recv_str()
+                if not rec_text:
+                    secure_sock.close()
+                    print(f"Client {remote_addr} disconnected abruptly.")
+                    return
+
                 req_type, req_data = protocol.parse_request(rec_text)
-                if not req_type: raise Exception(f"Invalid request - {rec_text}")
+                if not req_type: raise Exception(f"Invalid request for init - {rec_text}")
+
                 acc_data, error_text = self.handle_auth_request(req_type, req_data)
                 if not acc_data:
-                    protocol.send_str(client_sock, build_response(ResponseCode.ERROR, req_type, error_text))                    
+                    # protocol.send_str(client_sock, build_response(ResponseCode.ERROR, req_type, error_text))
+                    secure_sock.send_str(build_response(ResponseCode.ERROR, req_type, error_text))
                     continue
 
-                new_client = ClientInfo(client_sock, remote_addr, acc_data)
+                new_client = ClientInfo(secure_sock, remote_addr, acc_data)
                 new_client.send(build_response(ResponseCode.SUCCESS, req_type, "Connected Successfully"))
         except Exception as e:
             import traceback
             print(f"Handshake failed for {remote_addr}:", e)
             traceback.print_exc()
-            client_sock.close()
+            secure_sock.close()
             return
 
         new_client.on_receive(None, self.on_receive_message)

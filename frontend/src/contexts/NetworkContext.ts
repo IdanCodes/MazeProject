@@ -4,7 +4,6 @@ import { ServerResponse } from "@src/interfaces/ServerResponse";
 import { createContext, useContext } from "react";
 
 export interface NetworkContextType {
-  // TODO: specify GameMsgType when subscribing
   onMessage: (
     callerId: string,
     msgType: GameMsgType,

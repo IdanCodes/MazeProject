@@ -23,8 +23,9 @@ export function useGameSocket(
 ): {
   isConnected: boolean;
   // connect: (name: string) => Promise<string>;
-  signUp: (username: string, password: string) => Promise<string>;
-  login: (username: string, password: string) => Promise<string>;
+  establishConnection: () => Promise<string>;
+  // signUp: (username: string, password: string) => Promise<string>;
+  // login: (username: string, password: string) => Promise<string>;
   disconnect: () => void;
   sendMessage: (msgType: GameMsgType, data?: any | undefined) => void;
 } {
@@ -57,11 +58,94 @@ export function useGameSocket(
   };
 
   // connect to the server with a name
-  function authenticate_user(
-    auth_msg: GameMsgType,
-    username: string,
-    password: string,
-  ): Promise<string> {
+  // function authenticate_user(
+  //   auth_msg: GameMsgType,
+  //   username: string,
+  //   password: string,
+  // ): Promise<string> {
+  //   return new Promise((res, rej) => {
+  //     if (isConnected) return rej("Already connected");
+
+  //     console.log("Connecting...");
+
+  //     const handleConnectResponse = (e: MessageEvent) => {
+  //       if (!ws.current) return;
+  //       ws.current.onmessage = null;
+
+  //       const serverMsg = parseGameServerMessage(e.data);
+  //       if (!serverMsg || serverMsg.msgType !== GameMsgType.RESPONSE) {
+  //         console.error("Received unexpected message from server", serverMsg);
+  //         return rej("Invalid response from server");
+  //       }
+
+  //       const serverResponse = parseGameServerResponse(serverMsg.data);
+  //       if (!serverResponse || serverResponse.responseTo != auth_msg) {
+  //         console.error(
+  //           "Received unexpected response from server:",
+  //           serverResponse,
+  //         );
+  //         return rej("Unexpected server resposne");
+  //       }
+
+  //       if (serverResponse.code != ResponseCode.SUCCESS)
+  //         return rej(serverResponse.data ?? "Unexpected Server Error");
+
+  //       // register event handlers
+  //       setIsConnected(true);
+  //       handleOpen();
+  //       ws.current.addEventListener("close", handleClose);
+  //       ws.current.addEventListener("message", handleMessage);
+  //       ws.current.addEventListener("error", handleError);
+  //       res("Connected");
+  //     };
+
+  //     const handleConnectOpen = () => {
+  //       if (!ws.current) return;
+  //       ws.current.onopen = ws.current.onerror = null;
+  //       ws.current.onmessage = handleConnectResponse;
+  //       ws.current.onclose = handleClose;
+  //       ws.current.send(buildGameRequest(auth_msg, { username, password }));
+  //     };
+
+  //     const handleConnectError = (e: WebSocketEventMap["error"]) => {
+  //       console.error(`Could not connect to ${url}. Error:`, e);
+  //       ws.current = undefined;
+  //       rej(`Could not connect to ${url}.\nError: ${JSON.stringify(e)}`);
+  //     };
+
+  //     if (
+  //       ws.current &&
+  //       ws.current.readyState != WebSocket.CLOSING &&
+  //       ws.current.readyState != WebSocket.CLOSED
+  //     ) {
+  //       handleConnectOpen();
+  //     } else {
+  //       ws.current = new WebSocket(url);
+  //       ws.current.onopen = handleConnectOpen;
+  //       ws.current.onerror = handleConnectError;
+  //     }
+  //   });
+  // }
+
+  // const signUp = (username: string, password: string): Promise<string> =>
+  //   authenticate_user(GameMsgType.SIGN_UP, username, password);
+  // const login = (username: string, password: string): Promise<string> =>
+  //   authenticate_user(GameMsgType.LOGIN, username, password);
+
+  function disconnect() {
+    if (!isConnected || !ws.current) return;
+    ws.current.close(1000);
+  }
+
+  const sendMessage = useCallback(
+    (msgType: GameMsgType, data?: any | undefined) => {
+      if (!isConnected || !ws.current) return;
+      ws.current.send(buildGameRequest(msgType, data));
+    },
+    [isConnected, ws.current],
+  );
+
+  function establishConnection(): Promise<string> {
     return new Promise((res, rej) => {
       if (isConnected) return rej("Already connected");
 
@@ -71,23 +155,29 @@ export function useGameSocket(
         if (!ws.current) return;
         ws.current.onmessage = null;
 
-        const serverMsg = parseGameServerMessage(e.data);
-        if (!serverMsg || serverMsg.msgType !== GameMsgType.RESPONSE) {
-          console.error("Received unexpected message from server", serverMsg);
-          return rej("Invalid response from server");
+        console.log("[ESTABLISH] Received Response:", e.data);
+        if (e.data != "CONNECTED") {
+          console.error("SERVER DID NOT CONNECT!");
+          return rej("Was not able to connect... ! :(");
         }
 
-        const serverResponse = parseGameServerResponse(serverMsg.data);
-        if (!serverResponse || serverResponse.responseTo != auth_msg) {
-          console.error(
-            "Received unexpected response from server:",
-            serverResponse,
-          );
-          return rej("Unexpected server resposne");
-        }
+        // const serverMsg = parseGameServerMessage(e.data);
+        // if (!serverMsg || serverMsg.msgType !== GameMsgType.RESPONSE) {
+        //   console.error("Received unexpected message from server", serverMsg);
+        //   return rej("Invalid response from server");
+        // }
 
-        if (serverResponse.code != ResponseCode.SUCCESS)
-          return rej(serverResponse.data ?? "Unexpected Server Error");
+        // const serverResponse = parseGameServerResponse(serverMsg.data);
+        // if (!serverResponse || serverResponse.responseTo != auth_msg) {
+        //   console.error(
+        //     "Received unexpected response from server:",
+        //     serverResponse,
+        //   );
+        //   return rej("Unexpected server resposne");
+        // }
+
+        // if (serverResponse.code != ResponseCode.SUCCESS)
+        //   return rej(serverResponse.data ?? "Unexpected Server Error");
 
         // register event handlers
         setIsConnected(true);
@@ -103,7 +193,7 @@ export function useGameSocket(
         ws.current.onopen = ws.current.onerror = null;
         ws.current.onmessage = handleConnectResponse;
         ws.current.onclose = handleClose;
-        ws.current.send(buildGameRequest(auth_msg, { username, password }));
+        // ws.current.send(buildGameRequest(auth_msg, { username, password }));
       };
 
       const handleConnectError = (e: WebSocketEventMap["error"]) => {
@@ -126,29 +216,12 @@ export function useGameSocket(
     });
   }
 
-  const signUp = (username: string, password: string): Promise<string> =>
-    authenticate_user(GameMsgType.SIGN_UP, username, password);
-  const login = (username: string, password: string): Promise<string> =>
-    authenticate_user(GameMsgType.LOGIN, username, password);
-
-  function disconnect() {
-    if (!isConnected || !ws.current) return;
-    ws.current.close(1000);
-  }
-
-  const sendMessage = useCallback(
-    (msgType: GameMsgType, data?: any | undefined) => {
-      if (!isConnected || !ws.current) return;
-      ws.current.send(buildGameRequest(msgType, data));
-    },
-    [isConnected, ws.current],
-  );
-
   return {
+    establishConnection,
     isConnected,
     // connect: authenticate_user,
-    login,
-    signUp,
+    // login,
+    // signUp,
     disconnect,
     sendMessage,
   };

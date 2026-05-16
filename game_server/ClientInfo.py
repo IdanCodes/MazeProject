@@ -1,12 +1,11 @@
 from __future__ import annotations
-import asyncio
 import socket
 import threading
 from typing import TYPE_CHECKING, Callable
 from uuid import UUID
-import websockets
 from Database.AccountData import AccountData
 from EventBus import EventBus
+from ProtocolHelpers.EncryptedSocket import EncryptedSocket
 import protocol
 
 if TYPE_CHECKING:
@@ -15,7 +14,9 @@ if TYPE_CHECKING:
 RECV_EVENT_NAME = "data_received"
 DISCONNECT_EVENT_NAME = "disconnected"
 class ClientInfo:
-    def __init__(self, sock: socket.socket, remote_addr: socket._RetAddress, account_data: AccountData):
+    sock: EncryptedSocket
+
+    def __init__(self, sock: EncryptedSocket, remote_addr: socket._RetAddress, account_data: AccountData):
         self.sock = sock
         self.remote_addr = remote_addr
         self.account_data = account_data
@@ -29,7 +30,7 @@ class ClientInfo:
         self.recv_thread.start()
 
     def send(self, message: str):
-        return protocol.send_str(self.sock, message)
+        return self.sock.send_str(message)
 
     def on_receive(self, cb_id: UUID | None, recv_cb: Callable[[object, str], None]):
         return self.event_bus.subscribe(RECV_EVENT_NAME, cb_id, recv_cb)
@@ -46,17 +47,12 @@ class ClientInfo:
     def receive_loop(self):
         try:
             while True:
-                encoded_data = self.sock.recv(protocol.SOCK_RECV_CHUNK_SIZE)
-                recv_data = encoded_data.decode(encoding=protocol.NETWORK_ENCODING)
-                if len(recv_data) == 0: break
-
-                messages = recv_data.split(protocol.MESSAGE_DELIMITER)
-                for message in messages:
-                    if len(message) > 0:
-                        self.emit_recv(message)
+                recv_str = self.sock.recv_str()
+                if not recv_str or len(recv_str) == 0: break
+                self.emit_recv(recv_str)
         except ConnectionError as ce:
             print(f"ConnectionError occurred while receiving for client {self.to_string()}:", ce)
-        except all as e:
+        except Exception as e:
             print(f"Exception occurred while receiving for client {self.to_string()}:", e)
         finally:
             print(f"Closing connection to {self.to_string()}...")

@@ -19,6 +19,7 @@ class CustomJSONEncoder(json.JSONEncoder):
 def encodeToJson(data: any) -> str:
     return json.dumps(data, cls=CustomJSONEncoder)
 
+
 # message structure:
 """
 Message Structure
