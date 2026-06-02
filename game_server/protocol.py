@@ -37,8 +37,6 @@ Message Structure
         }
 """
 
-IP_ADDR = "127.0.0.1"
-PORT = 3003
 SOCK_RECV_CHUNK_SIZE = 1024
 NETWORK_ENCODING = "utf-8"
 MESSAGE_DELIMITER = '\n'

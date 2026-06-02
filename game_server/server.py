@@ -13,6 +13,7 @@ from MazeGen.MazeGenerator import generate_maze_data_by_game_options
 from ProtocolHelpers.EncryptedSocket import EncryptedSocket
 from Structures.GameOptions import GameOptions
 from Structures.Vector2 import vector2_to_dict
+import server_config
 import protocol
 from protocol import SOCK_RECV_CHUNK_SIZE, MsgType, ResponseCode, build_error_obj, build_response, parse_request
 from Database.DBManagers import accounts_manager
@@ -37,9 +38,9 @@ class Server:
     def start_server(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.server_sock:
             self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server_sock.bind((protocol.IP_ADDR, protocol.PORT))
-            self.server_sock.listen(15)
-            print(f"Server listening on {protocol.IP_ADDR}:{protocol.PORT}")
+            self.server_sock.bind((server_config.IP_ADDR, server_config.PORT))
+            self.server_sock.listen(server_config.BACKLOG)
+            print(f"Server listening on {server_config.IP_ADDR}:{server_config.PORT}")
 
             self.accept_connections()
 
