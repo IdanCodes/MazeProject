@@ -11,9 +11,13 @@
     "client": "electron ./electron/main.ts",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "start": "electron-forge start",
+
+    "build:frontend": "vite build",
+    "start": "cross-env NODE_ENV=production electron ./electron/main.ts",
+    
     "package": "npm run build && electron-forge package",
-    "make": "npm run build && electron-forge make"
+    "make": "npm run build && electron-forge make",
+    "buildvite-start": "npm run build:frontend && npm start"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.13",
@@ -52,6 +56,7 @@
     "autoprefixer": "^10.4.21",
     "baseline-browser-mapping": "^2.10.0",
     "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "electron": "^41.0.3",
     "electron-vite": "^5.0.0",
     "eslint-plugin-react-hooks": "^5.2.0",

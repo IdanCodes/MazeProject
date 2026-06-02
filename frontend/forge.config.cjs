@@ -5,6 +5,7 @@ module.exports = {
   packagerConfig: {
     asar: true,
     ignore: [/^\/src/, /^\/\.github/, /^\/vite\.config/, /tsconfig.*/],
+    extraResource: ['./app_config.json']
   },
   rebuildConfig: {},
   makers: [

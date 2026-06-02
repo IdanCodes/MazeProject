@@ -14,6 +14,7 @@ import require$$0$1 from "buffer";
 import require$$2$1 from "util";
 import * as path from "path";
 import { v4 } from "uuid";
+import * as fs from "fs";
 import __cjs_mod__ from "node:module";
 const __filename = import.meta.filename;
 const __dirname = import.meta.dirname;
@@ -3752,9 +3753,34 @@ var websocketServerExports = requireWebsocketServer();
 const WebSocketServer = /* @__PURE__ */ getDefaultExportFromCjs(websocketServerExports);
 const __filename$1 = fileURLToPath(import.meta.url);
 const __dirname$1 = path.dirname(__filename$1);
+function loadConfig() {
+  const CONFIG_FILE = app.isPackaged ? path.join(process.resourcesPath, "app_config.json") : path.join(process.cwd(), "app_config.json");
+  try {
+    console.log(`Reading config file from: ${CONFIG_FILE}`);
+    const rawData = fs.readFileSync(CONFIG_FILE, "utf-8");
+    const config = JSON.parse(rawData);
+    const isValidAddr = config && typeof config.SERVER_ADDR === "string" && config.SERVER_ADDR.trim() !== "";
+    const isValidPort = config && typeof config.SERVER_PORT === "number" && Number.isInteger(config.SERVER_PORT) && config.SERVER_PORT > 0;
+    if (!isValidAddr || !isValidPort) {
+      console.error("Invalid config file! Expecting SERVER_ADDR: string, SERVER_PORT: positive integer.\nReceived:", config);
+      throw new Error("Invalid config file structure.");
+    }
+    return {
+      SERVER_ADDR: config.SERVER_ADDR,
+      SERVER_PORT: config.SERVER_PORT
+    };
+  } catch (error) {
+    console.error("Failed to read or parse app_config.json, falling back to defaults:", error);
+    return {
+      SERVER_ADDR: "127.0.0.1",
+      SERVER_PORT: 3e3
+    };
+  }
+}
+const loadedConfig = loadConfig();
+const TCP_HOST = loadedConfig.SERVER_ADDR;
+const TCP_PORT = loadedConfig.SERVER_PORT;
 const DEV_BASE_URL = "http://localhost:5173";
-const TCP_HOST = "127.0.0.1";
-const TCP_PORT = 3003;
 const NONCE_BYTE_SIZE = 12;
 const WS_CONNECTED_MSG = "CONNECTED";
 async function getFreePort() {

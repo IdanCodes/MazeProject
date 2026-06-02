@@ -6,15 +6,54 @@ import * as crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
 import { IncomingMessage } from "http";
 import { pathToFileURL, fileURLToPath } from "url";
+import * as fs from 'fs';
 
 // Recreate __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configs
+function loadConfig(): {
+  SERVER_ADDR: string;
+  SERVER_PORT: number;
+} {
+  const CONFIG_FILE = app.isPackaged
+    ? path.join(process.resourcesPath, "app_config.json") // Resources folder in production
+    : path.join(process.cwd(), "app_config.json"); // Root of project in dev
+
+  try {
+    console.log(`Reading config file from: ${CONFIG_FILE}`);
+
+    const rawData = fs.readFileSync(CONFIG_FILE, 'utf-8');
+    const config = JSON.parse(rawData);
+    
+    const isValidAddr = config && typeof config.SERVER_ADDR === "string" && config.SERVER_ADDR.trim() !== "";
+    const isValidPort = config && typeof config.SERVER_PORT === "number" && Number.isInteger(config.SERVER_PORT) && config.SERVER_PORT > 0;
+
+    if (!isValidAddr || !isValidPort) {
+      console.error("Invalid config file! Expecting SERVER_ADDR: string, SERVER_PORT: positive integer.\nReceived:", config);
+      throw new Error("Invalid config file structure.");
+    }
+
+    return {
+      SERVER_ADDR: config.SERVER_ADDR,
+      SERVER_PORT: config.SERVER_PORT
+    };
+  } catch (error) {
+    console.error('Failed to read or parse app_config.json, falling back to defaults:', error);
+    
+    return {
+      SERVER_ADDR: "127.0.0.1",
+      SERVER_PORT: 3000
+    };
+  }
+}
+// Load 
+const loadedConfig = loadConfig();
+const TCP_HOST = loadedConfig.SERVER_ADDR;
+const TCP_PORT = loadedConfig.SERVER_PORT;
+
+// Config
 const DEV_BASE_URL = "http://localhost:5173";
-const TCP_HOST = "127.0.0.1";
-const TCP_PORT = 3003;
 const NONCE_BYTE_SIZE = 12;
 const WS_CONNECTED_MSG = "CONNECTED";
 
