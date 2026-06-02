@@ -1,15 +1,17 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, Menu } from "electron";
 import require$$0$3 from "events";
-import require$$1$2 from "https";
-import require$$2$1 from "http";
+import require$$1$1 from "https";
+import require$$2$2 from "http";
 import * as net from "net";
 import net__default from "net";
 import require$$4 from "tls";
-import require$$1$1 from "crypto";
+import * as crypto from "crypto";
+import crypto__default from "crypto";
 import require$$0$2 from "stream";
-import require$$7 from "url";
+import require$$7, { fileURLToPath, pathToFileURL } from "url";
 import require$$0 from "zlib";
 import require$$0$1 from "buffer";
+import require$$2$1 from "util";
 import * as path from "path";
 import { v4 } from "uuid";
 import __cjs_mod__ from "node:module";
@@ -73,7 +75,6 @@ function requireConstants() {
   return constants;
 }
 const __viteOptionalPeerDep_bufferutil_ws_true = {};
-throw new Error(`Could not resolve "bufferutil" imported by "ws". Is it installed?`);
 const __viteOptionalPeerDep_bufferutil_ws_true$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: __viteOptionalPeerDep_bufferutil_ws_true
@@ -588,7 +589,6 @@ function requirePermessageDeflate() {
 }
 var validation = { exports: {} };
 const __viteOptionalPeerDep_utf8Validate_ws_true = {};
-throw new Error(`Could not resolve "utf-8-validate" imported by "ws". Is it installed?`);
 const __viteOptionalPeerDep_utf8Validate_ws_true$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: __viteOptionalPeerDep_utf8Validate_ws_true
@@ -830,6 +830,10 @@ function requireReceiver() {
      *     extensions
      * @param {Boolean} [options.isServer=false] Specifies whether to operate in
      *     client or server mode
+     * @param {Number} [options.maxBufferedChunks=0] The maximum number of
+     *     buffered data chunks
+     * @param {Number} [options.maxFragments=0] The maximum number of message
+     *     fragments
      * @param {Number} [options.maxPayload=0] The maximum allowed message length
      * @param {Boolean} [options.skipUTF8Validation=false] Specifies whether or
      *     not to skip UTF-8 validation for text and close messages
@@ -840,6 +844,8 @@ function requireReceiver() {
       this._binaryType = options.binaryType || BINARY_TYPES[0];
       this._extensions = options.extensions || {};
       this._isServer = !!options.isServer;
+      this._maxBufferedChunks = options.maxBufferedChunks | 0;
+      this._maxFragments = options.maxFragments | 0;
       this._maxPayload = options.maxPayload | 0;
       this._skipUTF8Validation = !!options.skipUTF8Validation;
       this[kWebSocket] = void 0;
@@ -869,6 +875,18 @@ function requireReceiver() {
      */
     _write(chunk, encoding, cb) {
       if (this._opcode === 8 && this._state == GET_INFO) return cb();
+      if (this._maxBufferedChunks > 0 && this._buffers.length >= this._maxBufferedChunks) {
+        cb(
+          this.createError(
+            RangeError,
+            "Too many buffered chunks",
+            false,
+            1008,
+            "WS_ERR_TOO_MANY_BUFFERED_PARTS"
+          )
+        );
+        return;
+      }
       this._bufferedBytes += chunk.length;
       this._buffers.push(chunk);
       this.startLoop(cb);
@@ -1198,6 +1216,17 @@ function requireReceiver() {
         return;
       }
       if (data.length) {
+        if (this._maxFragments > 0 && this._fragments.length >= this._maxFragments) {
+          const error = this.createError(
+            RangeError,
+            "Too many message fragments",
+            false,
+            1008,
+            "WS_ERR_TOO_MANY_BUFFERED_PARTS"
+          );
+          cb(error);
+          return;
+        }
         this._messageLength = this._totalPayloadLength;
         this._fragments.push(data);
       }
@@ -1223,6 +1252,17 @@ function requireReceiver() {
               false,
               1009,
               "WS_ERR_UNSUPPORTED_MESSAGE_LENGTH"
+            );
+            cb(error);
+            return;
+          }
+          if (this._maxFragments > 0 && this._fragments.length >= this._maxFragments) {
+            const error = this.createError(
+              RangeError,
+              "Too many message fragments",
+              false,
+              1008,
+              "WS_ERR_TOO_MANY_BUFFERED_PARTS"
             );
             cb(error);
             return;
@@ -1392,7 +1432,10 @@ function requireSender() {
   if (hasRequiredSender) return sender;
   hasRequiredSender = 1;
   const { Duplex } = require$$0$2;
-  const { randomFillSync } = require$$1$1;
+  const { randomFillSync } = crypto__default;
+  const {
+    types: { isUint8Array }
+  } = require$$2$1;
   const PerMessageDeflate = requirePermessageDeflate();
   const { EMPTY_BUFFER, kWebSocket, NOOP } = requireConstants();
   const { isBlob, isValidStatusCode } = requireValidation();
@@ -1546,8 +1589,10 @@ function requireSender() {
         buf.writeUInt16BE(code, 0);
         if (typeof data === "string") {
           buf.write(data, 2);
-        } else {
+        } else if (isUint8Array(data)) {
           buf.set(data, 2);
+        } else {
+          throw new TypeError("Second argument must be a string or a Uint8Array");
         }
       }
       const options = {
@@ -2262,11 +2307,11 @@ function requireWebsocket() {
   if (hasRequiredWebsocket) return websocket;
   hasRequiredWebsocket = 1;
   const EventEmitter = require$$0$3;
-  const https = require$$1$2;
-  const http = require$$2$1;
+  const https = require$$1$1;
+  const http = require$$2$2;
   const net2 = net__default;
   const tls = require$$4;
-  const { randomBytes, createHash } = require$$1$1;
+  const { randomBytes, createHash } = crypto__default;
   const { Duplex, Readable } = require$$0$2;
   const { URL: URL2 } = require$$7;
   const PerMessageDeflate = requirePermessageDeflate();
@@ -2428,6 +2473,10 @@ function requireWebsocket() {
      *     multiple times in the same tick
      * @param {Function} [options.generateMask] The function used to generate the
      *     masking key
+     * @param {Number} [options.maxBufferedChunks=0] The maximum number of
+     *     buffered data chunks
+     * @param {Number} [options.maxFragments=0] The maximum number of message
+     *     fragments
      * @param {Number} [options.maxPayload=0] The maximum allowed message size
      * @param {Boolean} [options.skipUTF8Validation=false] Specifies whether or
      *     not to skip UTF-8 validation for text and close messages
@@ -2439,6 +2488,8 @@ function requireWebsocket() {
         binaryType: this.binaryType,
         extensions: this._extensions,
         isServer: this._isServer,
+        maxBufferedChunks: options.maxBufferedChunks,
+        maxFragments: options.maxFragments,
         maxPayload: options.maxPayload,
         skipUTF8Validation: options.skipUTF8Validation
       });
@@ -2738,6 +2789,8 @@ function requireWebsocket() {
       autoPong: true,
       closeTimeout: CLOSE_TIMEOUT,
       protocolVersion: protocolVersions[1],
+      maxBufferedChunks: 1024 * 1024,
+      maxFragments: 128 * 1024,
       maxPayload: 100 * 1024 * 1024,
       skipUTF8Validation: false,
       perMessageDeflate: true,
@@ -2980,6 +3033,8 @@ function requireWebsocket() {
       websocket2.setSocket(socket, head, {
         allowSynchronousEvents: opts.allowSynchronousEvents,
         generateMask: opts.generateMask,
+        maxBufferedChunks: opts.maxBufferedChunks,
+        maxFragments: opts.maxFragments,
         maxPayload: opts.maxPayload,
         skipUTF8Validation: opts.skipUTF8Validation
       });
@@ -3298,9 +3353,9 @@ function requireWebsocketServer() {
   if (hasRequiredWebsocketServer) return websocketServer;
   hasRequiredWebsocketServer = 1;
   const EventEmitter = require$$0$3;
-  const http = require$$2$1;
+  const http = require$$2$2;
   const { Duplex } = require$$0$2;
-  const { createHash } = require$$1$1;
+  const { createHash } = crypto__default;
   const extension2 = requireExtension();
   const PerMessageDeflate = requirePermessageDeflate();
   const subprotocol2 = requireSubprotocol();
@@ -3329,6 +3384,10 @@ function requireWebsocketServer() {
      *     called
      * @param {Function} [options.handleProtocols] A hook to handle protocols
      * @param {String} [options.host] The hostname where to bind the server
+     * @param {Number} [options.maxBufferedChunks=1048576] The maximum number of
+     *     buffered data chunks
+     * @param {Number} [options.maxFragments=131072] The maximum number of message
+     *     fragments
      * @param {Number} [options.maxPayload=104857600] The maximum allowed message
      *     size
      * @param {Boolean} [options.noServer=false] Enable no server mode
@@ -3350,6 +3409,8 @@ function requireWebsocketServer() {
       options = {
         allowSynchronousEvents: true,
         autoPong: true,
+        maxBufferedChunks: 1024 * 1024,
+        maxFragments: 128 * 1024,
         maxPayload: 100 * 1024 * 1024,
         skipUTF8Validation: false,
         perMessageDeflate: false,
@@ -3629,6 +3690,8 @@ function requireWebsocketServer() {
       socket.removeListener("error", socketOnError);
       ws.setSocket(socket, head, {
         allowSynchronousEvents: this.options.allowSynchronousEvents,
+        maxBufferedChunks: this.options.maxBufferedChunks,
+        maxFragments: this.options.maxFragments,
         maxPayload: this.options.maxPayload,
         skipUTF8Validation: this.options.skipUTF8Validation
       });
@@ -3687,18 +3750,20 @@ function requireWebsocketServer() {
 }
 var websocketServerExports = requireWebsocketServer();
 const WebSocketServer = /* @__PURE__ */ getDefaultExportFromCjs(websocketServerExports);
-let mainWindow = null;
+const __filename$1 = fileURLToPath(import.meta.url);
+const __dirname$1 = path.dirname(__filename$1);
 const DEV_BASE_URL = "http://localhost:5173";
 const TCP_HOST = "127.0.0.1";
 const TCP_PORT = 3003;
-const MESSAGE_DELIMITER = "\n";
-const secretToken = v4();
+const NONCE_BYTE_SIZE = 12;
+const WS_CONNECTED_MSG = "CONNECTED";
 async function getFreePort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
-    server.on("error", (err) => {
-      reject(new Error(`Could not find a free port: ${err.message}`));
-    });
+    server.on(
+      "error",
+      (err) => reject(new Error(`Could not find a free port: ${err.message}`))
+    );
     server.listen(0, "127.0.0.1", () => {
       const address = server.address();
       if (address && typeof address !== "string") {
@@ -3712,69 +3777,193 @@ async function getFreePort() {
     });
   });
 }
-function startProxy(port) {
-  const wss = new WebSocketServer({ port });
+function encryptWithAES(aesKey, msgStr) {
+  const nonce = crypto.randomBytes(NONCE_BYTE_SIZE);
+  const cipher = crypto.createCipheriv("aes-256-gcm", aesKey, nonce);
+  let ciphertext = cipher.update(msgStr, "utf-8");
+  ciphertext = Buffer.concat([ciphertext, cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  const encryptedPayload = Buffer.concat([nonce, ciphertext, authTag]);
+  const lengthHeader = Buffer.alloc(4);
+  lengthHeader.writeUInt32BE(encryptedPayload.length, 0);
+  return Buffer.concat([lengthHeader, encryptedPayload]);
+}
+function startProxy(port, instanceToken, wss) {
   wss.on("connection", (ws, req) => {
     const url = new URL(req.url || "", `http://localhost:${port}`);
-    if (url.searchParams.get("token") !== secretToken) {
+    if (url.searchParams.get("token") !== instanceToken) {
       console.error("Unauthorized connection attempt!");
       ws.terminate();
       return;
     }
     const tcpClient = new net.Socket();
+    let aesKey = null;
+    let tcpBuffer = Buffer.alloc(0);
+    console.log(`Connecting Proxy on Port ${port} to Game Server...`);
     tcpClient.connect(TCP_PORT, TCP_HOST, () => {
-      console.log("TCP connection established");
+      console.log(`TCP connection established with Game Server for port ${port}`);
     });
     ws.on("message", (data) => {
-      data += MESSAGE_DELIMITER;
-      const buffer2 = Buffer.isBuffer(data) ? data : Buffer.from(data);
-      tcpClient.write(buffer2, (err) => {
-        if (err) console.error("TCP Write Error:", err);
-      });
+      if (!aesKey) {
+        console.warn("Dropped outbound message: Handshake with server not completed yet.");
+        return;
+      }
+      const msgStr = data.toString();
+      try {
+        const payload = encryptWithAES(aesKey, msgStr);
+        tcpClient.write(payload, (err) => {
+          if (err) console.error("TCP Encrypted Write Error:", err);
+        });
+      } catch (err) {
+        console.error("Encryption failed:", err);
+      }
     });
-    let buffer = "";
     tcpClient.on("data", (chunk) => {
-      buffer += chunk.toString();
-      const parts = buffer.split(MESSAGE_DELIMITER);
-      buffer = parts.pop() || "";
-      parts.forEach((message) => {
-        if (message.trim()) ws.send(message);
-      });
+      tcpBuffer = Buffer.concat([tcpBuffer, chunk]);
+      while (tcpBuffer.length >= 4) {
+        const msgLen = tcpBuffer.readUInt32BE(0);
+        if (tcpBuffer.length < 4 + msgLen) break;
+        const payload = tcpBuffer.subarray(4, 4 + msgLen);
+        tcpBuffer = tcpBuffer.subarray(4 + msgLen);
+        if (!aesKey) {
+          try {
+            console.log("Received RSA Public Key from Python Server.");
+            const publicKeyPem = payload.toString("utf-8");
+            aesKey = crypto.randomBytes(32);
+            const encryptedAesKey = crypto.publicEncrypt(
+              {
+                key: publicKeyPem,
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                oaepHash: "sha256"
+              },
+              aesKey
+            );
+            const handshakeHeader = Buffer.alloc(4);
+            handshakeHeader.writeUInt32BE(encryptedAesKey.length, 0);
+            tcpClient.write(Buffer.concat([handshakeHeader, encryptedAesKey]));
+            console.log("Sent Encrypted AES Key to server. Handshake complete.");
+            ws.send(WS_CONNECTED_MSG);
+          } catch (err) {
+            console.error("Handshake negotiation failed:", err);
+            ws.send(`ERROR! Handshake negotiation failed - ${err}`);
+            ws.close();
+            tcpClient.destroy();
+          }
+        } else {
+          try {
+            const nonce = payload.subarray(0, 12);
+            const encryptedData = payload.subarray(12);
+            const ciphertext = encryptedData.subarray(0, encryptedData.length - 16);
+            const authTag = encryptedData.subarray(encryptedData.length - 16);
+            const decipher = crypto.createDecipheriv("aes-256-gcm", aesKey, nonce);
+            decipher.setAuthTag(authTag);
+            let decryptedStr = decipher.update(ciphertext, void 0, "utf-8");
+            decryptedStr += decipher.final("utf-8");
+            if (decryptedStr.trim()) {
+              ws.send(decryptedStr);
+            }
+          } catch (err) {
+            console.error("Decryption failed! Packet dropped:", err);
+          }
+        }
+      }
     });
     ws.on("close", () => {
       tcpClient.destroy();
-      console.log("WS Closed Connection");
+      console.log(`WS Local Connection Closed on port ${port}`);
     });
     tcpClient.on("close", () => {
+      console.log(`TCP Remote Connection Closed on port ${port}`);
+      ws.send("Could not connect to server. Check if it's running!");
       ws.close();
-      console.log("TCP Closed Connection");
     });
     tcpClient.on("error", (err) => {
       ws.close();
-      console.log(`TCP Error:`, err);
+      console.error("TCP Client Error:", err.message);
     });
   });
 }
-function createWindow(port) {
-  mainWindow = new BrowserWindow({
-    width: 1e3,
-    height: 700,
-    webPreferences: {
-      // Security best practices
-      contextIsolation: true,
-      nodeIntegration: false
+async function createApplicationInstance() {
+  try {
+    const port = await getFreePort();
+    const instanceToken = v4();
+    const wss = new WebSocketServer({ port });
+    startProxy(port, instanceToken, wss);
+    const windowInstance = new BrowserWindow({
+      width: 1e3,
+      height: 700,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false
+      }
+    });
+    windowInstance.on("closed", () => {
+      wss.close(() => {
+        console.log(`WebSocket server on port ${port} gracefully shut down.`);
+      });
+    });
+    if (app.isPackaged) {
+      const indexPath = path.join(__dirname$1, "..", "dist", "index.html");
+      const fileUrl = pathToFileURL(indexPath);
+      fileUrl.searchParams.append("wsPort", port.toString());
+      fileUrl.searchParams.append("wsToken", instanceToken);
+      windowInstance.loadURL(fileUrl.toString());
+    } else {
+      const devUrl = `${DEV_BASE_URL}?wsPort=${port}&wsToken=${instanceToken}`;
+      windowInstance.loadURL(devUrl);
     }
-  });
-  if (app.isPackaged) {
-    const indexPath = path.join(__dirname, "..", "dist", "index.html");
-    mainWindow.loadFile(indexPath);
-  } else {
-    const devUrl = `${DEV_BASE_URL}?wsPort=${port}&wsToken=${secretToken}`;
-    mainWindow.loadURL(devUrl);
+  } catch (error) {
+    console.error("Failed to spin up application instance:", error);
   }
 }
-app.whenReady().then(async () => {
-  const port = await getFreePort();
-  startProxy(port);
-  createWindow(port);
+function setupApplicationMenu() {
+  const customTemplate = [
+    {
+      label: "File",
+      submenu: [
+        {
+          label: "New Window",
+          accelerator: "CmdOrCtrl+N",
+          click: () => {
+            createApplicationInstance();
+          }
+        },
+        { type: "separator" },
+        { role: "close" }
+      ]
+    },
+    {
+      role: "editMenu"
+    },
+    {
+      // Group your individual window actions under a dedicated View menu category
+      label: "View",
+      submenu: [
+        { role: "toggleDevTools" },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" }
+      ]
+    },
+    {
+      role: "windowMenu"
+    }
+  ];
+  const menu = Menu.buildFromTemplate(customTemplate);
+  Menu.setApplicationMenu(menu);
+}
+app.whenReady().then(() => {
+  setupApplicationMenu();
+  createApplicationInstance();
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createApplicationInstance();
+    }
+  });
+});
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });

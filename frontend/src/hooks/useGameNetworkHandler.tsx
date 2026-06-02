@@ -61,6 +61,14 @@ export function useGameNetworkHandler(
     [otherPlayers],
   );
 
+  // const setOtherPlayers = (action: SetStateAction<PlayerInfo[]>) => {
+  //   _setOtherPlayers(op => {
+  //     const newVal = typeof(action) == 'function' ? action(op) : action;
+      
+  //     return newVal;
+  //   });
+  // }
+
   // #region Server Message Handlers
   // function handleServerMessage(msg: NetworkMessage) {
   //   switch (msg.msgType) {
@@ -311,10 +319,15 @@ export function useGameNetworkHandler(
     onMessage(callerId, GameMsgType.PLAYER_CONNECTED, (msg) => {
       const newPlayer = parsePlayerInfo(msg.data);
       if (!newPlayer) return;
-      const index = otherPlayers.findIndex(
-        (p) => p.username === newPlayer.username,
-      );
-      if (index < 0) setOtherPlayers((op) => [...op, newPlayer]);
+      
+      setOtherPlayers((op) => {
+        // const newVal = [...op, newPlayer];
+        // if (index < 0) setOtherPlayers((op) => [...op, newPlayer]);
+        const index = otherPlayers.findIndex(
+          (p) => p.username === newPlayer.username,
+        );
+        return index < 0 ? [...op, newPlayer] : op;
+      });
     });
 
     onMessage(callerId, GameMsgType.PLAYER_DISCONNECTED, (msg) => {

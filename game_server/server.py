@@ -230,7 +230,7 @@ class Server:
                 }
         return ResponseCode.ERROR, None
     
-    def get_rooms_info(self) -> list[GameRoom]:
+    def get_rooms_info(self) -> list[dict]:
         return [room.get_room_info() for room in self.rooms]
     
     def get_room_by_id(self, room_id: UUID) -> GameRoom | None:

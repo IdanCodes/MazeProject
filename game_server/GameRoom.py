@@ -302,9 +302,6 @@ class GameRoom:
         self.send_broadcast(build_network_msg(None, MsgType.RESTART_GAME))
         self.send_broadcast(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
         self.send_broadcast(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_json()))
-        # for player in self.players:
-        #     player.send(build_network_msg(None, MsgType.MAZE, self.stored_maze.get_matrix()))
-        #     player.send(build_network_msg(None, MsgType.GAME_OPTIONS, self.game_options.get_json()))
 
     def game_loop(self):
         while True:

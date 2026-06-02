@@ -52,20 +52,21 @@ class MsgType(Enum):
     LOGIN = "login" # username: string, password: string
     SIGN_UP = "sign_up" # username: string, password: string
 
-    MAZE = "maze"
-    UPDATE_POS = "update_pos"
-    SET_NAME = "set_name"
+    SET_NAME = "set_name" # not used?
+    ACCEPT_CONNECTION = "accept_connection" # Not used?
+    ERR_NAME_TAKEN = "err_name_taken" # not used?
+    RESTART_GAME = "restart_game" # not used?
 
-    ACCEPT_CONNECTION = "accept_connection"
-    ERR_NAME_TAKEN = "err_name_taken"
+    UPDATE_POS = "update_pos"
+    MAZE = "maze" # server->client: params: CellType[][]
     PLAYER_CONNECTED = "player_connected"
     PLAYER_DISCONNECTED = "player_disconnected"
-    SET_READY = "set_ready"
+    SET_READY = "set_ready" # arg = "true"/"false"
 
     ROOMS_LIST = "rooms_list" # params: count?: int -> list[room]
     CREATE_ROOM = "create_room" # params: { name: string, capacity: int, password: string }
     JOIN_ROOM = "join_room" # params: { room_id: number, password: str| None }
-    LEAVE_ROOM = "leave_room" # params: { room_id: number }
+    LEAVE_ROOM = "leave_room" # ~~params: { room_id: number }~~
     ROOM_ADMIN = "room_admin" # server->client - params: string
     GAME_OPTIONS = "game_options" # params: GameOptions
     GENERATE_MAZE = "generate_maze" # client->server: params: {difficulty}; response: { grid, finishCell }
@@ -73,7 +74,6 @@ class MsgType(Enum):
     START_GAME = "start_game" # client->server - no params; server->client - { maze, finishCell, startTime }
     PLAYER_FINISHED = "player_finished" # server->client(broadcast) - { name: string, timeMs: number, place: number }
     END_GAME = "end_game" # server->client - { name: string, timeMs: number }[]
-    RESTART_GAME = "restart_game"
 
     RESPONSE = "response" # data = { code: ResponseType, response_to: MsgType, data: dict | None }
 

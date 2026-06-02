@@ -15,3 +15,5 @@ yarn-error.log*
 /frontend/dist
 /frontend/out
 game_server/accounts.db
+
+**/package-lock.json

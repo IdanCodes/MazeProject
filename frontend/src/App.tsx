@@ -178,6 +178,7 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
       .then((s) => {
         console.log("Connection successful! Going to authentication...");
         setIsConnected(true);
+        autoConnected.current = false;
       })
       .catch((error) => {
         alert(`Error occurred while connecting! ${error}. Check console`);
@@ -199,17 +200,25 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
   }
 
   useEffect(() => {
-    if (!autoConnected.current) autoConnected.current = true;
+    if (!isConnected && !autoConnected.current) autoConnected.current = true;
     doConnect();
   }, []);
+  const appContentNetworkContext = useMemo<NetworkContextType>(() => ({...networkContext, disconnect: () => {
+        setIsConnected(false);
+        networkContext.disconnect();
+      }}), [networkContext]);
 
   return isConnected ? (
     <>
-      <AppContent networkContext={networkContext} />
+      <AppContent networkContext={appContentNetworkContext} />
     </>
   ) : (
-    <>
-      <div className="flex justify-center w-full flex-col items-center">
+    <ProxyConnectionHandler isConnecting={isConnecting} doConnect={doConnect} />
+  );
+}
+
+function ProxyConnectionHandler({isConnecting, doConnect}: {isConnecting: boolean, doConnect: () => void}) {
+  return <><div className="flex justify-center w-full flex-col items-center">
         {isConnecting ? (
           <>
             <p className="text-center text-4xl">Connecting...</p>
@@ -223,9 +232,7 @@ function App({ wsServerUrl }: { wsServerUrl: string }) {
             Connect
           </PrimaryButton>
         )}
-      </div>
-    </>
-  );
+      </div></>;
 }
 
 function AppContent({

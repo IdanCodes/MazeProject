@@ -12,8 +12,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "package": "npm run build && electron-forge package",
+    "make": "npm run build && electron-forge make"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.13",

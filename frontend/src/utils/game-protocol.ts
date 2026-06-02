@@ -1,3 +1,4 @@
+import { ServerResponse } from "@src/interfaces/ServerResponse";
 import {
   GameMsgType,
   isGameMsgType,
@@ -5,8 +6,7 @@ import {
 } from "../constants/GameMsgType";
 import {
   NetworkMessage,
-  ServerResponse,
-} from "@src/hooks/useGameNetworkHandler";
+} from "@src/interfaces/NetworkMessage";
 
 export function buildGameRequest(
   msgType: GameMsgType,

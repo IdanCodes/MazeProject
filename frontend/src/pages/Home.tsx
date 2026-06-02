@@ -32,9 +32,9 @@ export function AuthenticatedHome({
         >
           Multiplayer
         </RedirectButton>
-        <RedirectButton className="text-4xl py-3" path={RoutePath.Stats}>
+        {/* <RedirectButton className="text-4xl py-3" path={RoutePath.Stats}>
           Stats
-        </RedirectButton>
+        </RedirectButton> */}
       </div>
     </>
   );
