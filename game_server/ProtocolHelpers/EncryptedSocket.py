@@ -9,9 +9,6 @@ class EncryptedSocket:
         self.sock = sock
         self.framer = PacketFramer()
         self.crypto_engine = GameCryptoEngine()
-        
-        # Optimize for real-time game traffic immediately
-        # self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
     def execute_server_handshake(self) -> bool:
         """

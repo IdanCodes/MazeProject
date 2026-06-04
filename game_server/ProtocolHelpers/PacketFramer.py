@@ -1,4 +1,3 @@
-# --- 1. Low-Level Packet Framing Component ---
 import struct
 
 

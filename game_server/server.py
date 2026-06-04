@@ -18,10 +18,6 @@ import protocol
 from protocol import SOCK_RECV_CHUNK_SIZE, MsgType, ResponseCode, build_error_obj, build_response, parse_request
 from Database.DBManagers import accounts_manager
 
-# TODO: Add a "Restart" button for the admin when the game ends so players can rematch.
-#       The button sends a mesasge to the server, which broadcasts to the players that the game restarted, and the room does a full "reset" of a sort
-#       The room saves the GameData (in the db) and creates a new GameData
-
 # Default exception hook for threads
 def default_excepthook(args):
     import traceback
@@ -71,9 +67,6 @@ class Server:
         new_client = None
         try:
             while new_client == None:
-                # TODO: Maybe receive with respect to the delimiter like in ClientInfo
-                # rec_text = client_sock.recv(SOCK_RECV_CHUNK_SIZE)
-                # rec_text = rec_text.decode(encoding=protocol.NETWORK_ENCODING)
                 rec_text = secure_sock.recv_str()
                 if not rec_text:
                     secure_sock.close()
@@ -85,7 +78,6 @@ class Server:
 
                 acc_data, error_text = self.handle_auth_request(req_type, req_data)
                 if not acc_data:
-                    # protocol.send_str(client_sock, build_response(ResponseCode.ERROR, req_type, error_text))
                     secure_sock.send_str(build_response(ResponseCode.ERROR, req_type, error_text))
                     continue
 

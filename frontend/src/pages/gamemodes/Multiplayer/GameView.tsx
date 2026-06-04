@@ -315,20 +315,11 @@ function GameView({
     );
   }
 
-  // function RestartButton({}: {}) {
-  //   return (
-  //     <>
-  //       <PrimaryButton className="text-2xl">Restart</PrimaryButton>
-  //     </>
-  //   );
-  // }
-
   function GameResultsPanel() {
     if (!lastGameResults) return <></>;
 
     return (
       <>
-        {/* <OverlayModal></OverlayModal> */}
         <div className="bg-gray-400/30">
           <p className="text-3xl">Results:</p>
           {lastGameResults.map((res, i) => (

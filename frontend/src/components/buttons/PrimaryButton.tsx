@@ -9,11 +9,6 @@ export default function PrimaryButton({
   disabled = false,
   buttonSize = ButtonSize.Medium,
   btnType = "button",
-  // colors = {
-  //   normal: "rgb(106,114,130)",
-  //   hover: "rgba(106,114,130,0.9)",
-  //   click: "rgba(74,85,101, 0.9)",
-  // },
   children,
   className = "",
 }: {
@@ -41,29 +36,7 @@ export default function PrimaryButton({
         onClick={(e) => {
           if (!disabled) onClick(e);
         }}
-        // initial={{
-        //   backgroundColor: colors.normal,
-        // }}
-        // whileHover={{
-        //   backgroundColor: disabled ? colors.normal : colors.hover,
-        // }}
-        // whileTap={{
-        //   backgroundColor: disabled ? colors.normal : colors.click,
-        // }}
-        // transition={{
-        //   duration: 0.03,
-        //   ease: "easeIn",
-        // }}
       >
-        {/*<p*/}
-        {/*  className={clsx(*/}
-        {/*    buttonSize == ButtonSize.Small && "text-2xl",*/}
-        {/*    buttonSize == ButtonSize.Medium && "m-0.5 text-3xl",*/}
-        {/*    buttonSize == ButtonSize.Large && "m-1 text-4xl",*/}
-        {/*  )}*/}
-        {/*>*/}
-        {/*  {text}*/}
-        {/*</p>*/}
         {children}
       </motion.button>
     </>

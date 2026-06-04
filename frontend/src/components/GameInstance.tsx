@@ -98,65 +98,7 @@ const GameInstance = forwardRef<
       );
     });
 
-    useAnimationUpdate(GAME_FPS, () => {
-      // setPlayerPos((cp: Vector2): Vector2 => {
-      //   if (!gameCanvasRef.current) return cp;
-      //   const checkCollision = (pos: Vector2) =>
-      //     gameCanvasRef.current?.checkCircleCollision(
-      //       { x: pos.x + cellScale / 2, y: pos.y + cellScale / 2 },
-      //       PLAYER_RADIUS * cellScale,
-      //     );
-      //   const newPos: Vector2 = {
-      //     x: cp.x + velocity.current.x,
-      //     y: cp.y + velocity.current.y,
-      //   };
-      //   // Check full movement
-      //   if (!checkCollision(newPos)) return newPos;
-      //   // Try horizontal only
-      //   const onlyHorizontal: Vector2 = {
-      //     x: newPos.x,
-      //     y: cp.y,
-      //   };
-      //   if (!checkCollision(onlyHorizontal)) return onlyHorizontal;
-      //   // Try vertical only
-      //   const onlyVertical: Vector2 = {
-      //     x: cp.x,
-      //     y: newPos.y,
-      //   };
-      //   if (!checkCollision(onlyVertical)) return onlyVertical;
-      //   // const newGridPos: Vector2 = gameCanvasRef.current.canvasToGrid(newPos);
-      //   // if (
-      //   //   maze.inBounds(newGridPos) &&
-      //   //   maze.getCell(newGridPos) !== CellType.Wall
-      //   // )
-      //   //   return newPos;
-      //   // const onlyHorizontal: Vector2 = {
-      //   //   x: newPos.x,
-      //   //   y: cp.y,
-      //   // };
-      //   // const onlyHorizontalGP: Vector2 =
-      //   //   gameCanvasRef.current.canvasToGrid(onlyHorizontal);
-      //   // if (
-      //   //   maze.inBounds(onlyHorizontalGP) &&
-      //   //   maze.getCell(onlyHorizontalGP) === CellType.Passage
-      //   // )
-      //   //   return onlyHorizontal;
-      //   // const onlyVertical: Vector2 = {
-      //   //   x: cp.x,
-      //   //   y: newPos.y,
-      //   // };
-      //   // const onlyVerticalGP: Vector2 =
-      //   //   gameCanvasRef.current.canvasToGrid(onlyVertical);
-      //   // if (
-      //   //   maze.inBounds(onlyVerticalGP) &&
-      //   //   maze.getCell(onlyVerticalGP) === CellType.Passage
-      //   // )
-      //   //   return onlyVertical;
-      //   return cp;
-      // });
-    });
 
-    // const tempTargetVelocity = useRef<Vector2>(ZERO_VEC);
     useAnimationUpdate(PHYSICS_UPDATE_FPS, () => {
       const epsilon = 0.05;
 
@@ -234,38 +176,6 @@ const GameInstance = forwardRef<
           return onlyVertical;
         }
         updateVel(ZERO_VEC, true);
-
-        // const newGridPos: Vector2 = gameCanvasRef.current.canvasToGrid(newPos);
-
-        // if (
-        //   maze.inBounds(newGridPos) &&
-        //   maze.getCell(newGridPos) !== CellType.Wall
-        // )
-        //   return newPos;
-
-        // const onlyHorizontal: Vector2 = {
-        //   x: newPos.x,
-        //   y: cp.y,
-        // };
-        // const onlyHorizontalGP: Vector2 =
-        //   gameCanvasRef.current.canvasToGrid(onlyHorizontal);
-        // if (
-        //   maze.inBounds(onlyHorizontalGP) &&
-        //   maze.getCell(onlyHorizontalGP) === CellType.Passage
-        // )
-        //   return onlyHorizontal;
-
-        // const onlyVertical: Vector2 = {
-        //   x: cp.x,
-        //   y: newPos.y,
-        // };
-        // const onlyVerticalGP: Vector2 =
-        //   gameCanvasRef.current.canvasToGrid(onlyVertical);
-        // if (
-        //   maze.inBounds(onlyVerticalGP) &&
-        //   maze.getCell(onlyVerticalGP) === CellType.Passage
-        // )
-        //   return onlyVertical;
 
         return cp;
       });

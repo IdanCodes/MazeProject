@@ -7,7 +7,6 @@ from protocol import NETWORK_ENCODING
 
 NONCE_NUM_BYTES = 12
 
-# --- 2. Stateful Hybrid Cryptography Engine ---
 class GameCryptoEngine:
     """
     Manages RSA handshake key generation and stateful AES-GCM encryption/decryption 

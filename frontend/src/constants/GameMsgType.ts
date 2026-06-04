@@ -2,7 +2,6 @@ export enum GameMsgType {
   LOGIN = "login",
   SIGN_UP = "sign_up",
 
-  CONNECT_REQUEST = "connect_request",
   MAZE = "maze",
   UPDATE_POS = "update_pos",
   SET_NAME = "set_name",
