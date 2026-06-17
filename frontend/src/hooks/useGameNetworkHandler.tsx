@@ -118,7 +118,7 @@ export function useGameNetworkHandler(
       setOtherPlayers((op) => {
         // const newVal = [...op, newPlayer];
         // if (index < 0) setOtherPlayers((op) => [...op, newPlayer]);
-        const index = otherPlayers.findIndex(
+        const index = op.findIndex(
           (p) => p.username === newPlayer.username,
         );
         return index < 0 ? [...op, newPlayer] : op;
