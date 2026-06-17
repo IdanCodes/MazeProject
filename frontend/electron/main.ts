@@ -12,6 +12,8 @@ import * as fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const isPackaged = app.isPackaged || process.env.NODE_ENV === 'production';
+
 function loadConfig(): {
   SERVER_ADDR: string;
   SERVER_PORT: number;
@@ -236,7 +238,7 @@ async function createApplicationInstance() {
     });
 
     // 4. Route UI
-    if (app.isPackaged) {
+    if (isPackaged) {
       const indexPath = path.join(__dirname, "..", "dist", "index.html");
       const fileUrl = pathToFileURL(indexPath);
 
