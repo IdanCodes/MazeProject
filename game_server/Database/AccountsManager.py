@@ -1,4 +1,5 @@
 import atexit
+import hashlib
 import sqlite3
 
 from Database.AccountData import *
@@ -43,8 +44,7 @@ class AccountsManager:
     def sign_up(self, username: str, password: str) -> AccountData | None:
         if self.does_user_exist(username): return False
 
-        # TODO: hash password
-        hashed_password = password
+        hashed_password = self.hash_password(password)
         
         try:
             with self.conn:
@@ -57,8 +57,9 @@ class AccountsManager:
     # log in
     def authenticate_user(self, username: str, password: str) -> AccountData | None:
         acc_data = self.get_account_data_by_username(username)
-        # TODO: Hash Password
-        if not acc_data or acc_data.password != password: return None
+
+        hashed_password = self.hash_password(password)
+        if not acc_data or acc_data.password != hashed_password: return None
         return acc_data
     
     # Does a user with this username exist?
@@ -67,3 +68,6 @@ class AccountsManager:
         row = cursor.fetchone()
         return bool(row[0])
 
+
+    def hash_password(self, p: str) -> str:
+        return hashlib.sha256(p.encode('utf-8')).hexdigest()

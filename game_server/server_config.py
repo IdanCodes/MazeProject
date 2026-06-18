@@ -1,5 +1,5 @@
 # IPv4 address to open the server
-IP_ADDR = "0.0.0.0"
+IP_ADDR = "127.0.0.1"
 
 # port to open the server
 PORT = 3004
