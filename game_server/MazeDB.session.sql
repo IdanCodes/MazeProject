@@ -1,1 +1,1 @@
-DROP TABLE games
+DELETE FROM accounts WHERE username = 'mid2';
