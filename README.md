@@ -1,9 +1,7 @@
 # Maze Game Project
 My 12th grade cyber project.
 This is a browser game written in TypeScript on React (backend in python), which includes mazes.
-The core idea of the game is to 
-The work on this game is still in progress!
-
+The core idea of the game is to complete mazes as fast as possible, with friends or alone.
 
 ## Local Deploy
 ### Deploying Website
